@@ -1,29 +1,40 @@
 """
 Script Generator Service
 Uses LangChain and LLM to convert educational content into screenplay format
+Supports both OpenAI API and local Ollama
 """
 
 import os
+import httpx
 from typing import List, Dict
 from dataclasses import dataclass
 
 try:
     from langchain.chat_models import ChatOpenAI
+    from langchain.llms import Ollama
     from langchain.prompts import ChatPromptTemplate
     from langchain.output_parsers import PydanticOutputParser
 except ImportError:
     ChatOpenAI = None
+    Ollama = None
     ChatPromptTemplate = None
     PydanticOutputParser = None
 
 from models.story import Screenplay, Scene
+from config import Config
+from services.cache_manager import CacheManager
 
 
 class ScriptGenerator:
     """Generates educational screenplay from document text"""
     
     def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY", "")
+        self.use_local_llm = Config.USE_LOCAL_LLM
+        self.openai_key = Config.OPENAI_API_KEY
+        self.ollama_url = Config.OLLAMA_BASE_URL
+        self.ollama_model = Config.OLLAMA_MODEL
+        
+        self.cache = CacheManager()
         
         # Grade-appropriate language mapping
         self.grade_prompts = {
@@ -53,9 +64,15 @@ class ScriptGenerator:
         Returns:
             Screenplay object with scenes
         """
-        if not self.api_key:
-            # Return mock screenplay for testing without API key
-            return self._generate_mock_screenplay(text, grade_level, avatar_type)
+        # Check cache first
+        cached_screenplay = await self.cache.get_json(
+            "screenplay",
+            text=text,
+            grade_level=grade_level,
+            avatar_type=avatar_type
+        )
+        if cached_screenplay:
+            return Screenplay(**cached_screenplay)
         
         # Get grade-appropriate language instruction
         grade_instruction = self.grade_prompts.get(
@@ -71,19 +88,29 @@ class ScriptGenerator:
         )
         
         try:
-            if ChatOpenAI is not None:
-                # Use LangChain with OpenAI
-                llm = ChatOpenAI(
-                    model="gpt-4",
-                    temperature=0.7,
-                    openai_api_key=self.api_key
-                )
-                
-                response = await llm.apredict(prompt)
-                return self._parse_screenplay(response)
+            if self.use_local_llm:
+                # Use local Ollama
+                screenplay = await self._generate_with_ollama(prompt)
+            elif self.openai_key:
+                # Use OpenAI API
+                screenplay = await self._generate_with_openai(prompt)
             else:
-                # Fallback to mock if LangChain not installed
-                return self._generate_mock_screenplay(text, grade_level, avatar_type)
+                # Fallback to mock
+                screenplay = self._generate_mock_screenplay(text, grade_level, avatar_type)
+            
+            # Cache the result
+            await self.cache.set_json(
+                "screenplay",
+                {"scenes": [{"scene_number": s.scene_number, 
+                            "visual_description": s.visual_description,
+                            "narration": s.narration,
+                            "learning_point": s.learning_point} for s in screenplay.scenes]},
+                text=text,
+                grade_level=grade_level,
+                avatar_type=avatar_type
+            )
+            
+            return screenplay
         
         except Exception as e:
             print(f"Error generating screenplay: {e}")
@@ -133,6 +160,52 @@ SCENE 2:
 ...
 
 Generate the complete screenplay now:"""
+    
+    async def _generate_with_ollama(self, prompt: str) -> Screenplay:
+        """Generate screenplay using local Ollama"""
+        try:
+            # Test Ollama connection
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Make API call to Ollama
+                response = await client.post(
+                    f"{self.ollama_url}/api/generate",
+                    json={
+                        "model": self.ollama_model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "temperature": 0.7
+                    }
+                )
+                response.raise_for_status()
+                data = response.json()
+                llm_response = data.get("response", "")
+                
+                if llm_response:
+                    return self._parse_screenplay(llm_response)
+                else:
+                    raise Exception("Empty response from Ollama")
+        
+        except Exception as e:
+            print(f"Ollama error: {e}")
+            raise
+    
+    async def _generate_with_openai(self, prompt: str) -> Screenplay:
+        """Generate screenplay using OpenAI API"""
+        try:
+            if ChatOpenAI is not None:
+                llm = ChatOpenAI(
+                    model="gpt-4",
+                    temperature=0.7,
+                    openai_api_key=self.openai_key
+                )
+                response = await llm.apredict(prompt)
+                return self._parse_screenplay(response)
+            else:
+                raise ImportError("LangChain not installed")
+        
+        except Exception as e:
+            print(f"OpenAI error: {e}")
+            raise
     
     def _parse_screenplay(self, llm_response: str) -> Screenplay:
         """Parse LLM response into Screenplay object"""

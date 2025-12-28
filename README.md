@@ -41,14 +41,36 @@ Transform educational documents into engaging, animated learning experiences for
 - Node.js 18+
 - Docker (optional, for containerized deployment)
 
-### API Keys Required
+### ⚡ Two Paths Forward
 
-You'll need accounts and API keys for:
-- OpenAI (GPT-4 and/or DALL-E)
-- Stability AI (for Stable Diffusion)
-- ElevenLabs (for voice generation)
+#### Path A: FREE (Open-Source, Zero API Costs) ✅ **Recommended**
+- No API keys needed
+- Completely offline
+- Self-hosted models
+- **See [FREE_SETUP_GUIDE.md](FREE_SETUP_GUIDE.md) for detailed instructions**
+
+**Cost:** $0/month | **Setup Time:** ~50 minutes
+
+#### Path B: API-Based (Premium Quality, Paid Services)
+- Higher quality outputs
+- Cloud-based processing
+- API rate limits apply
+- **See instructions below**
+
+**Cost:** ~$160/month | **Setup Time:** 15 minutes
 
 ### Installation
+
+#### For FREE Setup (Recommended)
+👉 **[Follow the FREE_SETUP_GUIDE.md](FREE_SETUP_GUIDE.md)**
+
+This guide includes:
+- Installing Ollama for local LLM
+- Setting up local Stable Diffusion
+- Configuring Piper TTS
+- Redis caching setup
+
+#### For API-Based Setup
 
 1. **Clone the repository**
 ```bash
@@ -67,19 +89,21 @@ cp .env.example .env
 # Edit .env with your API keys
 ```
 
-3. **Frontend Setup**
+3. **Configure for API Mode**
+
+Edit `backend/.env`:
+```env
+SERVICE_MODE=api
+
+OPENAI_API_KEY=your_openai_api_key_here
+STABILITY_API_KEY=your_stability_api_key_here
+ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+```
+
+4. **Frontend Setup**
 ```bash
 cd ../frontend
 npm install
-```
-
-4. **Configure Environment Variables**
-
-Edit `backend/.env` and add your API keys:
-```env
-OPENAI_API_KEY=your_key_here
-STABILITY_API_KEY=your_key_here
-ELEVENLABS_API_KEY=your_key_here
 ```
 
 ### Running Locally
@@ -244,9 +268,19 @@ EduStory/
 - LangChain - AI workflow orchestration
 - PyPDF2 - PDF text extraction
 - python-docx - DOCX parsing
-- OpenAI API - GPT-4 for content generation
-- Stability AI - Image generation
-- ElevenLabs - Voice synthesis
+
+**AI Services (Choose Your Path):**
+
+*Free & Open-Source (Recommended):*
+- Ollama + Mistral/Llama 2 - Local LLM for screenplay
+- Stable Diffusion + diffusers - Local image generation
+- Piper TTS - Local voice synthesis
+- Redis - Content caching
+
+*Or Premium APIs:*
+- OpenAI GPT-4 - Cloud-based screenplay
+- Stability AI - Cloud-based image generation
+- ElevenLabs - Cloud-based voice synthesis
 
 **Frontend:**
 - React 18 - UI library
@@ -271,17 +305,28 @@ EduStory/
 ## 📈 Scaling for Production
 
 ### Performance Optimizations
-- Implement Redis caching for generated content
+- Implement Redis caching for generated content ✅ (Built-in)
 - Use CDN for static assets
 - Add database for story persistence (PostgreSQL recommended)
 - Implement background task queue (Celery + Redis)
 - Enable response compression
 
 ### Cost Optimization
+**Free Path:**
+- Self-host all AI services (zero API costs)
+- Cache generated assets locally
+- Implement usage quotas per user
+- Batch similar requests
+
+**API Path:**
 - Cache AI-generated assets
 - Implement usage quotas per user
 - Batch similar requests
 - Use lower-cost models for initial drafts
+
+**Estimated Costs:**
+- Free Open-Source: **$0/month** (plus server hosting)
+- API-Based: **~$160/month** (for 1,000 stories)
 
 ## 🐛 Troubleshooting
 

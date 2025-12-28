@@ -14,12 +14,28 @@ langchain==0.1.0
 openai==1.7.2
 anthropic==0.8.1  # For Claude if needed
 
+# Local LLM Support (Ollama)
+# Ollama runs as a separate service - no Python package needed
+
 # Image Generation
 stability-sdk==0.8.4
 pillow==10.1.0
 
+# Local Image Generation (Stable Diffusion)
+diffusers==0.21.4
+transformers==4.35.2
+torch==2.1.1
+accelerate==0.24.1  # Optional but recommended for speed
+
+# Local TTS (Piper)
+# Piper runs as CLI tool - install separately: pip install piper-tts
+
 # HTTP Client
 httpx==0.25.2
+
+# Caching
+redis==5.0.1
+aioredis==2.0.1
 
 # Data Validation
 pydantic==2.5.3

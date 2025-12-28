@@ -1,6 +1,7 @@
 """
 EduStory Backend - Main FastAPI Application
 Handles file uploads, AI orchestration, and content generation
+Supports both API-based and local open-source AI models
 """
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
@@ -15,7 +16,9 @@ from services.script_generator import ScriptGenerator
 from services.image_generator import ImageGenerator
 from services.voice_generator import VoiceGenerator
 from services.scene_assembler import SceneAssembler
+from services.cache_manager import CacheManager
 from models.story import StoryRequest, StoryResponse
+from config import Config
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -41,8 +44,8 @@ voice_generator = VoiceGenerator()
 scene_assembler = SceneAssembler()
 
 # Create necessary directories
-UPLOAD_DIR = Path("uploads")
-OUTPUT_DIR = Path("outputs")
+UPLOAD_DIR = Path(Config.UPLOAD_DIR)
+OUTPUT_DIR = Path(Config.OUTPUT_DIR)
 UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
@@ -53,7 +56,24 @@ async def root():
     return {
         "status": "online",
         "service": "EduStory API",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "config": Config.get_info()
+    }
+
+
+@app.get("/api/config")
+async def get_config():
+    """Get current configuration and service status"""
+    cache = CacheManager()
+    cache_health = await cache.health_check()
+    
+    return {
+        "config": Config.get_info(),
+        "cache": {
+            "enabled": Config.USE_CACHE,
+            "status": "healthy" if cache_health else "offline",
+            "redis_url": Config.REDIS_URL
+        }
     }
 
 

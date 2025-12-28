@@ -1,6 +1,6 @@
 """
 Image Generator Service
-Uses Stable Diffusion or DALL-E to generate consistent anime-style scene images
+Uses Stable Diffusion locally (via diffusers) or cloud APIs
 """
 
 import os
@@ -9,15 +9,36 @@ import httpx
 from typing import List, Dict
 from pathlib import Path
 
+try:
+    from diffusers import StableDiffusionPipeline
+    import torch
+except ImportError:
+    StableDiffusionPipeline = None
+    torch = None
+
+from config import Config
+from services.cache_manager import CacheManager
+
 
 class ImageGenerator:
     """Generates consistent character images for each scene"""
     
     def __init__(self):
-        self.stability_key = os.getenv("STABILITY_API_KEY", "")
-        self.openai_key = os.getenv("OPENAI_API_KEY", "")
+        self.use_local = Config.USE_LOCAL_IMAGE_GEN
+        self.stability_key = Config.STABILITY_API_KEY
         self.output_dir = Path("outputs/images")
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.cache = CacheManager()
+        
+        # Initialize local model if using local generation
+        self.pipeline = None
+        if self.use_local and StableDiffusionPipeline is not None:
+            try:
+                self._initialize_pipeline()
+            except Exception as e:
+                print(f"Failed to initialize local diffusers: {e}")
+                self.use_local = False
         
         # Character seed tokens for consistency
         self.character_seeds = {
@@ -27,6 +48,25 @@ class ImageGenerator:
             "astronaut": "young astronaut in white spacesuit with clear helmet",
             "dinosaur": "friendly green dinosaur with small arms and big smile",
         }
+    
+    def _initialize_pipeline(self):
+        """Initialize local Stable Diffusion pipeline"""
+        print(f"Loading {Config.STABLE_DIFFUSION_MODEL}...")
+        
+        # Use GPU if available
+        device = "cuda" if torch and torch.cuda.is_available() else "cpu"
+        
+        self.pipeline = StableDiffusionPipeline.from_pretrained(
+            Config.STABLE_DIFFUSION_MODEL,
+            torch_dtype=torch.float16 if device == "cuda" else torch.float32
+        )
+        self.pipeline = self.pipeline.to(device)
+        
+        # Disable safety checker for educational content
+        if not Config.ENABLE_SAFETY_CHECKER:
+            self.pipeline.safety_checker = None
+        
+        print(f"Pipeline ready on {device}")
     
     async def generate_scenes(
         self,
@@ -89,12 +129,55 @@ class ImageGenerator:
         # Construct the full prompt with character seed
         full_prompt = f"{style} art style, {character_seed}, {visual_description}, educational illustration, bright colors, child-friendly"
         
-        # For now, return placeholder (implement API call when keys are available)
-        if self.stability_key:
+        # Check cache
+        cached_image = await self.cache.get(
+            "image",
+            visual_description=visual_description,
+            character_seed=character_seed,
+            style=style
+        )
+        if cached_image and cached_image != "/api/placeholder/scene_{}.png".format(scene_number):
+            return cached_image
+        
+        # Generate new image
+        if self.use_local and self.pipeline:
+            return await self._generate_with_diffusers(full_prompt, scene_number)
+        elif self.stability_key:
             return await self._generate_with_stability(full_prompt, scene_number)
-        elif self.openai_key:
-            return await self._generate_with_dalle(full_prompt, scene_number)
         else:
+            return self._create_placeholder(scene_number)
+    
+    async def _generate_with_diffusers(self, prompt: str, scene_number: int) -> str:
+        """Generate image using local Stable Diffusion"""
+        try:
+            # Run in executor to avoid blocking
+            loop = asyncio.get_event_loop()
+            image = await loop.run_in_executor(
+                None,
+                lambda: self.pipeline(
+                    prompt,
+                    num_inference_steps=Config.IMAGE_INFERENCE_STEPS,
+                    guidance_scale=7.5
+                ).images[0]
+            )
+            
+            # Save the image
+            image_path = self.output_dir / f"scene_{scene_number}.png"
+            image.save(image_path)
+            
+            # Cache the path
+            await self.cache.set(
+                "image",
+                str(image_path),
+                visual_description=prompt,
+                character_seed="",
+                style=""
+            )
+            
+            return str(image_path)
+        
+        except Exception as e:
+            print(f"Diffusers error: {e}")
             return self._create_placeholder(scene_number)
     
     async def _generate_with_stability(self, prompt: str, scene_number: int) -> str:
