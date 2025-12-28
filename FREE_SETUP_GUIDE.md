@@ -257,7 +257,7 @@ npm run dev
 # Runs at http://localhost:3000
 ```
 
-**Open browser:** http://localhost:3000
+**Open browser:** http://localhost:3004
 
 ---
 

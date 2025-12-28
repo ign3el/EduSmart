@@ -119,7 +119,7 @@ python main.py
 ```bash
 cd frontend
 npm run dev
-# Frontend runs at http://localhost:3000
+# Frontend runs at http://localhost:3004 (VPS domain: https://edusmart.ign3el.com)
 ```
 
 ### Docker Deployment
@@ -129,7 +129,7 @@ npm run dev
 docker-compose up --build
 
 # Access the application
-# Frontend: http://localhost:3000
+# Frontend: http://localhost:3004 (VPS domain: https://edusmart.ign3el.com)
 # Backend API: http://localhost:8000
 ```
 
