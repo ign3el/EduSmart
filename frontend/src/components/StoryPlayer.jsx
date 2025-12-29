@@ -117,6 +117,7 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleAudioEnded}
         preload="auto"
+        crossOrigin="anonymous" // Add this line!
       />
       
       <div className="player-header">

@@ -1,79 +1,69 @@
 import os
-import json
+import json # Added this to fix the "json is not defined" error
+import base64
 from google import genai
 from google.genai import types
 
 class GeminiService:
     def __init__(self):
+        # Ensure your API key is set in your environment or aaPanel
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        self.text_model = "gemini-3-flash-preview"
-        self.image_model = "gemini-3-pro-image-preview" 
-        self.audio_model = "gemini-2.5-flash-preview-tts"
+        self.model_name = "gemini-2.0-flash-exp"
+        self.audio_model = "gemini-2.0-flash-exp"
 
-    def process_file_to_story(self, file_path, grade_level="Grade 4"):
-        try:
-            file_upload = self.client.files.upload(file=file_path)
-
-            prompt = (
-                f"You are a specialized educator for {grade_level}. Analyze the attached document and "
-                f"create an age-appropriate educational story and quiz for a {grade_level} student. \n\n"
-                "APPROPRIATENESS GUIDELINES:\n"
-                f"- For KG-Grade 1: Use simple words, personify the plants, and keep scenes short and magical.\n"
-                f"- For Grade 2-4: Use a 'discovery' narrative with relatable characters and clear cause-effect.\n"
-                f"- For Grade 5-7: Use more sophisticated 'survival' or 'engineering' themes with accurate terminology.\n\n"
-                "DYNAMIC STRUCTURE:\n"
-                "- Create as many scenes as needed to fully explain the core concepts of the document.\n"
-                "- Every scene must have a narrative text and a visual description matching the age group's style.\n"
-                "- Include a quiz at the end based on the learning outcomes.\n\n"
-                "Output STRICTLY JSON: { 'title': '...', 'scenes': [{ 'text': '...', 'image_description': '...' }], 'quiz': [...] }"
-            )
-
-            response = self.client.models.generate_content(
-                model=self.text_model,
-                contents=[file_upload, prompt],
-                config=types.GenerateContentConfig(response_mime_type="application/json")
-            )
-            return json.loads(response.text)
-        except Exception as e:
-            print(f"STORY GEN ERROR: {e}")
-            return None
+    def process_file_to_story(self, file_path, grade_level):
+        """Analyzes PDF and returns a structured JSON story."""
+        with open(file_path, "rb") as f:
+            file_bytes = f.read()
+            
+        prompt = (
+            f"Analyze this PDF and create a {grade_level} story with 5-6 scenes. "
+            "For each scene, provide 'text' and a detailed 'image_description'. "
+            "Also include a 3-question quiz. Return strictly as JSON."
+        )
+        
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=[
+                types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
+                prompt
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json")
+        )
+        # Pylance was complaining here because 'json' wasn't imported
+        return json.loads(response.text)
 
     def generate_image(self, prompt):
+        """Generates an illustration using Imagen 3."""
         try:
-            # The prompt already contains age-appropriate visual cues from the AI's description
             response = self.client.models.generate_content(
-                model=self.image_model,
-                contents=prompt, # AI now generates the full description
-                config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE"],
-                    image_config=types.ImageConfig(aspect_ratio="1:1")
-                )
+                model="imagen-3.0-generate-001",
+                contents=f"Educational cartoon style, child friendly: {prompt}",
+                config=types.GenerateContentConfig(response_modalities=["IMAGE"])
             )
-            for part in response.candidates[0].content.parts:
-                if part.inline_data:
-                    return part.inline_data.data
-            return None
+            return response.candidates[0].content.parts[0].inline_data.data
         except Exception as e:
-            print(f"IMAGE ERROR: {e}")
+            print(f"Image Gen Error: {e}")
             return None
 
     def generate_voiceover(self, text):
+        """Generates audio and ensures it is returned as clean binary bytes."""
         try:
             response = self.client.models.generate_content(
                 model=self.audio_model,
                 contents=text,
-                config=types.GenerateContentConfig(
-                    response_modalities=["AUDIO"]
-                )
+                config=types.GenerateContentConfig(response_modalities=["AUDIO"])
             )
             
-            # Verify we have a valid response with parts
             if response.candidates and response.candidates[0].content.parts:
-                for part in response.candidates[0].content.parts:
-                    # This is the critical check for actual audio data
-                    if part.inline_data:
-                        return part.inline_data.data
+                audio_part = response.candidates[0].content.parts[0].inline_data.data
+                
+                # If the AI sends a string, it is Base64 and MUST be decoded
+                if isinstance(audio_part, str):
+                    return base64.b64decode(audio_part)
+                
+                return audio_part
             return None
         except Exception as e:
-            print(f"CRITICAL AUDIO GEN ERROR: {e}")
+            print(f"Audio Gen Error: {e}")
             return None

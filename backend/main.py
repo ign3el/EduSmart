@@ -1,8 +1,6 @@
 import os
 import uuid
-import json
 import asyncio
-import base64
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -15,7 +13,7 @@ gemini = GeminiService()
 os.makedirs("outputs", exist_ok=True)
 os.makedirs("uploads", exist_ok=True)
 
-# 2. INITIALIZE GLOBAL JOBS STORE
+# 2. GLOBAL JOBS STORE
 jobs = {}
 
 # 3. MIDDLEWARE & STATIC FILES
@@ -26,65 +24,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Standard static file mounting for FastAPI
+# Serves the generated MP3 and PNG files
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 
-# 4. PARALLEL MEDIA GENERATION HELPER
+# 4. PARALLEL TASK HELPER
 async def generate_scene_media(job_id: str, i: int, scene: dict):
-    """
-    Generates image and audio for a scene simultaneously.
-    Uses asyncio.to_thread to keep the Gemini SDK from blocking.
-    """
+    """Generates image and audio simultaneously for a single scene."""
     try:
-        # Run AI requests for Image and Audio at the same time
-        image_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
-        audio_task = asyncio.to_thread(gemini.generate_voiceover, scene["text"])
+        # We use asyncio.to_thread because the Gemini SDK is synchronous
+        img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
+        aud_task = asyncio.to_thread(gemini.generate_voiceover, scene["text"])
         
-        image_bytes, audio_data = await asyncio.gather(image_task, audio_task)
+        # Start both AI requests at once
+        img_bytes, aud_bytes = await asyncio.gather(img_task, aud_task)
 
-        # Save Image if generated
-        if image_bytes:
+        # Save Image
+        if img_bytes:
             img_name = f"{job_id}_scene_{i}.png"
             with open(os.path.join("outputs", img_name), "wb") as f:
-                f.write(image_bytes)
+                f.write(img_bytes)
             scene["image_url"] = f"/api/outputs/{img_name}"
 
-        # Save Audio with Binary Corruption Fix
-        if audio_data:
+        # Save Audio (Binary Safe)
+        if aud_bytes:
             aud_name = f"{job_id}_scene_{i}.mp3"
-            full_path = os.path.join("outputs", aud_name)
-            
-            with open(full_path, "wb") as f:
-                # If the AI response is a string, it's Base64 and needs decoding.
-                # If it's already bytes, write it directly.
-                if isinstance(audio_data, str):
-                    f.write(base64.b64decode(audio_data))
-                else:
-                    f.write(audio_data)
-            
+            with open(os.path.join("outputs", aud_name), "wb") as f:
+                f.write(aud_bytes)
             scene["audio_url"] = f"/api/outputs/{aud_name}"
-            print(f"DEBUG: Scene {i} audio saved: {os.path.getsize(full_path)} bytes")
+            print(f"SUCCESS: Saved binary audio for Scene {i}")
             
     except Exception as e:
-        print(f"ERROR in media generation for scene {i}: {e}")
+        print(f"Media Generation Error (Scene {i}): {e}")
 
 # 5. BACKGROUND WORKFLOW
 async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
     try:
-        # Step 1: Analyze PDF & Create Story (Synchronous to get text first)
         jobs[job_id]["progress"] = 10
+        # Step 1: Text Generation (Must happen first)
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
         if not story_data or "scenes" not in story_data:
-            raise Exception("AI failed to create story scenes.")
+            raise Exception("Invalid AI response format.")
 
         scenes = story_data["scenes"]
         jobs[job_id]["progress"] = 30
 
-        # Step 2: Generate all Media in Parallel (Speed Improvement)
-        # This starts tasks for ALL scenes at once
-        media_tasks = [generate_scene_media(job_id, i, scene) for i, scene in enumerate(scenes)]
-        await asyncio.gather(*media_tasks)
+        # Step 2: Parallel Media Generation for all scenes
+        tasks = [generate_scene_media(job_id, i, scene) for i, scene in enumerate(scenes)]
+        await asyncio.gather(*tasks)
 
         # Finalize
         jobs[job_id]["progress"] = 100
@@ -92,19 +79,11 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         jobs[job_id]["result"] = story_data
 
     except Exception as e:
-        print(f"WORKFLOW ERROR: {e}")
+        print(f"Workflow Failure: {e}")
         jobs[job_id]["status"] = "failed"
         jobs[job_id]["error"] = str(e)
 
 # 6. API ROUTES
-@app.get("/api/avatars")
-async def get_avatars():
-    return [
-        {"id": "wizard", "name": "Professor Paws", "description": "Expert teacher guide."},
-        {"id": "robot", "name": "Robo-Buddy", "description": "Explains with cool sensors."},
-        {"id": "dinosaur", "name": "Dino-Explorer", "description": "Digs into history and nature."}
-    ]
-
 @app.post("/api/upload")
 async def upload_story(
     background_tasks: BackgroundTasks, 
@@ -127,3 +106,11 @@ async def get_status(job_id: str):
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     return jobs[job_id]
+
+@app.get("/api/avatars")
+async def get_avatars():
+    return [
+        {"id": "wizard", "name": "Professor Paws", "description": "Wise teacher."},
+        {"id": "robot", "name": "Robo-Buddy", "description": "Tech expert."},
+        {"id": "dinosaur", "name": "Dino-Explorer", "description": "Nature guide."}
+    ]
