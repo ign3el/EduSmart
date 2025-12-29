@@ -8,10 +8,11 @@ import pptx
 
 class GeminiService:
     def __init__(self):
-        self.client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-        # FIX: Use specific version -001 to avoid 404 errors 
-        self.text_model = "gemini-1.5-flash-001"
-        # FIX: Use standard Imagen 3 model 
+        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        # USE THIS EXACT STRING:
+        self.text_model = "gemini-1.5-flash" 
+        
+        # USE STANDARD IMAGEN:
         self.image_model = "imagen-3.0-generate-001"
 
     def process_file_to_story(self, file_path: str):
