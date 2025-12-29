@@ -4,6 +4,8 @@ import random
 import time
 import requests
 import urllib.parse
+import io
+import wave
 from google import genai
 from google.genai import types
 import docx
@@ -91,17 +93,17 @@ class GeminiService:
             clean_prompt = urllib.parse.quote(prompt)
             seed_param = f"&seed={seed}" if seed else ""
             
-            # ATTEMPT 1: High Quality (120s Timeout)
+            # ATTEMPT 1: High Quality
             url_hq = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=576&model=flux&nologo=true&enhance=true{seed_param}"
             try:
                 print(f"Generating HQ Image...")
-                response = requests.get(url_hq, timeout=120) # Given 2 minutes
+                response = requests.get(url_hq, timeout=120) 
                 if response.status_code == 200:
                     return response.content
             except Exception as e:
                 print(f"HQ Timeout: {e}")
 
-            # ATTEMPT 2: Safe Mode (Turbo)
+            # ATTEMPT 2: Safe Mode
             print("Retrying with Safe Mode...")
             url_safe = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=576&model=turbo{seed_param}"
             try:
@@ -112,7 +114,6 @@ class GeminiService:
                 pass
 
             # ATTEMPT 3: FAIL-SAFE (Static Backup)
-            # If all else fails, return a generic 'Storybook' image so the app doesn't crash.
             print("All AI Failed. Using Backup Image.")
             backup_url = "https://images.unsplash.com/photo-1519337265831-281ec6cc8514?q=80&w=1024&auto=format&fit=crop"
             return requests.get(backup_url, timeout=10).content
@@ -122,4 +123,16 @@ class GeminiService:
             return None
 
     def generate_voiceover(self, text: str):
-        return None
+        """Generates a 1-second silent WAV file so the Frontend doesn't crash."""
+        try:
+            buffer = io.BytesIO()
+            with wave.open(buffer, 'wb') as wav:
+                wav.setnchannels(1) # Mono
+                wav.setsampwidth(2) # 16-bit
+                wav.setframerate(44100)
+                wav.writeframes(b'\x00' * 44100) # 1 second of silence
+            
+            return buffer.getvalue()
+        except Exception as e:
+            print(f"Silent Audio Error: {e}")
+            return None
