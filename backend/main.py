@@ -51,4 +51,9 @@ async def upload_story(file: UploadFile = File(...)):
             f.write(audio_bytes)
         scene["audio_url"] = f"/outputs/{aud_name}"
 
-    return story_data
+    result = {
+        "story_id": session_id,
+        "title": story_data.get("title", "New Story"),
+        "scenes": story_data.get("scenes", [])
+    }
+    return result

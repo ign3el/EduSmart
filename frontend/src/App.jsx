@@ -16,7 +16,7 @@ function App() {
   const handleFileUpload = (file) => {
     setUploadedFile(file)
     setStep('avatar')
-    setError(null) // Clear previous errors
+    setError(null) 
   }
 
   const handleAvatarSelect = async (avatar) => {
@@ -34,38 +34,41 @@ function App() {
       formData.append('grade_level', gradeLevel)
       formData.append('avatar_type', avatar.id)
 
-      const uploadResponse = await fetch('/api/upload', {
+      // ACTION: We only need ONE call because the backend handles 
+      // extraction, image gen, and audio gen in the upload route.
+      const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
 
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.statusText}`)
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Server error: ${response.statusText}`)
       }
-      const uploadData = await uploadResponse.json()
 
-      const storyResponse = await fetch(`/api/generate-story/${uploadData.story_id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_text: uploadData.extracted_text || '',
-          grade_level: gradeLevel,
-          avatar_type: avatar.id,
-          style: 'anime'
-        }),
-      })
+      const data = await response.json()
 
-      if (!storyResponse.ok) {
-        throw new Error(`Story generation failed: ${storyResponse.statusText}`)
+      // FIX: Ensure the backend returned 'scenes'
+      if (!data || !data.scenes || data.scenes.length === 0) {
+        throw new Error("The AI didn't generate any scenes. Please try a different file.")
       }
-      const story = await storyResponse.json()
 
-      setStoryData(story)
+      // Add the VPS domain to URLs if the backend only sends relative paths
+      const formattedStory = {
+        ...data,
+        scenes: data.scenes.map(scene => ({
+          ...scene,
+          image_url: scene.image_url ? `https://edusmart.ign3el.com${scene.image_url}` : null,
+          audio_url: scene.audio_url ? `https://edusmart.ign3el.com${scene.audio_url}` : null
+        }))
+      }
+
+      setStoryData(formattedStory)
       setStep('playing')
     } catch (err) {
       console.error('Error generating story:', err)
-      setError('Failed to generate the story. Please check the file or try again later.')
-      setStep('upload') // Go back to the upload step on error
+      setError(err.message || 'Failed to generate the story. Please try again.')
+      setStep('upload') 
     }
   }
 
@@ -91,10 +94,11 @@ function App() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <p>{error}</p>
-            <button onClick={() => setError(null)}>Dismiss</button>
+            <p>⚠️ {error}</p>
+            <button onClick={() => setError(null)}>Try Again</button>
           </motion.div>
         )}
+        
         <AnimatePresence mode="wait">
           {step === 'upload' && (
             <motion.div
@@ -134,6 +138,7 @@ function App() {
               <div className="loading-spinner"></div>
               <h2>Creating Your Story...</h2>
               <p>Our AI is crafting an amazing learning experience!</p>
+              <p className="small-text">This usually takes about 30-60 seconds.</p>
             </motion.div>
           )}
 
