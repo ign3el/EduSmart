@@ -20,13 +20,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 1. STATIC FILES MOUNT
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 
+# 2. AVATARS ENDPOINT (Static route first to prevent 404)
+@app.get("/api/avatars")
+async def get_avatars():
+    return [
+        {"id": "wizard", "name": "Professor Paws", "description": "Wise guide."},
+        {"id": "robot", "name": "Robo-Buddy", "description": "Tech expert."},
+        {"id": "dinosaur", "name": "Dino-Explorer", "description": "Nature guide."}
+    ]
+
+# 3. BACKGROUND TASKS
 async def generate_scene_media(job_id: str, i: int, scene: dict, semaphore: asyncio.Semaphore):
-    """Parallel media generation throttled by a semaphore for quota limits."""
     async with semaphore:
         try:
-            # Generate Image (Imagen 4)
             img_bytes = await asyncio.to_thread(gemini.generate_image, scene["image_description"])
             if img_bytes:
                 img_name = f"{job_id}_scene_{i}.png"
@@ -34,10 +43,8 @@ async def generate_scene_media(job_id: str, i: int, scene: dict, semaphore: asyn
                     f.write(img_bytes)
                 scene["image_url"] = f"/api/outputs/{img_name}"
 
-            # Wait to respect the 2 RPM audio quota
-            await asyncio.sleep(30)
+            await asyncio.sleep(30) # Respect the 2 RPM quota
 
-            # Generate Audio (Gemini TTS)
             aud_bytes = await asyncio.to_thread(gemini.generate_voiceover, scene["text"])
             if aud_bytes:
                 aud_name = f"{job_id}_scene_{i}.mp3"
@@ -45,7 +52,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict, semaphore: asyn
                     f.write(aud_bytes)
                 scene["audio_url"] = f"/api/outputs/{aud_name}"
         except Exception as e:
-            print(f"Media Task Error Scene {i}: {e}")
+            print(f"Media Error Scene {i}: {e}")
 
 async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
     try:
@@ -53,12 +60,10 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
         if not story_data:
-            raise Exception("AI Response failed. Check logs for Pydantic/Schema errors.")
+            raise Exception("AI Response failed.")
 
         scenes = story_data["scenes"]
         jobs[job_id]["progress"] = 30
-
-        # One-by-one processing to avoid 429 quota errors
         semaphore = asyncio.Semaphore(1)
         tasks = [generate_scene_media(job_id, i, scene, semaphore) for i, scene in enumerate(scenes)]
         await asyncio.gather(*tasks)
@@ -71,6 +76,7 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         jobs[job_id]["status"] = "failed"
         jobs[job_id]["error"] = str(e)
 
+# 4. REMAINING API ROUTES
 @app.post("/api/upload")
 async def upload_story(
     background_tasks: BackgroundTasks, 
