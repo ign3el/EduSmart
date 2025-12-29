@@ -9,8 +9,8 @@ import pptx
 class GeminiService:
     def __init__(self):
         self.client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-        # FIX: Use 1.5-flash because 2.0-flash has 0 quota in some regions 
-        self.text_model = "gemini-1.5-flash"
+        # FIX: Use specific version -001 to avoid 404 errors 
+        self.text_model = "gemini-1.5-flash-001"
         # FIX: Use standard Imagen 3 model 
         self.image_model = "imagen-3.0-generate-001"
 
