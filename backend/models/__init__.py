@@ -11,6 +11,13 @@ Models:
     - AvatarType: Enum of available character types
 """
 
-from .story import Scene, Screenplay, StoryRequest, StoryResponse
+from .story import (
+    StorySchema, 
+    Scene, 
+    QuizItem, 
+    StoryRequest, 
+    StoryResponse, 
+    Screenplay
+)
 
-__all__ = ['Scene', 'Screenplay', 'StoryRequest', 'StoryResponse']
+__all__ = ['StorySchema', 'Scene', 'QuizItem', 'StoryRequest', 'StoryResponse', 'Screenplay']
