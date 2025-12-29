@@ -3,12 +3,12 @@ EduSmart Backend - Main FastAPI Application
 Handles file uploads, AI orchestration, and content generation
 Supports both API-based and local open-source AI models
 """
-
+import uvicorn
+import logging
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import uvicorn
-import os
+
 from pathlib import Path
 
 from services.document_processor import DocumentProcessor
@@ -19,6 +19,10 @@ from services.scene_assembler import SceneAssembler
 from services.cache_manager import CacheManager
 from models.story import StoryRequest, StoryResponse
 from config import Config
+
+# Configure logging
+logging.basicConfig(level=Config.LOG_LEVEL)
+logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -42,6 +46,7 @@ script_generator = ScriptGenerator()
 image_generator = ImageGenerator()
 voice_generator = VoiceGenerator()
 scene_assembler = SceneAssembler()
+cache_manager = CacheManager()
 
 # Create necessary directories
 UPLOAD_DIR = Path(Config.UPLOAD_DIR)
@@ -64,8 +69,7 @@ async def root():
 @app.get("/api/config")
 async def get_config():
     """Get current configuration and service status"""
-    cache = CacheManager()
-    cache_health = await cache.health_check()
+    cache_health = await cache_manager.health_check()
     
     return {
         "config": Config.get_info(),
@@ -122,8 +126,11 @@ async def upload_document(
             "message": "Document uploaded successfully. Story generation started."
         }
     
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error during file upload: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal server error occurred during file upload.")
 
 
 @app.post("/api/generate-story/{story_id}")
@@ -177,9 +184,12 @@ async def generate_story(
             "total_scenes": len(screenplay.scenes),
             "message": "Story generated successfully"
         }
-    
+
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error generating story {story_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal server error occurred during story generation.")
 
 
 @app.get("/api/story/{story_id}")

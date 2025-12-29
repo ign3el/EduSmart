@@ -1,286 +1,153 @@
 """
 Script Generator Service
-Uses LangChain and LLM to convert educational content into screenplay format
-Supports both OpenAI API and local Ollama
+Uses LangChain and an LLM to convert educational content into a structured screenplay.
+Supports both OpenAI API and local Ollama.
 """
-
-import os
+import logging
 import httpx
-from typing import List, Dict
-from dataclasses import dataclass
+from typing import List
 
-try:
-    from langchain.chat_models import ChatOpenAI
-    from langchain.llms import Ollama
-    from langchain.prompts import ChatPromptTemplate
-    from langchain.output_parsers import PydanticOutputParser
-except ImportError:
-    ChatOpenAI = None
-    Ollama = None
-    ChatPromptTemplate = None
-    PydanticOutputParser = None
-
+from langchain.prompts import ChatPromptTemplate
+from langchain.output_parsers import PydanticOutputParser, OutputFixingParser
 from models.story import Screenplay, Scene
 from config import Config
 from services.cache_manager import CacheManager
 
+# Conditional imports for LangChain LLMs
+try:
+    from langchain_openai import ChatOpenAI
+except ImportError:
+    ChatOpenAI = None
+
+try:
+    from langchain_community.llms import Ollama
+except ImportError:
+    Ollama = None
+
+
+logger = logging.getLogger(__name__)
+
 
 class ScriptGenerator:
-    """Generates educational screenplay from document text"""
-    
+    """Generates an educational screenplay from document text."""
+
     def __init__(self):
         self.use_local_llm = Config.USE_LOCAL_LLM
-        self.openai_key = Config.OPENAI_API_KEY
-        self.ollama_url = Config.OLLAMA_BASE_URL
-        self.ollama_model = Config.OLLAMA_MODEL
-        
         self.cache = CacheManager()
-        
-        # Grade-appropriate language mapping
+
         self.grade_prompts = {
-            1: "Explain this like talking to a 6-year-old kindergartener. Use very simple words.",
-            2: "Explain this for a first grader using simple sentences and basic vocabulary.",
-            3: "Explain this for a second grader with clear, easy-to-understand language.",
-            4: "Explain this for a third grader with straightforward concepts.",
-            5: "Explain this for a fourth grader with moderate complexity.",
-            6: "Explain this for a fifth grader introducing more detailed concepts.",
-            7: "Explain this for a sixth grader with appropriate academic language.",
+            1: "like they are a 6-year-old kindergartener. Use very simple words and short sentences.",
+            2: "like they are a first grader. Use simple sentences and basic vocabulary.",
+            3: "for a second grader, with clear, easy-to-understand language.",
+            4: "for a third grader, with straightforward concepts and slightly more detail.",
+            5: "for a fourth grader, with moderate complexity and vocabulary.",
+            6: "for a fifth grader, introducing more detailed concepts and terminology.",
+            7: "for a sixth grader, using appropriate academic language and more complex sentences.",
         }
-    
-    async def generate_screenplay(
-        self,
-        text: str,
-        grade_level: int,
-        avatar_type: str
-    ) -> Screenplay:
-        """
-        Generate interactive screenplay from educational content
+
+    async def generate_screenplay(self, text: str, grade_level: int, avatar_type: str) -> Screenplay:
+        """Generates an interactive screenplay from educational content."""
+        cache_key_params = {"text": text, "grade_level": grade_level, "avatar_type": avatar_type}
         
-        Args:
-            text: Extracted document text
-            grade_level: Target grade (1-7)
-            avatar_type: Character to use as narrator
+        cached_screenplay_dict = await self.cache.get_json("screenplay", **cache_key_params)
+        if cached_screenplay_dict:
+            logger.info("Screenplay cache hit.")
+            return Screenplay(**cached_screenplay_dict)
         
-        Returns:
-            Screenplay object with scenes
-        """
-        # Check cache first
-        cached_screenplay = await self.cache.get_json(
-            "screenplay",
-            text=text,
-            grade_level=grade_level,
-            avatar_type=avatar_type
-        )
-        if cached_screenplay:
-            return Screenplay(**cached_screenplay)
+        logger.info("Screenplay cache miss. Generating new screenplay.")
         
-        # Get grade-appropriate language instruction
-        grade_instruction = self.grade_prompts.get(
-            grade_level,
-            "Explain this for an elementary school student."
-        )
+        parser = PydanticOutputParser(pydantic_object=Screenplay)
+        prompt_template = self._create_screenplay_prompt_template(parser, grade_level, avatar_type)
         
-        # Create the prompt
-        prompt = self._create_screenplay_prompt(
-            text=text,
-            grade_instruction=grade_instruction,
-            avatar_type=avatar_type
-        )
-        
+        llm = self._get_llm(parser)
+        if not llm:
+             logger.warning("No LLM is configured. Returning mock screenplay.")
+             return self._generate_mock_screenplay(text, grade_level, avatar_type)
+
+        chain = prompt_template | llm | parser
+
         try:
-            if self.use_local_llm:
-                # Use local Ollama
-                screenplay = await self._generate_with_ollama(prompt)
-            elif self.openai_key:
-                # Use OpenAI API
-                screenplay = await self._generate_with_openai(prompt)
-            else:
-                # Fallback to mock
-                screenplay = self._generate_mock_screenplay(text, grade_level, avatar_type)
+            screenplay = await chain.ainvoke({"educational_content": text})
+            if not screenplay or not screenplay.scenes:
+                 raise ValueError("LLM returned an empty or invalid screenplay.")
             
-            # Cache the result
-            await self.cache.set_json(
-                "screenplay",
-                {"scenes": [{"scene_number": s.scene_number, 
-                            "visual_description": s.visual_description,
-                            "narration": s.narration,
-                            "learning_point": s.learning_point} for s in screenplay.scenes]},
-                text=text,
-                grade_level=grade_level,
-                avatar_type=avatar_type
-            )
-            
+            await self.cache.set_json("screenplay", screenplay.model_dump(), **cache_key_params)
             return screenplay
-        
         except Exception as e:
-            print(f"Error generating screenplay: {e}")
+            logger.error(f"Error generating screenplay: {e}", exc_info=True)
             return self._generate_mock_screenplay(text, grade_level, avatar_type)
     
-    def _create_screenplay_prompt(
-        self,
-        text: str,
-        grade_instruction: str,
-        avatar_type: str
-    ) -> str:
-        """Create the LLM prompt for screenplay generation"""
-        
-        return f"""You are an expert educational content creator and scriptwriter for children.
-
-Your task is to transform the following educational content into an engaging, interactive screenplay 
-for an animated storybook experience.
-
-EDUCATIONAL CONTENT:
-{text}
-
-TARGET AUDIENCE:
-{grade_instruction}
-
-CHARACTER/NARRATOR:
-Use a {avatar_type} as the main character who will guide the learning experience.
-
-INSTRUCTIONS:
-1. Break the content into 5-8 distinct scenes
-2. Each scene should have:
-   - A clear visual description (what the viewer sees)
-   - Dialogue/narration from the {avatar_type} character
-   - One key learning point
-3. Make it conversational and engaging
-4. Use storytelling techniques (suspense, questions, surprises)
-5. Include interactive moments where the {avatar_type} asks questions or encourages thinking
-6. Keep language appropriate for the target age group
-
-FORMAT your response as follows:
-
-SCENE 1:
-VISUAL: [Describe what appears on screen]
-NARRATION: [What the character says]
-LEARNING POINT: [Key concept]
-
-SCENE 2:
-...
-
-Generate the complete screenplay now:"""
-    
-    async def _generate_with_ollama(self, prompt: str) -> Screenplay:
-        """Generate screenplay using local Ollama"""
-        try:
-            # Test Ollama connection
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                # Make API call to Ollama
-                response = await client.post(
-                    f"{self.ollama_url}/api/generate",
-                    json={
-                        "model": self.ollama_model,
-                        "prompt": prompt,
-                        "stream": False,
-                        "temperature": 0.7
-                    }
-                )
-                response.raise_for_status()
-                data = response.json()
-                llm_response = data.get("response", "")
-                
-                if llm_response:
-                    return self._parse_screenplay(llm_response)
-                else:
-                    raise Exception("Empty response from Ollama")
-        
-        except Exception as e:
-            print(f"Ollama error: {e}")
-            raise
-    
-    async def _generate_with_openai(self, prompt: str) -> Screenplay:
-        """Generate screenplay using OpenAI API"""
-        try:
-            if ChatOpenAI is not None:
-                llm = ChatOpenAI(
-                    model="gpt-4",
-                    temperature=0.7,
-                    openai_api_key=self.openai_key
-                )
-                response = await llm.apredict(prompt)
-                return self._parse_screenplay(response)
-            else:
-                raise ImportError("LangChain not installed")
-        
-        except Exception as e:
-            print(f"OpenAI error: {e}")
-            raise
-    
-    def _parse_screenplay(self, llm_response: str) -> Screenplay:
-        """Parse LLM response into Screenplay object"""
-        scenes = []
-        current_scene = {}
-        
-        lines = llm_response.split('\n')
-        
-        for line in lines:
-            line = line.strip()
+    def _get_llm(self, parser: PydanticOutputParser):
+        """Initializes and returns the appropriate LLM based on config."""
+        if self.use_local_llm:
+            if Ollama is None:
+                logger.error("Ollama is selected but `langchain_community` is not installed.")
+                return None
             
-            if line.startswith('SCENE'):
-                if current_scene:
-                    scenes.append(Scene(**current_scene))
-                current_scene = {
-                    'scene_number': len(scenes) + 1,
-                    'visual_description': '',
-                    'narration': '',
-                    'learning_point': ''
-                }
-            elif line.startswith('VISUAL:'):
-                current_scene['visual_description'] = line.replace('VISUAL:', '').strip()
-            elif line.startswith('NARRATION:'):
-                current_scene['narration'] = line.replace('NARRATION:', '').strip()
-            elif line.startswith('LEARNING POINT:'):
-                current_scene['learning_point'] = line.replace('LEARNING POINT:', '').strip()
-        
-        # Add the last scene
-        if current_scene and current_scene.get('narration'):
-            scenes.append(Scene(**current_scene))
-        
-        return Screenplay(scenes=scenes)
-    
-    def _generate_mock_screenplay(
-        self,
-        text: str,
-        grade_level: int,
-        avatar_type: str
-    ) -> Screenplay:
-        """Generate a mock screenplay for testing purposes"""
-        
-        # Extract first 200 characters as topic
-        topic = text[:200] if len(text) > 200 else text
-        
-        scenes = [
-            Scene(
-                scene_number=1,
-                visual_description=f"A friendly {avatar_type} appears with a welcoming smile",
-                narration=f"Hello! I'm your {avatar_type} friend, and today we're going to learn something amazing!",
-                learning_point="Introduction to the topic"
-            ),
-            Scene(
-                scene_number=2,
-                visual_description=f"The {avatar_type} points to an illustrated diagram",
-                narration=f"Let me show you something interesting about {topic[:50]}...",
-                learning_point="Main concept introduction"
-            ),
-            Scene(
-                scene_number=3,
-                visual_description=f"The {avatar_type} demonstrates with animated examples",
-                narration="Watch how this works! It's easier than you think.",
-                learning_point="Practical demonstration"
-            ),
-            Scene(
-                scene_number=4,
-                visual_description=f"The {avatar_type} poses a question with a curious expression",
-                narration="Now, can you guess what happens next? Think about it!",
-                learning_point="Interactive engagement"
-            ),
-            Scene(
-                scene_number=5,
-                visual_description=f"The {avatar_type} celebrates with a happy animation",
-                narration="You did it! You learned something new today. Great job!",
-                learning_point="Conclusion and encouragement"
+            # Ollama with JSON mode support is preferred
+            return Ollama(
+                base_url=Config.OLLAMA_BASE_URL,
+                model=Config.OLLAMA_MODEL,
+                temperature=0.7,
+                # For Llama 3 and other models that support it
+                format="json", 
             )
-        ]
+
+        if Config.OPENAI_API_KEY:
+            if ChatOpenAI is None:
+                logger.error("OpenAI is selected but `langchain_openai` is not installed.")
+                return None
+            # GPT-4 and newer models are good at following JSON instructions
+            return ChatOpenAI(
+                model_name=Config.OPENAI_MODEL,
+                temperature=0.7,
+                openai_api_key=Config.OPENAI_API_KEY,
+                model_kwargs={"response_format": {"type": "json_object"}}
+            )
         
+        return None
+
+
+    def _create_screenplay_prompt_template(self, parser: PydanticOutputParser, grade_level: int, avatar_type: str) -> ChatPromptTemplate:
+        """Creates the LangChain prompt template for screenplay generation."""
+        grade_instruction = self.grade_prompts.get(grade_level, "for an elementary school student.")
+        
+        prompt = f"""
+You are an expert educational content creator for children's animated storybooks. Your task is to transform educational text into an engaging screenplay.
+
+**Character/Narrator:** The story will be told by a friendly {avatar_type}.
+**Target Audience:** Explain the content {grade_instruction}.
+
+**Instructions:**
+1.  Read the educational content provided.
+2.  Break it down into exactly 5 engaging scenes.
+3.  For each scene, provide:
+    - `scene_number`: A unique integer for the scene order.
+    - `visual_description`: A brief, vivid description of what is shown on screen.
+    - `narration`: The {avatar_type}'s dialogue, which should be conversational and educational.
+    - `learning_point`: A single, concise key takeaway for the scene.
+4.  Make the story interactive. Have the {avatar_type} ask questions to engage the viewer.
+
+**Educational Content:**
+{{educational_content}}
+
+**Output Format:**
+{{format_instructions}}
+"""
+        return ChatPromptTemplate.from_messages([
+            ("system", prompt),
+        ]).partial(format_instructions=parser.get_format_instructions())
+
+
+    def _generate_mock_screenplay(self, text: str, grade_level: int, avatar_type: str) -> Screenplay:
+        """Generates a mock screenplay for testing or fallback."""
+        logger.info("Generating mock screenplay.")
+        topic = text[:50] + "..." if len(text) > 50 else text
+        scenes = [
+            Scene(scene_number=1, visual_description=f"A friendly {avatar_type} waves hello.", narration=f"Hi there! I'm a {avatar_type} and we're going to learn about {topic}", learning_point="Introduction"),
+            Scene(scene_number=2, visual_description="The scene shows a colorful diagram.", narration="First, let's look at the main idea.", learning_point="Main Concept"),
+            Scene(scene_number=3, visual_description="An animation plays, showing how it works.", narration="Wow, look at that! Isn't that cool?", learning_point="Demonstration"),
+            Scene(scene_number=4, visual_description=f"The {avatar_type} asks a question.", narration="What do you think happens next?", learning_point="Engagement Question"),
+            Scene(scene_number=5, visual_description=f"The {avatar_type} gives a thumbs-up.", narration="You're doing great! We learned so much today.", learning_point="Conclusion")
+        ]
         return Screenplay(scenes=scenes)

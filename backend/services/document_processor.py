@@ -1,9 +1,9 @@
 """
 Document Processor Service
-Handles PDF and DOCX file parsing and text extraction
+Handles PDF and DOCX file parsing and text extraction using non-blocking I/O.
 """
-
-import io
+import asyncio
+import logging
 from pathlib import Path
 from typing import Union
 
@@ -17,88 +17,80 @@ try:
 except ImportError:
     docx = None
 
+logger = logging.getLogger(__name__)
+
+
+class DocumentProcessorError(Exception):
+    """Custom exception for document processing errors."""
+    pass
+
 
 class DocumentProcessor:
-    """Extracts text content from PDF and DOCX files"""
-    
+    """Extracts text content from PDF and DOCX files asynchronously."""
+
     def __init__(self):
         self.supported_formats = ['.pdf', '.docx', '.doc']
-    
+        if PdfReader is None:
+            logger.warning("PyPDF2 is not installed. PDF processing will not be available.")
+        if docx is None:
+            logger.warning("python-docx is not installed. DOCX processing will not be available.")
+
     async def process(self, file_path: Union[str, Path]) -> str:
         """
-        Extract text from document file
-        
+        Extracts text from a document file asynchronously.
+
         Args:
-            file_path: Path to PDF or DOCX file
-        
+            file_path: Path to the PDF or DOCX file.
+
         Returns:
-            Extracted text content
-        
+            The extracted text content.
+
         Raises:
-            ValueError: If file format is not supported
-            ImportError: If required library is not installed
+            DocumentProcessorError: If the file format is not supported or an error occurs.
+            ImportError: If a required library is not installed for the given file type.
         """
         file_path = Path(file_path)
-        
-        if file_path.suffix.lower() == '.pdf':
+        file_suffix = file_path.suffix.lower()
+
+        if file_suffix == '.pdf':
+            if PdfReader is None:
+                raise ImportError("PyPDF2 is not installed. Please run: pip install PyPDF2")
             return await self._extract_from_pdf(file_path)
-        elif file_path.suffix.lower() in ['.docx', '.doc']:
+        elif file_suffix in ['.docx', '.doc']:
+            if docx is None:
+                raise ImportError("python-docx is not installed. Please run: pip install python-docx")
             return await self._extract_from_docx(file_path)
         else:
-            raise ValueError(f"Unsupported file format: {file_path.suffix}")
-    
-    async def _extract_from_pdf(self, file_path: Path) -> str:
-        """Extract text from PDF file"""
-        if PdfReader is None:
-            raise ImportError("PyPDF2 is not installed. Install with: pip install PyPDF2")
-        
+            raise DocumentProcessorError(f"Unsupported file format: {file_suffix}")
+
+    def _read_pdf_sync(self, file_path: Path) -> str:
+        """Synchronous function to read and extract text from a PDF."""
         try:
             text_content = []
-            reader = PdfReader(str(file_path))
-            
+            reader = PdfReader(file_path)
             for page in reader.pages:
                 text = page.extract_text()
                 if text:
                     text_content.append(text)
-            
             return "\n\n".join(text_content)
-        
         except Exception as e:
-            raise Exception(f"Error reading PDF: {str(e)}")
-    
-    async def _extract_from_docx(self, file_path: Path) -> str:
-        """Extract text from DOCX file"""
-        if docx is None:
-            raise ImportError("python-docx is not installed. Install with: pip install python-docx")
-        
+            logger.error(f"Error reading PDF file at {file_path}: {e}", exc_info=True)
+            raise DocumentProcessorError(f"Failed to read PDF file: {file_path.name}") from e
+
+    async def _extract_from_pdf(self, file_path: Path) -> str:
+        """Asynchronously extracts text from a PDF by running sync code in a thread."""
+        return await asyncio.to_thread(self._read_pdf_sync, file_path)
+
+    def _read_docx_sync(self, file_path: Path) -> str:
+        """Synchronous function to read and extract text from a DOCX."""
         try:
-            doc = docx.Document(str(file_path))
-            text_content = []
-            
-            for paragraph in doc.paragraphs:
-                if paragraph.text.strip():
-                    text_content.append(paragraph.text)
-            
+            doc = docx.Document(file_path)
+            text_content = [p.text for p in doc.paragraphs if p.text.strip()]
             return "\n\n".join(text_content)
-        
         except Exception as e:
-            raise Exception(f"Error reading DOCX: {str(e)}")
-    
-    def clean_text(self, text: str) -> str:
-        """
-        Clean and normalize extracted text
-        
-        Args:
-            text: Raw extracted text
-        
-        Returns:
-            Cleaned text
-        """
-        # Remove excessive whitespace
-        lines = [line.strip() for line in text.split('\n')]
-        lines = [line for line in lines if line]
-        
-        # Join with proper spacing
-        cleaned = '\n\n'.join(lines)
-        
-        return cleaned
+            logger.error(f"Error reading DOCX file at {file_path}: {e}", exc_info=True)
+            raise DocumentProcessorError(f"Failed to read DOCX file: {file_path.name}") from e
+
+    async def _extract_from_docx(self, file_path: Path) -> str:
+        """Asynchronously extracts text from a DOCX by running sync code in a thread."""
+        return await asyncio.to_thread(self._read_docx_sync, file_path)

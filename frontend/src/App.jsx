@@ -6,29 +6,29 @@ import StoryPlayer from './components/StoryPlayer'
 import './App.css'
 
 function App() {
-  const [step, setStep] = useState('upload') // upload, avatar, playing
+  const [step, setStep] = useState('upload') // upload, avatar, generating, playing
   const [uploadedFile, setUploadedFile] = useState(null)
   const [selectedAvatar, setSelectedAvatar] = useState(null)
   const [storyData, setStoryData] = useState(null)
   const [gradeLevel, setGradeLevel] = useState(3)
+  const [error, setError] = useState(null)
 
   const handleFileUpload = (file) => {
     setUploadedFile(file)
     setStep('avatar')
+    setError(null) // Clear previous errors
   }
 
   const handleAvatarSelect = async (avatar) => {
     setSelectedAvatar(avatar)
-    // Start story generation
     await generateStory(avatar)
   }
 
   const generateStory = async (avatar) => {
     try {
-      // Show loading state
       setStep('generating')
+      setError(null)
 
-      // 1. Upload document
       const formData = new FormData()
       formData.append('file', uploadedFile)
       formData.append('grade_level', gradeLevel)
@@ -38,9 +38,12 @@ function App() {
         method: 'POST',
         body: formData,
       })
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.statusText}`)
+      }
       const uploadData = await uploadResponse.json()
 
-      // 2. Generate story
       const storyResponse = await fetch(`/api/generate-story/${uploadData.story_id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,14 +54,18 @@ function App() {
           style: 'anime'
         }),
       })
+
+      if (!storyResponse.ok) {
+        throw new Error(`Story generation failed: ${storyResponse.statusText}`)
+      }
       const story = await storyResponse.json()
 
       setStoryData(story)
       setStep('playing')
-    } catch (error) {
-      console.error('Error generating story:', error)
-      alert('Failed to generate story. Please try again.')
-      setStep('upload')
+    } catch (err) {
+      console.error('Error generating story:', err)
+      setError('Failed to generate the story. Please check the file or try again later.')
+      setStep('upload') // Go back to the upload step on error
     }
   }
 
@@ -67,6 +74,7 @@ function App() {
     setUploadedFile(null)
     setSelectedAvatar(null)
     setStoryData(null)
+    setError(null)
   }
 
   return (
@@ -77,6 +85,16 @@ function App() {
       </header>
 
       <main className="app-main">
+        {error && (
+          <motion.div 
+            className="error-message"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <p>{error}</p>
+            <button onClick={() => setError(null)}>Dismiss</button>
+          </motion.div>
+        )}
         <AnimatePresence mode="wait">
           {step === 'upload' && (
             <motion.div

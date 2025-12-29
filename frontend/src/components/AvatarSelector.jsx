@@ -2,52 +2,53 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import './AvatarSelector.css'
 
-const avatars = [
-  {
-    id: 'wizard',
-    name: 'Wise Wizard',
-    description: 'A magical teacher who makes learning enchanting',
-    emoji: '🧙‍♂️',
-    color: '#8b5cf6'
-  },
-  {
-    id: 'robot',
-    name: 'Friendly Robot',
-    description: 'A helpful AI companion who loves technology',
-    emoji: '🤖',
-    color: '#3b82f6'
-  },
-  {
-    id: 'squirrel',
-    name: 'Smart Squirrel',
-    description: 'A clever forest friend full of wisdom',
-    emoji: '🐿️',
-    color: '#f59e0b'
-  },
-  {
-    id: 'astronaut',
-    name: 'Space Explorer',
-    description: 'A cosmic guide to the universe of knowledge',
-    emoji: '👨‍🚀',
-    color: '#06b6d4'
-  },
-  {
-    id: 'dinosaur',
-    name: 'Dino Teacher',
-    description: 'A prehistoric professor with ancient wisdom',
-    emoji: '🦕',
-    color: '#10b981'
-  }
-]
-
 function AvatarSelector({ onSelect }) {
+  const [avatars, setAvatars] = useState([])
   const [selected, setSelected] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchAvatars() {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/avatars')
+        if (!response.ok) {
+          throw new Error('Failed to fetch avatars')
+        }
+        const data = await response.json()
+        // Add frontend-specific properties like emoji and color
+        const enhancedAvatars = data.avatars.map(avatar => ({
+          ...avatar,
+          emoji: getEmojiForAvatar(avatar.id),
+          color: getColorForAvatar(avatar.id)
+        }));
+        setAvatars(enhancedAvatars)
+      } catch (error) {
+        console.error("Error fetching avatars:", error)
+        // Fallback to a default avatar in case of an error
+        setAvatars([{ id: 'wizard', name: 'Wise Wizard', description: 'A magical teacher', emoji: '🧙‍♂️', color: '#8b5cf6' }])
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAvatars()
+  }, [])
 
   const handleSelect = (avatar) => {
     setSelected(avatar.id)
     setTimeout(() => {
       onSelect(avatar)
     }, 500)
+  }
+
+  if (loading) {
+    return (
+      <div className="avatar-selector">
+        <h2>🎭 Choose Your Guide</h2>
+        <div className="loading-spinner-small"></div>
+        <p>Loading guides...</p>
+      </div>
+    )
   }
 
   return (
@@ -89,6 +90,29 @@ function AvatarSelector({ onSelect }) {
       </div>
     </div>
   )
+}
+
+// Helper functions to map backend data to frontend visuals
+const getEmojiForAvatar = (id) => {
+  const map = {
+    wizard: '🧙‍♂️',
+    robot: '🤖',
+    squirrel: '🐿️',
+    astronaut: '👨‍🚀',
+    dinosaur: '🦕',
+  }
+  return map[id] || '👤'
+}
+
+const getColorForAvatar = (id) => {
+  const map = {
+    wizard: '#8b5cf6',
+    robot: '#3b82f6',
+    squirrel: '#f59e0b',
+    astronaut: '#06b6d4',
+    dinosaur: '#10b981',
+  }
+  return map[id] || '#64748b'
 }
 
 export default AvatarSelector
