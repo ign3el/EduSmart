@@ -30,32 +30,40 @@ async def get_avatars():
 @app.post("/api/generate") 
 @app.post("/api/upload") 
 async def generate_story(file: UploadFile = File(...)): 
-    for i, scene in enumerate(story_data.get('scenes', [])):
-        # FIX: Use .get() with a fallback string to prevent KeyError
-        img_desc = scene.get('image_description', 'A beautiful storybook illustration')
-        char_details = scene.get('character_details', 'A friendly character')
-        
-        full_prompt = f"{img_desc}. {char_details}"
-        img_bytes = gemini.generate_image(full_prompt, seed=story_seed)
-    session_id = str(uuid.uuid4()) 
+    session_id = str(uuid.uuid4())
     file_ext = os.path.splitext(file.filename)[1].lower()
-
     file_path = f"uploads/{session_id}{file_ext}"
+    
     with open(file_path, "wb") as f:
         f.write(await file.read())
-    story_data = gemini.process_file_to_story(file_path)
-    if not story_data or "scenes" not in story_data:
-        story_data = {"title": "Error", "scenes": []}
-        return story_data
-    story_data["story_id"] = session_id 
-    story_seed = random.randint(0, 99999999) 
+
+    # Initialize as None to prevent UnboundLocalError
+    story_data = None
+    try:
+        story_data = gemini.process_file_to_story(file_path)
+    except Exception as e:
+        print(f"Service Error in process_file_to_story: {e}")
+
+    # Validate the story_data structure
+    if not story_data or not isinstance(story_data, dict):
+        raise HTTPException(status_code=500, detail="Story generation failed or returned an invalid format.")
+
+    # Ensure critical keys exist
+    if "scenes" not in story_data:
+        story_data["scenes"] = []
+
+    story_data["story_id"] = session_id
+    story_seed = random.randint(0, 99999999)
     story_data["visual_seed"] = story_seed
 
     final_scenes = []
-    for i, scene in enumerate(story_data['scenes']):
-        full_prompt = f"{scene['image_description']}. Character details: {scene.get('character_details', '')}"
-        img_bytes = gemini.generate_image(full_prompt, seed=story_seed)
-    
+    # Use .get() for safe access to scenes list
+    for i, scene in enumerate(story_data.get('scenes', [])):
+        # Use .get() with fallbacks for safe dictionary access
+        desc = scene.get('image_description', 'A beautiful and magical storybook illustration for children.')
+        
+        img_bytes = gemini.generate_image(desc, seed=story_seed)
+        
         if img_bytes:
             img_filename = f"outputs/{session_id}_scene_{i}.png"
             with open(img_filename, "wb") as f:
@@ -63,7 +71,8 @@ async def generate_story(file: UploadFile = File(...)):
             scene['image_url'] = f"/outputs/{session_id}_scene_{i}.png"
         else:
             scene['image_url'] = None
-        audio_bytes = gemini.generate_voiceover(scene['text'])
+
+        audio_bytes = gemini.generate_voiceover(scene.get('text', ''))
         if audio_bytes:
             audio_filename = f"outputs/{session_id}_scene_{i}.wav"
             with open(audio_filename, "wb") as f:
@@ -73,9 +82,11 @@ async def generate_story(file: UploadFile = File(...)):
             scene['audio_url'] = None
         
         final_scenes.append(scene)
+
     story_data["scenes"] = final_scenes
-    save_path = f"saved_stories/{session_id}.json" 
-    with open(save_path, "w") as f: 
+    
+    save_path = f"saved_stories/{session_id}.json"
+    with open(save_path, "w") as f:
         json.dump(story_data, f)
 
     return story_data

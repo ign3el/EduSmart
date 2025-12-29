@@ -18,9 +18,12 @@ class GeminiService:
         self.audio_model = "gemini-2.5-flash"
 
     def _clean_json_text(self, text):
-        text = re.sub(r"```json\s*", "", text)
-        text = re.sub(r"```", "", text)
-        return text.strip()
+        # This regex finds the content between ```json and ```
+        match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+        # Fallback: remove any single backticks or 'json' tags
+        return text.replace('```json', '').replace('```', '').strip()
 
     def process_file_to_story(self, file_path: str):
         ext = os.path.splitext(file_path)[1].lower()
@@ -55,9 +58,10 @@ class GeminiService:
                 contents=[content_part, prompt],
                 config=types.GenerateContentConfig(response_mime_type="application/json")
             )
-            return json.loads(self._clean_json_text(response.text))
+            cleaned = self._clean_json_text(response.text)
+            return json.loads(cleaned)
         except Exception as e:
-            print(f"JSON Parse Error: {e}")
+            print(f"JSON Parse Error: {e} | Content: {response.text[:100]}")
             return None
 
     def generate_image(self, prompt: str, seed: int = None):
