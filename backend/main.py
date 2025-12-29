@@ -31,6 +31,10 @@ async def upload_story(file: UploadFile = File(...)):
     session_id = str(uuid.uuid4())
     # Process the story
     story_data = gemini.process_file_to_story(file.filename)
+
+    if story_data is None:
+        # This will tell the frontend EXACTLY what happened
+        raise HTTPException(status_code=500, detail="Gemini API Model Not Found. Check backend logs.")
     
     if not story_data or "scenes" not in story_data:
         raise HTTPException(status_code=500, detail="Invalid Story Structure")

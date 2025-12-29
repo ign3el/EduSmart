@@ -5,26 +5,28 @@ from google.genai import types
 class GeminiService:
     def __init__(self):
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        # Update these to the most compatible names for the SDK
-        self.text_model = "gemini-1.5-flash-002" 
+        # TRY THIS: The most basic stable name
+        self.text_model = "gemini-1.5-flash" 
+        # FALLBACK: If 1.5 still fails, use "gemini-2.0-flash-exp"
+        
         self.image_model = "imagen-3.0-generate-001" 
 
     def process_file_to_story(self, file_path):
         try:
             prompt = "Generate a kids story in JSON format with 'title' and a 'scenes' list. Each scene needs 'text' and 'image_description'."
             
-            # Using the full model path sometimes resolves 404s in the new SDK
+            # Use the simplified string. The SDK adds 'models/' internally.
             response = self.client.models.generate_content(
                 model=self.text_model,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    # Add safety settings if needed, or leave default
                 )
             )
             return json.loads(response.text)
         except Exception as e:
-            print(f"STORY GEN ERROR: {e}")
+            # This helps us see if the error changes from 404 to something else
+            print(f"STORY GEN ERROR: {str(e)}")
             return None
 
     def generate_image(self, prompt):
