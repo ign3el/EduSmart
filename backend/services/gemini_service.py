@@ -13,7 +13,7 @@ class GeminiService:
         # Using exact model names from your verified list
         self.text_model = "gemini-3-flash-preview"
         self.image_model = "gemini-3-pro-image-preview"
-        self.audio_model = "gemini-2.5-flash" 
+        self.audio_model = "gemini-2.5-flash-tts" 
 
     def process_file_to_story(self, file_path: str, grade_level: str) -> Optional[dict]:
         """Generates the story JSON structure with safety checks."""
