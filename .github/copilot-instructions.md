@@ -1,7 +1,7 @@
-# EduStory - AI-Powered Educational Storybook Generator
+# EduSmart - AI-Powered Educational Storybook Generator
 
 ## Project Overview
-EduStory is an interactive educational platform that transforms PDF/DOCX documents into engaging animated storybook experiences for students in KG-1 through Grade 7.
+EduSmart is an interactive educational platform that transforms PDF/DOCX documents into engaging animated storybook experiences for students in KG-1 through Grade 7.
 
 ## Architecture
 - **Backend**: Python FastAPI with LangChain orchestration

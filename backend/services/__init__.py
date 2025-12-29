@@ -1,7 +1,7 @@
 """
 Backend Services Package
 
-This package contains all the core AI services for EduStory:
+This package contains all the core AI services for EduSmart:
 
 Services:
     - document_processor: Extracts text from PDF and DOCX files

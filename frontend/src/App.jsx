@@ -72,7 +72,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>📚 EduStory</h1>
+        <h1>📚 EduSmart</h1>
         <p>Transform learning into an adventure!</p>
       </header>
 

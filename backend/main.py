@@ -1,5 +1,5 @@
 """
-EduStory Backend - Main FastAPI Application
+EduSmart Backend - Main FastAPI Application
 Handles file uploads, AI orchestration, and content generation
 Supports both API-based and local open-source AI models
 """
@@ -22,7 +22,7 @@ from config import Config
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="EduStory API",
+    title="EduSmart API",
     description="AI-Powered Educational Storybook Generator",
     version="1.0.0"
 )
@@ -55,7 +55,7 @@ async def root():
     """Health check endpoint"""
     return {
         "status": "online",
-        "service": "EduStory API",
+        "service": "EduSmart API",
         "version": "1.0.0",
         "config": Config.get_info()
     }

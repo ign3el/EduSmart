@@ -5,7 +5,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: edustory-backend
+    container_name: edusmart-backend
     ports:
       - "8000:8000"
     environment:
@@ -19,25 +19,25 @@ services:
       - outputs:/app/outputs
     restart: unless-stopped
     networks:
-      - edustory-network
+      - edusmart-network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: edustory-frontend
+    container_name: edusmart-frontend
     ports:
       - "3004:80"
     depends_on:
       - backend
     restart: unless-stopped
     networks:
-      - edustory-network
+      - edusmart-network
 
 volumes:
   uploads:
   outputs:
 
 networks:
-  edustory-network:
+  edusmart-network:
     driver: bridge

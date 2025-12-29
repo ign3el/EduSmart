@@ -1,6 +1,6 @@
 # Models Package
 
-Data models for the EduStory application using Pydantic for validation.
+Data models for the EduSmart application using Pydantic for validation.
 
 ## Models
 

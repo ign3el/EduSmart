@@ -1,6 +1,6 @@
 # Free & Open-Source Setup Guide
 
-Complete guide to running EduStory **completely free** using open-source alternatives with **zero API costs**.
+Complete guide to running EduSmart **completely free** using open-source alternatives with **zero API costs**.
 
 ## 🎯 Quick Summary
 
@@ -169,7 +169,7 @@ redis-cli ping
 
 ---
 
-## Step 5: Configure EduStory
+## Step 5: Configure EduSmart
 
 ### Update Environment File
 
@@ -264,7 +264,7 @@ npm run dev
 ## 🚀 First Story Generation
 
 1. Create a simple test document (PDF or DOCX) with educational content
-2. Upload it to EduStory
+2. Upload it to EduSmart
 3. Choose grade level (e.g., Grade 3)
 4. Select your guide character (e.g., Wizard)
 5. Click "Generate Story"

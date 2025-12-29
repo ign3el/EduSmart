@@ -1,4 +1,4 @@
-# 📚 EduStory - AI-Powered Educational Storybook Generator
+# 📚 EduSmart - AI-Powered Educational Storybook Generator
 
 Transform educational documents into engaging, animated learning experiences for students in grades KG-1 through Grade 7.
 
@@ -74,7 +74,7 @@ This guide includes:
 
 1. **Clone the repository**
 ```bash
-cd EduStory
+cd EduSmart
 ```
 
 2. **Backend Setup**
@@ -231,7 +231,7 @@ npm test
 ## 📦 Project Structure
 
 ```
-EduStory/
+EduSmart/
 ├── backend/
 │   ├── main.py                 # FastAPI application
 │   ├── models/
