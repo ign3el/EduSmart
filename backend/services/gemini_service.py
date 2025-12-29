@@ -17,7 +17,7 @@ class GeminiService:
         
         self.client = genai.Client(api_key=api_key)
         
-        # 2. Text Model (This works for everyone)
+        # 2. Text Model (Free & Reliable)
         self.text_model = "gemini-2.5-flash"
 
     def process_file_to_story(self, file_path: str):
@@ -55,7 +55,7 @@ class GeminiService:
 
         # Generate Story JSON
         try:
-            time.sleep(1) # Safety pause
+            time.sleep(1) 
             
             prompt = """
             You are a game designer converting this content into an Interactive Visual Novel for kids (Age 6-8).
@@ -82,7 +82,7 @@ class GeminiService:
             """
             contents = [content_part, prompt]
             response = self.client.models.generate_content(
-                model=self.text_model,
+                model=self.text_model, # Corrected from self.text_.model
                 contents=contents,
                 config=types.GenerateContentConfig(response_mime_type="application/json")
             )
@@ -92,27 +92,26 @@ class GeminiService:
             return None
 
     def generate_image(self, prompt: str, seed: int = None):
-        """Generates image using Pollinations.ai (Free, No Auth)."""
+        """Generates image using Pollinations.ai (Free) with longer timeout."""
         try:
-            # We use a URL-based free generation API
-            # This bypasses Google's billing requirement
             clean_prompt = prompt.replace(" ", "%20")
             if seed:
                 clean_prompt += f"&seed={seed}"
                 
             image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=576&nologo=true"
             
-            # Fetch the image bytes
-            response = requests.get(image_url, timeout=10)
+            # FIX: Increased timeout to 60 seconds to avoid "Read timed out"
+            response = requests.get(image_url, timeout=60)
+            
             if response.status_code == 200:
                 return response.content
-            return None
+            else:
+                print(f"Pollinations Error: {response.status_code}")
+                return None
         except Exception as e:
             print(f"Image Gen Error: {e}")
             return None
 
     def generate_voiceover(self, text: str):
         """Placeholder for Audio (Google Audio is Billed-Only)."""
-        # Returning None keeps the app fast and crash-free.
-        # If you add a credit card later, we can re-enable Google Audio.
         return None
