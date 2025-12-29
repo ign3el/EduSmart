@@ -45,7 +45,7 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 
 # Async Support
-aiofiles==24.0.0
+aiofiles==24.1.0
 
 # Database (for production)
 sqlalchemy==2.0.23
