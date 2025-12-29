@@ -10,14 +10,13 @@ from models import StorySchema
 class GeminiService:
     def __init__(self) -> None:
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        # Using exact model names from your verified list
         self.text_model = "gemini-3-flash-preview"
         self.image_model = "gemini-3-pro-image-preview"
-        self.audio_model = "gemini-2.5-flash-tts" 
+        # The exact model ID you requested
+        self.audio_model = "gemini-2.5-flash-preview-tts" 
 
     def process_file_to_story(self, file_path: str, grade_level: str) -> Optional[dict]:
-        """Generates the story JSON structure with safety checks."""
-        print(f"DEBUG: Starting PDF analysis for {file_path}")
+        """Generates the story JSON structure."""
         try:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
@@ -33,61 +32,56 @@ class GeminiService:
                     response_schema=StorySchema,
                 )
             )
-            
-            # Safe access to text to satisfy Pylance
-            if response.text:
-                return json.loads(response.text)
-            
-            return None
+            return json.loads(response.text) if response.text else None
         except Exception as e:
             print(f"STORY ERROR: {e}")
             return None
 
     def generate_image(self, prompt: str) -> Optional[bytes]:
-        """Multimodal image generation with exhaustive attribute checking."""
+        """Multimodal image generation."""
         try:
-            print(f"DEBUG: Generating image for: {prompt[:40]}...")
             response = self.client.models.generate_content(
                 model=self.image_model,
                 contents=f"Educational cartoon illustration: {prompt}",
                 config=types.GenerateContentConfig(response_modalities=["IMAGE"])
             )
             
-            # Verify the response chain isn't None
-            if not (response.candidates and 
-                    response.candidates[0].content and 
-                    response.candidates[0].content.parts):
-                return None
-
-            for part in response.candidates[0].content.parts:
-                # FIX: Check both inline_data AND its data attribute
-                if part.inline_data and part.inline_data.data:
-                    return part.inline_data.data
-            
+            if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+                for part in response.candidates[0].content.parts:
+                    if part.inline_data and part.inline_data.data:
+                        return part.inline_data.data
             return None
         except Exception as e:
             print(f"IMAGE ERROR: {e}")
             return None
 
     def generate_voiceover(self, text: str, retries: int = 2) -> Optional[bytes]:
-        """Native TTS with Base64-to-Binary decoding."""
+        """
+        Implements your specific configuration request.
+        Decodes Base64 response to binary to fix browser playback.
+        """
         attempt = 0
         while attempt <= retries:
             try:
+                # YOUR REQUESTED CONFIGURATION ADAPTED FOR TYPE SAFETY
                 response = self.client.models.generate_content(
                     model=self.audio_model,
                     contents=text,
                     config=types.GenerateContentConfig(
-                        response_modalities=["AUDIO"],
+                        # This matches your "response_modalities": ["AUDIO"]
+                        response_modalities=["AUDIO"], 
+                        # This matches your "speech_config" structure
                         speech_config=types.SpeechConfig(
                             voice_config=types.VoiceConfig(
-                                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Aoede")
+                                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                                    voice_name="Aoede" 
+                                )
                             )
                         )
                     )
                 )
                 
-                # Nested safety check for audio parts
+                # 1. Pylance Safety Check: Verify structure exists
                 if not (response.candidates and 
                         response.candidates[0].content and 
                         response.candidates[0].content.parts):
@@ -95,21 +89,23 @@ class GeminiService:
 
                 audio_part = response.candidates[0].content.parts[0]
                 
-                # FIXED: Pylance check for optional member access
+                # 2. Pylance Safety Check: Verify data exists before access
                 if audio_part.inline_data and audio_part.inline_data.data:
                     audio_data = audio_part.inline_data.data
                     
-                    # Convert Base64 string to raw binary bytes for MP3
+                    # 3. CRITICAL FIX: Base64 Decoding
+                    # The API returns a Base64 string. We MUST decode it to bytes
+                    # for the browser to play it as an MP3.
                     if isinstance(audio_data, str):
                         return base64.b64decode(audio_data)
                     return audio_data
                 
-                raise ValueError("No binary audio data found in response")
+                raise ValueError("No binary audio data found")
 
             except Exception as e:
                 attempt += 1
                 print(f"AUDIO ERROR (Attempt {attempt}): {e}")
-                # Exponential backoff for rate limits
+                # Exponential backoff to handle the 429 errors you saw earlier
                 if "429" in str(e):
                     time.sleep(10 * attempt) 
                 else:
