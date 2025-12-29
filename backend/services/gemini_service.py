@@ -11,12 +11,11 @@ class GeminiService:
     def __init__(self) -> None:
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         self.text_model = "gemini-3-flash-preview"
-        self.audio_model = "gemini-2.5-flash-preview-tts"
+        # Switched to a more stable model for audio generation
+        self.audio_model = "gemini-2.0-flash" 
         self.image_model = "gemini-3-pro-image-preview"
 
     def process_file_to_story(self, file_path: str, grade_level: str) -> Optional[dict]:
-        """Generates the story JSON structure with safety checks."""
-        print(f"DEBUG: Starting PDF analysis for {file_path}")
         try:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
@@ -28,55 +27,41 @@ class GeminiService:
                     f"Create a {grade_level} educational story with 5-6 scenes and a quiz as JSON."
                 ],
                 config=types.GenerateContentConfig(
-                    # Ensures Gemini follows our StorySchema structure
-                    #
                     response_mime_type="application/json",
                     response_schema=StorySchema,
                 )
             )
             
-            # Safe access to text to prevent 'None' type errors
-            #
             if response.text:
                 return json.loads(response.text)
-            
-            print("ERROR: AI returned an empty text response.")
             return None
         except Exception as e:
             print(f"STORY ERROR: {e}")
             return None
 
     def generate_image(self, prompt: str) -> Optional[bytes]:
-        """Multimodal image generation with exhaustive attribute checking."""
         try:
-            print(f"DEBUG: Generating image for: {prompt[:40]}...")
             response = self.client.models.generate_content(
                 model=self.image_model,
                 contents=f"Educational cartoon illustration: {prompt}",
                 config=types.GenerateContentConfig(response_modalities=["IMAGE"])
             )
             
-            # Step-by-step validation to satisfy Pylance
-            #
             if not (response.candidates and 
                     response.candidates[0].content and 
                     response.candidates[0].content.parts):
-                print("DEBUG: Image response structure is incomplete.")
                 return None
 
             for part in response.candidates[0].content.parts:
-                # Explicit check for inline_data and the data attribute
-                #
                 if part.inline_data and part.inline_data.data:
                     return part.inline_data.data
-            
             return None
         except Exception as e:
             print(f"IMAGE ERROR: {e}")
             return None
 
     def generate_voiceover(self, text: str, retries: int = 2) -> Optional[bytes]:
-        """Native TTS with Base64-to-Binary decoding and safety checks."""
+        """Native TTS with strict Base64 decoding."""
         attempt = 0
         while attempt <= retries:
             try:
@@ -93,31 +78,26 @@ class GeminiService:
                     )
                 )
                 
-                # Check all levels of the response object to prevent errors
-                #
                 if not (response.candidates and 
                         response.candidates[0].content and 
                         response.candidates[0].content.parts):
-                    raise ValueError("Incomplete audio response structure")
+                    raise ValueError("Incomplete audio response")
 
                 audio_part = response.candidates[0].content.parts[0]
                 
-                # Confirm inline_data and its data property are not None
-                #
                 if audio_part.inline_data and audio_part.inline_data.data:
                     audio_data = audio_part.inline_data.data
-                    
-                    # Convert Base64 string to raw binary bytes for MP3 file
-                    #
+                    # Ensure binary output for MP3 saving
                     if isinstance(audio_data, str):
                         return base64.b64decode(audio_data)
                     return audio_data
                 
-                raise ValueError("No binary audio data found in response")
+                raise ValueError("No data found")
 
             except Exception as e:
                 attempt += 1
                 print(f"AUDIO ERROR (Attempt {attempt}): {e}")
+                # Exponential backoff: wait longer each time
                 if attempt <= retries:
-                    time.sleep(2) # Staggered retry for 500 errors
+                    time.sleep(5 * attempt) 
         return None

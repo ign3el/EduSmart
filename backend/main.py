@@ -30,7 +30,8 @@ async def get_avatars():
     ]
 
 async def generate_scene_media(job_id: str, i: int, scene: dict):
-    await asyncio.sleep(i * 1.5) # Gentle stagger
+    # Increased delay to 3s per scene to respect quota limits
+    await asyncio.sleep(i * 3.0) 
     
     try:
         img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
@@ -46,7 +47,6 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
 
         if audio_bytes:
             aud_name = f"{job_id}_scene_{i}.mp3"
-            # Write binary bytes to ensure browser playback
             with open(os.path.join("outputs", aud_name), "wb") as f:
                 f.write(audio_bytes)
             scene["audio_url"] = f"/api/outputs/{aud_name}"
@@ -61,7 +61,7 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
         if not story_data:
-            raise Exception("AI failed to generate story.")
+            raise Exception("AI failed to generate story text.")
 
         jobs[job_id]["progress"] = 30
         tasks = [generate_scene_media(job_id, i, scene) for i, scene in enumerate(story_data["scenes"])]
