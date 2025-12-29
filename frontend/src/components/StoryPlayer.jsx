@@ -3,16 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlay, FiPause, FiSkipForward, FiSkipBack, FiRotateCw } from 'react-icons/fi';
 import './StoryPlayer.css';
 
+const API_DOMAIN = "https://edusmart.ign3el.com";
+
 function StoryPlayer({ storyData, avatar, onRestart }) {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const audioRef = useRef(null);
 
-  const scenes = storyData.timeline.scenes || [];
+  const scenes = storyData?.scenes || [];
   const scene = scenes[currentScene];
 
-  // Effect to control audio playback (play/pause)
+  const fullAudioUrl = scene?.audio_url ? `${API_DOMAIN}${scene.audio_url}` : '';
+  const fullImageUrl = scene?.image_url ? `${API_DOMAIN}${scene.image_url}` : '';
+
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -21,24 +25,24 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, currentScene]); // Rerun when scene changes to load new audio
+  }, [isPlaying, currentScene]);
 
-  // Effect to handle scene changes and audio loading
   useEffect(() => {
     setProgress(0);
     if (audioRef.current) {
-      audioRef.current.src = scene?.audio || '';
+      audioRef.current.src = fullAudioUrl;
+      audioRef.current.load(); // Important to load the new source
       if (isPlaying) {
         audioRef.current.play().catch(err => console.error("Audio play failed on scene change:", err));
       }
     }
-  }, [currentScene, scene?.audio]);
+  }, [currentScene, fullAudioUrl]);
 
   const goToNextScene = () => {
     if (currentScene < scenes.length - 1) {
       setCurrentScene(currentScene + 1);
     } else {
-      setIsPlaying(false); // Story finished
+      setIsPlaying(false);
     }
   };
 
@@ -82,13 +86,13 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
     <div className="story-player">
       <audio
         ref={audioRef}
-        src={scene.audio}
+        src={fullAudioUrl}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleAudioEnded}
-        // preload="auto"
+        preload="auto"
       />
       <div className="player-header">
-        <h2>🎬 {avatar.name}'s Story Time</h2>
+        <h2>🎬 {storyData.title || "Story Time"}</h2>
         <button className="restart-btn" onClick={onRestart}>
           <FiRotateCw /> New Story
         </button>
@@ -105,27 +109,16 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
             className="scene-content"
           >
             <div className="scene-image">
-              {scene.image && !scene.image.includes('placeholder') ? (
-                <img src={scene.image} alt={`Scene ${currentScene + 1}`} />
+              {fullImageUrl ? (
+                <img src={fullImageUrl} alt={`Scene ${currentScene + 1}`} />
               ) : (
                 <div className="placeholder-image">
-                  <span className="avatar-large">{avatar.emoji}</span>
-                  <p>{scene.visual_description}</p>
+                  <p>{scene.image_description || "Image is being created..."}</p>
                 </div>
               )}
             </div>
             <div className="scene-narration">
-              <div className="narrator-badge">
-                <span>{avatar.emoji}</span>
-                <span>{avatar.name}</span>
-              </div>
-              <p className="narration-text">{scene.narration}</p>
-              {scene.learning_point && (
-                <div className="learning-point">
-                  <span className="lightbulb">💡</span>
-                  <span>{scene.learning_point}</span>
-                </div>
-              )}
+              <p className="narration-text">{scene.text}</p>
             </div>
           </motion.div>
         </AnimatePresence>
@@ -145,7 +138,7 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
           <button onClick={goToNextScene} disabled={currentScene === scenes.length - 1} className="control-btn"><FiSkipForward /></button>
         </div>
         <div className="scene-dots">
-          {scenes.map((_, index) => (
+          {(storyData?.scenes || []).map((_, index) => (
             <button
               key={`dot-${index}`}
               className={`dot ${index === currentScene ? 'active' : ''} ${index < currentScene ? 'completed' : ''}`}

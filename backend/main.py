@@ -1,101 +1,50 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+import os, uuid, json, random
 from services.gemini_service import GeminiService
-import os
-import json
-import uuid
-import random
-app = FastAPI()
-
-app.add_middleware( CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], )
-
-os.makedirs("uploads", exist_ok=True) 
-os.makedirs("outputs", exist_ok=True) 
-os.makedirs("saved_stories", exist_ok=True)
-
-app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
-
+app = FastAPI() 
 gemini = GeminiService()
 
-@app.get("/api/avatars") 
-async def get_avatars(): 
-    # Wrapped in an object to ensure frontend 'data.avatars.map' works
-    return { "avatars": [ 
-        {"id": "beep", "name": "Beep", "url": "https://api.dicebear.com/7.x/bottts/svg?seed=beep"}, 
-        {"id": "boop", "name": "Boop", "url": "https://api.dicebear.com/7.x/bottts/svg?seed=boop"}, 
-        {"id": "zoom", "name": "Zoom", "url": "https://api.dicebear.com/7.x/bottts/svg?seed=zoom"} 
-    ]}
+# Absolute paths for Docker Bind Mounts
+UPLOAD_DIR = "/app/uploads" 
+OUTPUT_DIR = "/app/outputs" 
+STORAGE_DIR = "/app/saved_stories" 
+for d in [UPLOAD_DIR, OUTPUT_DIR, STORAGE_DIR]: 
+    os.makedirs(d, exist_ok=True)
 
-@app.post("/api/generate") 
 @app.post("/api/upload") 
 async def generate_story(file: UploadFile = File(...)): 
-    session_id = str(uuid.uuid4())
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    file_path = f"uploads/{session_id}{file_ext}"
-    
+    session_id = str(uuid.uuid4()) 
+    file_path = os.path.join(UPLOAD_DIR, f"{session_id}_{file.filename}")
+
     with open(file_path, "wb") as f:
         f.write(await file.read())
 
-    # Initialize as None to prevent UnboundLocalError
-    story_data = None
-    try:
-        story_data = gemini.process_file_to_story(file_path)
-    except Exception as e:
-        print(f"Service Error in process_file_to_story: {e}")
+    story_data = gemini.process_file_to_story(file_path)
+    if not story_data:
+        raise HTTPException(status_code=500, detail="Gemini failed to generate story JSON")
 
-    # Validate the story_data structure
-    if not story_data or not isinstance(story_data, dict):
-        raise HTTPException(status_code=500, detail="Story generation failed or returned an invalid format.")
+    story_seed = random.randint(0, 999999)
+    scenes = story_data.get("scenes", [])
+    for i, scene in enumerate(scenes): 
+        # Image Generation 
+        img_prompt = scene.get("image_description", "storybook illustration") 
+        img_bytes = gemini.generate_image(img_prompt, seed=story_seed) 
+        if img_bytes: 
+            fname = f"{session_id}_img_{i}.png" 
+            with open(os.path.join(OUTPUT_DIR, fname), "wb") as f: 
+                f.write(img_bytes) 
+            scene["image_url"] = f"/outputs/{fname}"
 
-    # Ensure critical keys exist
-    if "scenes" not in story_data:
-        story_data["scenes"] = []
+        # Audio Generation
+        audio_bytes = gemini.generate_voiceover(scene.get("text", ""))
+        if audio_bytes:
+            aname = f"{session_id}_aud_{i}.wav"
+            with open(os.path.join(OUTPUT_DIR, aname), "wb") as f:
+                f.write(audio_bytes)
+            scene["audio_url"] = f"/outputs/{aname}"
 
     story_data["story_id"] = session_id
-    story_seed = random.randint(0, 99999999)
-    story_data["visual_seed"] = story_seed
-
-    final_scenes = []
-    # Use .get() for safe access to scenes list
-    for i, scene in enumerate(story_data.get('scenes', [])):
-        # Use .get() with fallbacks for safe dictionary access
-        desc = scene.get('image_description', 'A beautiful and magical storybook illustration for children.')
-        
-        img_bytes = gemini.generate_image(desc, seed=story_seed)
-        
-        if img_bytes:
-            img_filename = f"outputs/{session_id}_scene_{i}.png"
-            with open(img_filename, "wb") as f:
-                f.write(img_bytes)
-            scene['image_url'] = f"/outputs/{session_id}_scene_{i}.png"
-        else:
-            scene['image_url'] = None
-
-        audio_bytes = gemini.generate_voiceover(scene.get('text', ''))
-        if audio_bytes:
-            audio_filename = f"outputs/{session_id}_scene_{i}.wav"
-            with open(audio_filename, "wb") as f:
-                f.write(audio_bytes)
-            scene['audio_url'] = f"/outputs/{session_id}_scene_{i}.wav"
-        else:
-            scene['audio_url'] = None
-        
-        final_scenes.append(scene)
-
-    story_data["scenes"] = final_scenes
-    
-    save_path = f"saved_stories/{session_id}.json"
-    with open(save_path, "w") as f:
+    with open(os.path.join(STORAGE_DIR, f"{session_id}.json"), "w") as f:
         json.dump(story_data, f)
-
+        
     return story_data
-    
-@app.get("/api/load/{story_id}") 
-@app.post("/api/generate-story/{story_id}") 
-async def load_story(story_id: str): 
-    try: 
-        with open(f"saved_stories/{story_id}.json", "r") as f: 
-            return json.load(f) 
-    except FileNotFoundError: 
-        raise HTTPException(status_code=404, detail="Story not found")
