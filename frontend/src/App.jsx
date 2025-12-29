@@ -34,41 +34,49 @@ function App() {
       formData.append('grade_level', gradeLevel)
       formData.append('avatar_type', avatar.id)
 
-      // ACTION: We only need ONE call because the backend handles 
-      // extraction, image gen, and audio gen in the upload route.
+      // The AI generation can take 2+ minutes, so we use a long-lived fetch
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
 
+      // --- SAFETY FIXES START ---
+      
+      // 1. Check for Server/Proxy Errors (524, 499, 504)
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `Server error: ${response.statusText}`)
+        if (response.status === 524) {
+          throw new Error("AI Timeout (Cloudflare 524): The generation took longer than 100 seconds. Please disable Cloudflare Proxy (Grey Cloud) for edusmart.ign3el.com.");
+        }
+        if (response.status === 499 || response.status === 504) {
+          throw new Error("Server Timeout: Nginx closed the connection. Please verify proxy_read_timeout is set to 300s in aaPanel.");
+        }
+        throw new Error(`Server Error (${response.status}): The backend failed to complete the story.`);
+      }
+
+      // 2. Content-Type Guard: Prevent "Unexpected token '<'" error
+      // This ensures we don't try to parse HTML error pages as JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const errorHtml = await response.text();
+        console.error("Non-JSON Response received:", errorHtml);
+        throw new Error("Invalid Response: The server returned an error page instead of story data. This usually indicates a timeout.");
       }
 
       const data = await response.json()
-
-      // FIX: Ensure the backend returned 'scenes'
-      if (!data || !data.scenes || data.scenes.length === 0) {
-        throw new Error("The AI didn't generate any scenes. Please try a different file.")
+      
+      // 3. Data Integrity Check
+      if (!data.scenes || data.scenes.length === 0) {
+        throw new Error("The AI generated an empty story. Please try again with a different file.");
       }
 
-      // Add the VPS domain to URLs if the backend only sends relative paths
-      const formattedStory = {
-        ...data,
-        scenes: data.scenes.map(scene => ({
-          ...scene,
-          image_url: scene.image_url ? `https://edusmart.ign3el.com${scene.image_url}` : null,
-          audio_url: scene.audio_url ? `https://edusmart.ign3el.com${scene.audio_url}` : null
-        }))
-      }
+      // --- SAFETY FIXES END ---
 
-      setStoryData(formattedStory)
+      setStoryData(data)
       setStep('playing')
     } catch (err) {
-      console.error('Error generating story:', err)
-      setError(err.message || 'Failed to generate the story. Please try again.')
-      setStep('upload') 
+      console.error('Generation Failed:', err)
+      setError(err.message || "An unexpected error occurred during generation.")
+      setStep('upload') // Reset to allow retry
     }
   }
 
@@ -138,7 +146,7 @@ function App() {
               <div className="loading-spinner"></div>
               <h2>Creating Your Story...</h2>
               <p>Our AI is crafting an amazing learning experience!</p>
-              <p className="small-text">This usually takes about 30-60 seconds.</p>
+              <p className="small-text">This usually takes about 60-120 seconds because we are generating custom images and audio for you.</p>
             </motion.div>
           )}
 
