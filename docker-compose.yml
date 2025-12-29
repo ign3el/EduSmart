@@ -8,11 +8,21 @@ services:
     container_name: edusmart-backend
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
+      - SERVICE_MODE=${SERVICE_MODE:-api}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - STABILITY_API_KEY=${STABILITY_API_KEY}
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - USE_CACHE=${USE_CACHE:-false}
+      - REDIS_URL=${REDIS_URL:-redis://localhost:6379/0}
+      - CACHE_TTL=${CACHE_TTL:-86400}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://edusmart.ign3el.com}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-mistral}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./backend:/app
       - uploads:/app/uploads
