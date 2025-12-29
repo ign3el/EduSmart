@@ -30,9 +30,7 @@ async def get_avatars():
 @app.post("/api/upload") 
 async def generate_story(file: UploadFile = File(...)): 
     session_id = str(uuid.uuid4()) 
-    file_ext = os.path.splitext(file.filename)[1].lower() 
-    if file_ext not in [".pdf", ".docx", ".pptx", ".txt"]: 
-        pass
+    file_ext = os.path.splitext(file.filename)[1].lower()
 
     file_path = f"uploads/{session_id}{file_ext}"
     with open(file_path, "wb") as f:
@@ -49,23 +47,32 @@ async def generate_story(file: UploadFile = File(...)):
         full_prompt = f"{scene['image_description']}. Character details: {scene.get('character_details', '')}"
         img_bytes = gemini.generate_image(full_prompt, seed=story_seed)
     
-        img_filename = f"outputs/{session_id}_scene_{i}.png"
         if img_bytes:
+            img_filename = f"outputs/{session_id}_scene_{i}.png"
             with open(img_filename, "wb") as f:
                 f.write(img_bytes)
-        scene['image_url'] = f"/outputs/{session_id}_scene_{i}.png"
-        # Audio disabled for free tier
-        scene['audio_url'] = None 
+            scene['image_url'] = f"/outputs/{session_id}_scene_{i}.png"
+        else:
+            scene['image_url'] = None
+        audio_bytes = gemini.generate_voiceover(scene['text'])
+        if audio_bytes:
+            audio_filename = f"outputs/{session_id}_scene_{i}.wav"
+            with open(audio_filename, "wb") as f:
+                f.write(audio_bytes)
+            scene['audio_url'] = f"/outputs/{session_id}_scene_{i}.wav"
+        else:
+            scene['audio_url'] = None
+        
         final_scenes.append(scene)
     story_data["scenes"] = final_scenes
-    save_path = f"saved_stories/{session_id}.json"
-    with open(save_path, "w") as f:
+    save_path = f"saved_stories/{session_id}.json" 
+    with open(save_path, "w") as f: 
         json.dump(story_data, f)
+
     return story_data
     
-#--- FIX FOR 404 ERROR ---
 @app.get("/api/load/{story_id}") 
-@app.post("/api/generate-story/{story_id}") # Handles the legacy frontend call 
+@app.post("/api/generate-story/{story_id}") 
 async def load_story(story_id: str): 
     try: 
         with open(f"saved_stories/{story_id}.json", "r") as f: 
