@@ -24,7 +24,7 @@ class Config:
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")  # mistral, llama2, neural-chat
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
     
     # Image Generation Service
     USE_LOCAL_IMAGE_GEN = SERVICE_MODE == "local"
