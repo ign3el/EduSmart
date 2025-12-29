@@ -8,8 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from services.gemini_service import GeminiService
 from models import StoryResponse
 
-# CRITICAL: Fixes 'NotSupportedError' by sending correct headers
-#
+# Explicitly register MIME types so browser plays audio correctly
 mimetypes.add_type('audio/mpeg', '.mp3')
 mimetypes.add_type('image/png', '.png')
 
@@ -36,8 +35,8 @@ async def get_avatars():
     ]
 
 async def generate_scene_media(job_id: str, i: int, scene: dict):
-    # Staggered requests to prevent 429 quota errors
-    await asyncio.sleep(i * 4.0) 
+    # Staggered requests to allow quota bucket to refill
+    await asyncio.sleep(i * 3.5) 
     
     try:
         img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
@@ -53,7 +52,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
 
         if audio_bytes:
             aud_name = f"{job_id}_scene_{i}.mp3"
-            # Write as binary ('wb') to save the decoded MP3 bytes
+            # Write as binary 'wb' to save valid MP3 data
             with open(os.path.join("outputs", aud_name), "wb") as f:
                 f.write(audio_bytes)
             scene["audio_url"] = f"/api/outputs/{aud_name}"
@@ -77,6 +76,8 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["result"] = story_data
+        print(f"DEBUG: Job {job_id} completed.")
+
     except Exception as e:
         print(f"WORKFLOW ERROR: {e}")
         jobs[job_id]["status"] = "failed"
