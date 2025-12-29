@@ -26,43 +26,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serves the static assets with correct MIME types handled by FastAPI
+# Standard static file mounting for FastAPI
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 
 # 4. PARALLEL MEDIA GENERATION HELPER
 async def generate_scene_media(job_id: str, i: int, scene: dict):
     """
-    Generates both image and audio for a specific scene simultaneously.
-    Uses asyncio.to_thread to prevent blocking the event loop with synchronous SDK calls.
+    Generates image and audio for a scene simultaneously.
+    Uses asyncio.to_thread to keep the Gemini SDK from blocking.
     """
     try:
-        # Run Image and Audio AI calls in parallel
+        # Run AI requests for Image and Audio at the same time
         image_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
         audio_task = asyncio.to_thread(gemini.generate_voiceover, scene["text"])
         
         image_bytes, audio_data = await asyncio.gather(image_task, audio_task)
 
-        # 1. Save Image
+        # Save Image if generated
         if image_bytes:
             img_name = f"{job_id}_scene_{i}.png"
             with open(os.path.join("outputs", img_name), "wb") as f:
                 f.write(image_bytes)
             scene["image_url"] = f"/api/outputs/{img_name}"
 
-        # 2. Save Audio with Binary Fix
+        # Save Audio with Binary Corruption Fix
         if audio_data:
             aud_name = f"{job_id}_scene_{i}.mp3"
             full_path = os.path.join("outputs", aud_name)
             
             with open(full_path, "wb") as f:
-                # Critical: Decode if the SDK returned a base64 string, 
-                # otherwise write the raw bytes directly.
+                # If the AI response is a string, it's Base64 and needs decoding.
+                # If it's already bytes, write it directly.
                 if isinstance(audio_data, str):
-                    try:
-                        f.write(base64.b64decode(audio_data))
-                    except Exception:
-                        # Fallback if string is somehow not base64
-                        f.write(audio_data.encode('utf-8'))
+                    f.write(base64.b64decode(audio_data))
                 else:
                     f.write(audio_data)
             
@@ -70,34 +66,30 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
             print(f"DEBUG: Scene {i} audio saved: {os.path.getsize(full_path)} bytes")
             
     except Exception as e:
-        print(f"ERROR generating media for scene {i}: {e}")
+        print(f"ERROR in media generation for scene {i}: {e}")
 
 # 5. BACKGROUND WORKFLOW
 async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
     try:
-        # Step 1: Story & Quiz Generation (First, to get the scene text)
+        # Step 1: Analyze PDF & Create Story (Synchronous)
         jobs[job_id]["progress"] = 10
-        print(f"DEBUG: Analyzing PDF for {grade_level}...")
-        
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
         if not story_data or "scenes" not in story_data:
-            raise Exception("AI failed to extract story scenes.")
+            raise Exception("AI failed to create story scenes.")
 
         scenes = story_data["scenes"]
         jobs[job_id]["progress"] = 30
-        print(f"DEBUG: Story created with {len(scenes)} scenes. Starting parallel media generation...")
 
-        # Step 2: Parallel Processing
-        # Create a list of tasks for every scene to run at the SAME TIME
-        tasks = [generate_scene_media(job_id, i, scene) for i, scene in enumerate(scenes)]
-        await asyncio.gather(*tasks)
+        # Step 2: Generate all Media in Parallel (The "Speed Up" fix)
+        # This starts tasks for ALL scenes at once
+        media_tasks = [generate_scene_media(job_id, i, scene) for i, scene in enumerate(scenes)]
+        await asyncio.gather(*media_tasks)
 
         # Finalize
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["result"] = story_data
-        print(f"DEBUG: Job {job_id} fully completed.")
 
     except Exception as e:
         print(f"WORKFLOW ERROR: {e}")
@@ -108,9 +100,9 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
 @app.get("/api/avatars")
 async def get_avatars():
     return [
-        {"id": "wizard", "name": "Professor Paws", "description": "A wise teacher guide."},
-        {"id": "robot", "name": "Robo-Buddy", "description": "Explains with high-tech sensors."},
-        {"id": "dinosaur", "name": "Dino-Explorer", "description": "Explores nature and history."}
+        {"id": "wizard", "name": "Professor Paws", "description": "Expert teacher guide."},
+        {"id": "robot", "name": "Robo-Buddy", "description": "Explains with cool sensors."},
+        {"id": "dinosaur", "name": "Dino-Explorer", "description": "Digs into history and nature."}
     ]
 
 @app.post("/api/upload")
@@ -127,8 +119,6 @@ async def upload_story(
         f.write(await file.read())
 
     jobs[job_id] = {"status": "processing", "progress": 0, "result": None}
-    
-    # We use await run_ai_workflow if we want it to be fully async
     background_tasks.add_task(run_ai_workflow, job_id, upload_path, grade_level)
     return {"job_id": job_id}
 
