@@ -8,21 +8,28 @@ import pptx
 
 class GeminiService:
     def __init__(self):
+        # 1. Load API Key
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             print("CRITICAL WARNING: GEMINI_API_KEY is missing!")
-
-        self.client = genai.Client(api_key=api_key)
-    
-        # PRO CONFIGURATION (Paid/Unlocked Models)
-        self.text_model = "gemini-2.5-flash"
-        self.image_model = "imagen-3.0-generate-001" 
-        self.audio_model = "gemini-2.5-flash"
         
+        self.client = genai.Client(api_key=api_key)
+        
+        # 2. EXACT MODELS FROM YOUR "CHECK_MODELS" LIST
+        # Text: Working fine
+        self.text_model = "gemini-2.5-flash"
+        
+        # Image: You have access to 4.0, so we use that!
+        self.image_model = "imagen-4.0-generate-001" 
+        
+        # Audio: Must use the specific audio model, not the text one
+        self.audio_model = "gemini-2.5-flash-native-audio-latest"
+
     def process_file_to_story(self, file_path: str):
+        """Reads PDF/Docx/PPTX and generates the JSON story structure."""
         ext = os.path.splitext(file_path)[1].lower()
         content_part = None
-    
+        
         if ext == ".pdf":
             with open(file_path, "rb") as f:
                 pdf_data = f.read()
@@ -32,8 +39,7 @@ class GeminiService:
                 doc = docx.Document(file_path)
                 text = "\n".join([para.text for para in doc.paragraphs])
                 content_part = f"Word Doc Content:\n{text}"
-            except:
-                return None
+            except: return None
         elif ext == ".pptx":
             try:
                 prs = pptx.Presentation(file_path)
@@ -43,18 +49,19 @@ class GeminiService:
                         if hasattr(shape, "text"):
                             text.append(shape.text)
                 content_part = f"PowerPoint Content:\n" + "\n".join(text)
-            except:
-                return None
+            except: return None
         elif ext == ".txt":
             with open(file_path, "r", encoding="utf-8") as f:
                 content_part = f.read()
+
         if not content_part:
             return None
+
         try:
             prompt = """
             You are a game designer converting this content into an Interactive Visual Novel for kids (Age 6-8).
             Create a linear story where the user learns the topic through a narrative.
-        
+            
             Return strictly valid JSON (no markdown) with this structure:
             {
               "title": "Story Title",
@@ -84,27 +91,35 @@ class GeminiService:
         except Exception as e:
             print(f"Story Gen Error: {e}")
             return None
-            
+
     def generate_image(self, prompt: str, seed: int = None):
+        """Generates Images using Imagen 4.0."""
         try:
             if seed is None:
                 seed = random.randint(0, 2**32 - 1)
+            
             response = self.client.models.generate_images(
                 model=self.image_model,
                 prompt=f"kids educational illustration, 3d pixar style, vibrant: {prompt}",
-                config=types.GenerateImagesConfig(number_of_images=1)
+                config=types.GenerateImagesConfig(
+                    number_of_images=1,
+                )
             )
             return response.generated_images[0].image.image_bytes
         except Exception as e:
             print(f"Image Gen Error: {e}")
             return None
-            
+
     def generate_voiceover(self, text: str):
+        """Generates Audio using the specialized Native Audio model."""
         try:
+            # We must use the AUDIO model, not the text one
             response = self.client.models.generate_content(
                 model=self.audio_model,
                 contents=f"Narrate this for a child in a cheerful, energetic voice: {text}",
-                config=types.GenerateContentConfig(response_modalities=["AUDIO"])
+                config=types.GenerateContentConfig(
+                    response_modalities=["AUDIO"]
+                )
             )
             for part in response.candidates[0].content.parts:
                 if part.inline_data:
