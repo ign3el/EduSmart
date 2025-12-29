@@ -30,6 +30,13 @@ async def get_avatars():
 @app.post("/api/generate") 
 @app.post("/api/upload") 
 async def generate_story(file: UploadFile = File(...)): 
+    for i, scene in enumerate(story_data.get('scenes', [])):
+        # FIX: Use .get() with a fallback string to prevent KeyError
+        img_desc = scene.get('image_description', 'A beautiful storybook illustration')
+        char_details = scene.get('character_details', 'A friendly character')
+        
+        full_prompt = f"{img_desc}. {char_details}"
+        img_bytes = gemini.generate_image(full_prompt, seed=story_seed)
     session_id = str(uuid.uuid4()) 
     file_ext = os.path.splitext(file.filename)[1].lower()
 
