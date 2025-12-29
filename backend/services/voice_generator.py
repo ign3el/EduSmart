@@ -1,7 +1,7 @@
 """
 Voice Generator Service
 Uses Piper TTS locally or ElevenLabs API for voiceovers.
-Handles audio generation and caching asynchronously.
+Handles audio generation and caching asynchronously, with concurrency limits.
 """
 import asyncio
 import logging
@@ -31,14 +31,16 @@ class VoiceGenerator:
 
         # Maps generic styles to specific ElevenLabs voice IDs
         self.voice_profiles = {
-            "expressive_child": "Rachel",
-            "storyteller": "Bella",
-            "friendly": "Antoni",
-            "energetic": "Josh",
+            "expressive_child": "Rachel", # Premade voice ID
+            "storyteller": "Bella",      # Premade voice ID
+            "friendly": "Antoni",      # Premade voice ID
+            "energetic": "Josh",         # Premade voice ID
         }
+        # Concurrency limit for API calls
+        self.semaphore = asyncio.Semaphore(2)
 
     async def generate_voiceovers(self, screenplay, voice_style: str = "expressive_child") -> List[Dict]:
-        """Generates voiceover audio for all scenes in parallel."""
+        """Generates voiceover audio for all scenes with a concurrency limit."""
         tasks = [
             self.generate_single_voiceover(
                 text=scene.narration,
@@ -70,21 +72,20 @@ class VoiceGenerator:
 
         logger.info(f"Cache miss for audio scene {scene_number}. Generating new audio.")
         
-        audio_path = None
-        if self.use_local:
-            # Note: Piper doesn't have different voice styles in this setup, so we use a generic one.
-            # If multiple local voices were supported, `voice_style` would be important here.
-            audio_path = await self._generate_with_piper(text, scene_number)
-        
-        if not audio_path and self.elevenlabs_key:
-            audio_path = await self._generate_with_elevenlabs(text, voice_style, scene_number)
-
-        final_path = audio_path or self._create_placeholder(scene_number)
-        
-        if audio_path: # Only cache successful results
-            await self.cache.set("audio", final_path, **cache_key_params)
+        async with self.semaphore:
+            audio_path = None
+            if self.use_local:
+                audio_path = await self._generate_with_piper(text, scene_number)
             
-        return final_path
+            if not audio_path and self.elevenlabs_key:
+                audio_path = await self._generate_with_elevenlabs(text, voice_style, scene_number)
+
+            final_path = audio_path or self._create_placeholder(scene_number)
+            
+            if audio_path: # Only cache successful results
+                await self.cache.set("audio", final_path, **cache_key_params)
+                
+            return final_path
 
     def _run_piper_sync(self, text: str, audio_path: Path):
         """Synchronous helper to run the Piper TTS command."""
@@ -112,15 +113,14 @@ class VoiceGenerator:
     async def _generate_with_elevenlabs(self, text: str, voice_style: str, scene_number: int) -> Optional[str]:
         """Generates audio using the ElevenLabs API."""
         logger.info(f"Generating audio for scene {scene_number} with ElevenLabs.")
-        # Use actual ElevenLabs voice IDs (premade voices that work for all accounts)
-        voice_id = "21m00Tcm4TlvDq8ikWAM"  # Rachel (premade voice)
+        voice_id = self.voice_profiles.get(voice_style, "21m00Tcm4TlvDq8ikWAM")  # Default to Rachel
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
         
         headers = {"Accept": "audio/mpeg", "xi-api-key": self.elevenlabs_key}
         payload = {
             "text": text,
-            "model_id": "eleven_monolingual_v1",  # Free tier compatible model
-            "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
+            "model_id": "eleven_multilingual_v2",  # Use a newer, compatible model
+            "voice_settings": {"stability": 0.55, "similarity_boost": 0.75},
         }
 
         try:
