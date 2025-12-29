@@ -1,11 +1,16 @@
 import os
 import uuid
 import asyncio
+import mimetypes
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from services.gemini_service import GeminiService
 from models import StoryResponse
+
+# Enforce correct headers for the browser
+mimetypes.add_type('audio/mpeg', '.mp3')
+mimetypes.add_type('image/png', '.png')
 
 app = FastAPI()
 gemini = GeminiService()
@@ -30,8 +35,8 @@ async def get_avatars():
     ]
 
 async def generate_scene_media(job_id: str, i: int, scene: dict):
-    # Staggered requests to prevent quota issues
-    await asyncio.sleep(i * 3.5) 
+    # Staggered requests to prevent 429 errors
+    await asyncio.sleep(i * 4.0) 
     
     try:
         img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
@@ -47,7 +52,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
 
         if audio_bytes:
             aud_name = f"{job_id}_scene_{i}.mp3"
-            # FIX: Write in binary mode 'wb' to prevent file corruption
+            # Write bytes directly to fix browser playback issues
             with open(os.path.join("outputs", aud_name), "wb") as f:
                 f.write(audio_bytes)
             scene["audio_url"] = f"/api/outputs/{aud_name}"
@@ -62,7 +67,7 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
         if not story_data:
-            raise Exception("AI failed to generate story text.")
+            raise Exception("AI failed to generate story content.")
 
         jobs[job_id]["progress"] = 30
         tasks = [generate_scene_media(job_id, i, scene) for i, scene in enumerate(story_data["scenes"])]
