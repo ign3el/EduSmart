@@ -17,7 +17,7 @@ class GeminiService:
         """
         try:
             # Fix: Using 'file_path' argument to upload the document
-            file_upload = self.client.files.upload(file_path=file_path)
+            file_upload = self.client.files.upload(file=file_path)
 
             prompt = (
                 "Analyze the provided document. Create an educational, engaging children's story "
