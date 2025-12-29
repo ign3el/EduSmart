@@ -71,7 +71,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
 # 5. BACKGROUND WORKFLOW
 async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
     try:
-        # Step 1: Analyze PDF & Create Story (Synchronous)
+        # Step 1: Analyze PDF & Create Story (Synchronous to get text first)
         jobs[job_id]["progress"] = 10
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
@@ -81,7 +81,7 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         scenes = story_data["scenes"]
         jobs[job_id]["progress"] = 30
 
-        # Step 2: Generate all Media in Parallel (The "Speed Up" fix)
+        # Step 2: Generate all Media in Parallel (Speed Improvement)
         # This starts tasks for ALL scenes at once
         media_tasks = [generate_scene_media(job_id, i, scene) for i, scene in enumerate(scenes)]
         await asyncio.gather(*media_tasks)
