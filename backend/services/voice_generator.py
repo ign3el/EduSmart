@@ -112,14 +112,15 @@ class VoiceGenerator:
     async def _generate_with_elevenlabs(self, text: str, voice_style: str, scene_number: int) -> Optional[str]:
         """Generates audio using the ElevenLabs API."""
         logger.info(f"Generating audio for scene {scene_number} with ElevenLabs.")
-        voice_id = self.voice_profiles.get(voice_style, "Rachel") # Default to Rachel
+        # Use actual ElevenLabs voice IDs (premade voices that work for all accounts)
+        voice_id = "21m00Tcm4TlvDq8ikWAM"  # Rachel (premade voice)
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
         
         headers = {"Accept": "audio/mpeg", "xi-api-key": self.elevenlabs_key}
         payload = {
             "text": text,
-            "model_id": "eleven_multilingual_v2", # More advanced model
-            "voice_settings": {"stability": 0.55, "similarity_boost": 0.75},
+            "model_id": "eleven_monolingual_v1",  # Free tier compatible model
+            "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
         }
 
         try:

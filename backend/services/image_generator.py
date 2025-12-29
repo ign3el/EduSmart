@@ -163,25 +163,34 @@ class ImageGenerator:
     async def _generate_with_stability(self, prompt: str, scene_number: int) -> Optional[str]:
         """Generates an image using the Stability AI API."""
         logger.info(f"Generating image for scene {scene_number} with Stability AI.")
-        url = "https://api.stability.ai/v2/generation/stable-image-core/generate/sd3"
+        url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
         
         headers = {
             "Authorization": f"Bearer {self.stability_key}",
+            "Content-Type": "application/json",
             "Accept": "application/json",
         }
         
         payload = {
-            "prompt": prompt,
-            "output_format": "png",
+            "text_prompts": [{"text": prompt, "weight": 1}],
+            "cfg_scale": 7,
+            "height": 1024,
+            "width": 1024,
+            "samples": 1,
+            "steps": 30,
         }
 
         try:
             async with httpx.AsyncClient(timeout=90.0) as client:
-                response = await client.post(url, headers=headers, files={"none": ''}, data=payload)
+                response = await client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
                 
+                data = response.json()
+                import base64
+                
+                image_data = base64.b64decode(data["artifacts"][0]["base64"])
                 image_path = self.output_dir / f"scene_{scene_number}.png"
-                image_path.write_bytes(response.content)
+                image_path.write_bytes(image_data)
 
                 return str(image_path)
         except httpx.HTTPStatusError as e:
