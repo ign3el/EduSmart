@@ -1,235 +1,132 @@
-"""
-EduSmart Backend - Main FastAPI Application
-Handles file uploads, AI orchestration, and content generation
-Supports both API-based and local open-source AI models
-"""
-import uvicorn
-import logging
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
+from services.gemini_service import GeminiService
+import os
+import json
+import uuid
+import random
+import aiofiles
 
-from pathlib import Path
+app = FastAPI()
 
-from services.document_processor import DocumentProcessor
-from services.script_generator import ScriptGenerator
-from services.image_generator import ImageGenerator
-from services.voice_generator import VoiceGenerator
-from services.scene_assembler import SceneAssembler
-from services.cache_manager import CacheManager
-from models.story import StoryRequest, StoryResponse
-from config import Config
-
-# Configure logging
-logging.basicConfig(level=Config.LOG_LEVEL)
-logger = logging.getLogger(__name__)
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="EduSmart API",
-    description="AI-Powered Educational Storybook Generator",
-    version="1.0.0"
-)
-
-# CORS middleware for frontend communication
+# Allow CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"],  # Adjust for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize services
-document_processor = DocumentProcessor()
-script_generator = ScriptGenerator()
-image_generator = ImageGenerator()
-voice_generator = VoiceGenerator()
-scene_assembler = SceneAssembler()
-cache_manager = CacheManager()
+# Create all necessary folders
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("outputs", exist_ok=True)
+os.makedirs("saved_stories", exist_ok=True)
 
-# Create necessary directories
-UPLOAD_DIR = Path(Config.UPLOAD_DIR)
-OUTPUT_DIR = Path(Config.OUTPUT_DIR)
-UPLOAD_DIR.mkdir(exist_ok=True)
-OUTPUT_DIR.mkdir(exist_ok=True)
+# Serve static files (images/audio)
+app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
 
+try:
+    gemini = GeminiService()
+except ValueError as e:
+    print(f"FATAL: Failed to initialize GeminiService: {e}")
+    gemini = None
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {
-        "status": "online",
-        "service": "EduSmart API",
-        "version": "1.0.0",
-        "config": Config.get_info()
-    }
+@app.post("/api/generate")
+async def generate_story(file: UploadFile = File(...)):
+    if not gemini:
+        raise HTTPException(status_code=500, detail="Gemini service is not initialized. Check API key.")
 
-
-@app.get("/api/config")
-async def get_config():
-    """Get current configuration and service status"""
-    cache_health = await cache_manager.health_check()
+    session_id = str(uuid.uuid4())
     
-    return {
-        "config": Config.get_info(),
-        "cache": {
-            "enabled": Config.USE_CACHE,
-            "status": "healthy" if cache_health else "offline",
-            "redis_url": Config.REDIS_URL
-        }
-    }
+    # 1. Save File with CORRECT Extension
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    if file_ext not in [".pdf", ".docx", ".pptx", ".txt"]:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
 
+    file_path = f"uploads/{session_id}{file_ext}"
 
-@app.post("/api/upload", response_model=dict)
-async def upload_document(
-    file: UploadFile = File(...),
-    grade_level: int = 1,
-    avatar_type: str = "wizard"
-):
-    """
-    Upload a PDF or DOCX file and initiate story generation
-    
-    Args:
-        file: PDF or DOCX file containing educational content
-        grade_level: Target grade level (1-7)
-        avatar_type: Character type (wizard, robot, squirrel, etc.)
-    
-    Returns:
-        Story ID and initial processing status
-    """
     try:
-        # Validate file type
-        if not file.filename.endswith(('.pdf', '.docx', '.doc')):
-            raise HTTPException(
-                status_code=400,
-                detail="Only PDF and DOCX files are supported"
-            )
-        
-        # Save uploaded file
-        file_path = UPLOAD_DIR / file.filename
-        with open(file_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
-        
-        # Extract text from document
-        extracted_text = await document_processor.process(file_path)
-        
-        # Generate unique story ID
-        story_id = f"story_{hash(file.filename + str(grade_level))}"
-        
-        return {
-            "story_id": story_id,
-            "filename": file.filename,
-            "extracted_length": len(extracted_text),
-            "status": "processing",
-            "message": "Document uploaded successfully. Story generation started."
-        }
-    
-    except HTTPException as http_exc:
-        raise http_exc
-    except Exception as e:
-        logger.error(f"Error during file upload: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal server error occurred during file upload.")
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(await file.read())
+    except IOError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {e}")
 
+    # 2. Generate Story (Pass file path to service)
+    story_data = gemini.process_file_to_story(file_path)
+    if not story_data:
+        raise HTTPException(status_code=500, detail="Failed to generate story")
+    
+    story_data["story_id"] = session_id
 
-@app.post("/api/generate-story/{story_id}")
-async def generate_story(
-    story_id: str,
-    request: StoryRequest
-):
-    """
-    Generate complete interactive story with scenes, images, and audio
+    # 3. Generate Global Seed (The secret to consistent characters)
+    story_seed = random.randint(0, 99999999)
+    story_data["visual_seed"] = story_seed
+
+    # 4. Generate Media for Each Scene
+    final_scenes = []
+    for i, scene in enumerate(story_data['scenes']):
+        # Image: Combine description with character details + SEED
+        full_prompt = f"{scene['image_description']}. Character details: {scene.get('character_details', '')}"
+        img_bytes = gemini.generate_image(full_prompt, seed=story_seed)
+        
+        img_filename = f"outputs/{session_id}_scene_{i}.png"
+        if img_bytes:
+            try:
+                async with aiofiles.open(img_filename, "wb") as f:
+                    await f.write(img_bytes)
+                scene['image_url'] = f"/outputs/{session_id}_scene_{i}.png"
+            except IOError as e:
+                print(f"Error saving image for scene {i}: {e}")
+                scene['image_url'] = None # Or a placeholder
+        else:
+            scene['image_url'] = None
+
+        # Audio: Generate Voiceover
+        audio_bytes = gemini.generate_voiceover(scene['text'])
+        audio_filename = f"outputs/{session_id}_scene_{i}.wav"
+        if audio_bytes:
+            try:
+                async with aiofiles.open(audio_filename, "wb") as f:
+                    await f.write(audio_bytes)
+                scene['audio_url'] = f"/outputs/{session_id}_scene_{i}.wav"
+            except IOError as e:
+                print(f"Error saving audio for scene {i}: {e}")
+                scene['audio_url'] = None
+        else:
+            scene['audio_url'] = None
+        
+        final_scenes.append(scene)
+
+    story_data["scenes"] = final_scenes
     
-    Args:
-        story_id: Unique story identifier
-        request: Story generation parameters
-    
-    Returns:
-        Complete story with all generated assets
-    """
+    # 5. Save to Disk (Persistence)
+    save_path = f"saved_stories/{session_id}.json"
     try:
-        # Step 1: Generate screenplay from document text
-        screenplay = await script_generator.generate_screenplay(
-            text=request.document_text,
-            grade_level=request.grade_level,
-            avatar_type=request.avatar_type
-        )
+        async with aiofiles.open(save_path, "w") as f:
+            await f.write(json.dumps(story_data, indent=2))
+    except IOError as e:
+        print(f"Error saving story JSON: {e}")
+        # Not a fatal error for the user, so we don't raise HTTPException
         
-        # Step 2: Generate images for each scene
-        scene_images = await image_generator.generate_scenes(
-            screenplay=screenplay,
-            avatar_type=request.avatar_type,
-            style="anime"
-        )
-        
-        # Step 3: Generate voiceovers for each scene
-        scene_audio = await voice_generator.generate_voiceovers(
-            screenplay=screenplay,
-            voice_style="expressive_child"
-        )
-        
-        # Step 4: Assemble everything into timeline
-        story_timeline = await scene_assembler.assemble(
-            screenplay=screenplay,
-            images=scene_images,
-            audio=scene_audio,
-            story_id=story_id
-        )
-        
-        return {
-            "story_id": story_id,
-            "status": "completed",
-            "timeline": story_timeline,
-            "total_scenes": len(screenplay.scenes),
-            "message": "Story generated successfully"
-        }
+    # Clean up uploaded file
+    try:
+        os.remove(file_path)
+    except OSError as e:
+        print(f"Error removing uploaded file {file_path}: {e}")
 
-    except HTTPException as http_exc:
-        raise http_exc
-    except Exception as e:
-        logger.error(f"Error generating story {story_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal server error occurred during story generation.")
+    return story_data
 
-
-@app.get("/api/story/{story_id}")
-async def get_story(story_id: str):
-    """
-    Retrieve a generated story by ID
-    
-    Args:
-        story_id: Unique story identifier
-    
-    Returns:
-        Complete story data
-    """
-    # TODO: Implement story retrieval from database/storage
-    return {"story_id": story_id, "status": "available"}
-
-
-@app.get("/api/avatars")
-async def get_available_avatars():
-    """
-    Get list of available avatar types for character consistency
-    
-    Returns:
-        List of avatar configurations
-    """
-    return {
-        "avatars": [
-            {"id": "wizard", "name": "Wise Wizard", "description": "A magical teacher"},
-            {"id": "robot", "name": "Friendly Robot", "description": "A helpful AI companion"},
-            {"id": "squirrel", "name": "Smart Squirrel", "description": "A clever forest friend"},
-            {"id": "astronaut", "name": "Space Explorer", "description": "A cosmic guide"},
-            {"id": "dinosaur", "name": "Dino Teacher", "description": "A prehistoric professor"},
-        ]
-    }
-
-
-if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+@app.get("/api/load/{story_id}")
+async def load_story(story_id: str):
+    """Loads a saved story JSON to avoid regenerating credits."""
+    try:
+        async with aiofiles.open(f"saved_stories/{story_id}.json", "r") as f:
+            content = await f.read()
+            return JSONResponse(content=json.loads(content))
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Story not found")
+    except (IOError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=500, detail=f"Error reading story file: {e}")

@@ -7,25 +7,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - SERVICE_MODE=${SERVICE_MODE:-api}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - STABILITY_API_KEY=${STABILITY_API_KEY}
-      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - USE_CACHE=${USE_CACHE:-true}
-      - REDIS_URL=redis://redis:6379/0
-      - CACHE_TTL=${CACHE_TTL:-86400}
       - CORS_ORIGINS=${CORS_ORIGINS:-https://edusmart.ign3el.com}
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-mistral}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./backend:/app
       - uploads:/app/uploads
       - outputs:/app/outputs
+      - saved_stories:/app/saved_stories
     restart: unless-stopped
-    depends_on:
-      - redis
     networks:
       - edusmart-network
 
@@ -41,20 +31,11 @@ services:
     restart: unless-stopped
     networks:
       - edusmart-network
-  
-  redis:
-    image: redis:alpine
-    container_name: edusmart-redis
-    volumes:
-      - redis-data:/data
-    restart: unless-stopped
-    networks:
-      - edusmart-network
 
 volumes:
   uploads:
   outputs:
-  redis-data:
+  saved_stories:
 
 networks:
   edusmart-network:
