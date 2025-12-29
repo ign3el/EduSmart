@@ -22,29 +22,30 @@ app.add_middleware(
 
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 
-async def generate_scene_media(job_id: str, i: int, scene: dict):
-    """Parallel media generation to reduce total time."""
-    try:
-        img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
-        aud_task = asyncio.to_thread(gemini.generate_voiceover, scene["text"])
-        
-        img_bytes, aud_bytes = await asyncio.gather(img_task, aud_task)
+async def generate_scene_media(job_id: str, i: int, scene: dict, semaphore: asyncio.Semaphore):
+    """Parallel media generation throttled by a semaphore for quota limits."""
+    async with semaphore:
+        try:
+            # Generate Image (Imagen 4)
+            img_bytes = await asyncio.to_thread(gemini.generate_image, scene["image_description"])
+            if img_bytes:
+                img_name = f"{job_id}_scene_{i}.png"
+                with open(os.path.join("outputs", img_name), "wb") as f:
+                    f.write(img_bytes)
+                scene["image_url"] = f"/api/outputs/{img_name}"
 
-        if img_bytes:
-            img_name = f"{job_id}_scene_{i}.png"
-            with open(os.path.join("outputs", img_name), "wb") as f:
-                f.write(img_bytes)
-            scene["image_url"] = f"/api/outputs/{img_name}"
+            # Wait to respect the 2 RPM audio quota
+            await asyncio.sleep(30)
 
-        if aud_bytes:
-            aud_name = f"{job_id}_scene_{i}.mp3"
-            full_path = os.path.join("outputs", aud_name)
-            with open(full_path, "wb") as f:
-                f.write(aud_bytes)
-            scene["audio_url"] = f"/api/outputs/{aud_name}"
-            
-    except Exception as e:
-        print(f"Scene {i} Media Failure: {e}")
+            # Generate Audio (Gemini TTS)
+            aud_bytes = await asyncio.to_thread(gemini.generate_voiceover, scene["text"])
+            if aud_bytes:
+                aud_name = f"{job_id}_scene_{i}.mp3"
+                with open(os.path.join("outputs", aud_name), "wb") as f:
+                    f.write(aud_bytes)
+                scene["audio_url"] = f"/api/outputs/{aud_name}"
+        except Exception as e:
+            print(f"Media Task Error Scene {i}: {e}")
 
 async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
     try:
@@ -52,19 +53,19 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
         if not story_data:
-            raise Exception("AI Response failed strict schema validation.")
+            raise Exception("AI Response failed. Check logs for Pydantic/Schema errors.")
 
         scenes = story_data["scenes"]
         jobs[job_id]["progress"] = 30
 
-        # Parallelize media generation for all scenes
-        tasks = [generate_scene_media(job_id, i, scene) for i, scene in enumerate(scenes)]
+        # One-by-one processing to avoid 429 quota errors
+        semaphore = asyncio.Semaphore(1)
+        tasks = [generate_scene_media(job_id, i, scene, semaphore) for i, scene in enumerate(scenes)]
         await asyncio.gather(*tasks)
 
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["result"] = story_data
-
     except Exception as e:
         print(f"CRITICAL WORKFLOW FAILURE: {e}")
         jobs[job_id]["status"] = "failed"
@@ -90,11 +91,3 @@ async def get_status(job_id: str):
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     return jobs[job_id]
-
-@app.get("/api/avatars")
-async def get_avatars():
-    return [
-        {"id": "wizard", "name": "Professor Paws", "description": "Wise guide."},
-        {"id": "robot", "name": "Robo-Buddy", "description": "Tech expert."},
-        {"id": "dinosaur", "name": "Dino-Explorer", "description": "Nature guide."}
-    ]
