@@ -2,6 +2,7 @@ import os
 import json
 import random
 import time
+import requests
 from google import genai
 from google.genai import types
 import docx
@@ -9,28 +10,22 @@ import pptx
 
 class GeminiService:
     def __init__(self):
-        # 1. Load the correct API Key
+        # 1. Load API Key
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             print("CRITICAL WARNING: GEMINI_API_KEY is missing!")
         
         self.client = genai.Client(api_key=api_key)
         
-        # 2. Text Model (For Story Logic)
+        # 2. Text Model (This works for everyone)
         self.text_model = "gemini-2.5-flash"
-        
-        # 3. Image Model (Updated to the one found in your list)
-        self.image_model = "imagen-4.0-generate-001"
-        
-        # 4. Audio Model (Updated to the dedicated audio model)
-        self.audio_model = "gemini-2.5-flash-native-audio-latest"
 
     def process_file_to_story(self, file_path: str):
         """Reads file and generates story structure."""
         ext = os.path.splitext(file_path)[1].lower()
         content_part = None
         
-        # File Processing Logic
+        # File Processing
         if ext == ".pdf":
             with open(file_path, "rb") as f:
                 pdf_data = f.read()
@@ -60,8 +55,7 @@ class GeminiService:
 
         # Generate Story JSON
         try:
-            # Sleep to prevent hitting rate limits
-            time.sleep(1)
+            time.sleep(1) # Safety pause
             
             prompt = """
             You are a game designer converting this content into an Interactive Visual Novel for kids (Age 6-8).
@@ -98,43 +92,27 @@ class GeminiService:
             return None
 
     def generate_image(self, prompt: str, seed: int = None):
-        """Generates image using Imagen 4."""
+        """Generates image using Pollinations.ai (Free, No Auth)."""
         try:
-            # Sleep 2 seconds to respect the 5 RPM limit
-            time.sleep(2)
-            
-            if seed is None:
-                seed = random.randint(0, 2**32 - 1)
+            # We use a URL-based free generation API
+            # This bypasses Google's billing requirement
+            clean_prompt = prompt.replace(" ", "%20")
+            if seed:
+                clean_prompt += f"&seed={seed}"
                 
-            response = self.client.models.generate_images(
-                model=self.image_model,
-                prompt=f"kids educational illustration, 3d pixar style, vibrant: {prompt}",
-                config=types.GenerateImagesConfig(
-                    number_of_images=1
-                )
-            )
-            return response.generated_images[0].image.image_bytes
+            image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=576&nologo=true"
+            
+            # Fetch the image bytes
+            response = requests.get(image_url, timeout=10)
+            if response.status_code == 200:
+                return response.content
+            return None
         except Exception as e:
             print(f"Image Gen Error: {e}")
             return None
 
     def generate_voiceover(self, text: str):
-        """Generates audio using the specialized Audio model."""
-        try:
-            # Sleep 2 seconds to respect the 5 RPM limit
-            time.sleep(2)
-            
-            response = self.client.models.generate_content(
-                model=self.audio_model,
-                contents=f"Narrate this for a child in a cheerful, energetic voice: {text}",
-                config=types.GenerateContentConfig(
-                    response_modalities=["AUDIO"]
-                )
-            )
-            for part in response.candidates[0].content.parts:
-                if part.inline_data:
-                    return part.inline_data.data
-            return None
-        except Exception as e:
-            print(f"Audio Gen Error: {e}")
-            return None
+        """Placeholder for Audio (Google Audio is Billed-Only)."""
+        # Returning None keeps the app fast and crash-free.
+        # If you add a credit card later, we can re-enable Google Audio.
+        return None
