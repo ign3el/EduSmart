@@ -8,6 +8,7 @@ import logging
 from typing import Optional, Dict
 
 import redis.asyncio as aioredis
+import redis.exceptions
 from config import Config
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ class CacheManager:
                 return value
             logger.info(f"Cache miss: {key}")
             return None
-        except (aioredis.exceptions.RedisError, OSError) as e:
+        except (redis.exceptions.RedisError, OSError) as e:
             logger.error(f"Cache GET error for key {key}: {e}")
             return None
 
@@ -73,7 +74,7 @@ class CacheManager:
             await redis.setex(key, self.cache_ttl, value)
             logger.info(f"Cached: {key}")
             return True
-        except (aioredis.exceptions.RedisError, OSError) as e:
+        except (redis.exceptions.RedisError, OSError) as e:
             logger.error(f"Cache SET error for key {key}: {e}")
             return False
 
@@ -111,7 +112,7 @@ class CacheManager:
                 logger.info(f"Cleared {deleted_count} keys for prefix '{prefix}'")
                 return deleted_count
             return 0
-        except (aioredis.exceptions.RedisError, OSError) as e:
+        except (redis.exceptions.RedisError, OSError) as e:
             logger.error(f"Cache clear error for prefix {prefix}: {e}")
             return 0
 
@@ -122,5 +123,5 @@ class CacheManager:
             return False
         try:
             return await redis.ping()
-        except (aioredis.exceptions.RedisError, OSError):
+        except (redis.exceptions.RedisError, OSError):
             return False
