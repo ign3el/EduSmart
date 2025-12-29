@@ -19,23 +19,35 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
   const fullAudioUrl = scene?.audio_url ? `${API_DOMAIN}${scene.audio_url}` : '';
   const fullImageUrl = scene?.image_url ? `${API_DOMAIN}${scene.image_url}` : '';
 
+  // Handle Play/Pause Toggle
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.play().catch(err => console.error("Audio play failed:", err));
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            console.error("Audio play failed:", err);
+            setIsPlaying(false);
+          });
+        }
       } else {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, currentScene]);
+  }, [isPlaying]);
 
+  // Handle Scene Change and Source Loading
   useEffect(() => {
     setProgress(0);
     if (audioRef.current) {
       audioRef.current.src = fullAudioUrl;
-      audioRef.current.load(); // Important to load the new source
+      audioRef.current.load(); // Force the browser to load the new scene's audio
+      
       if (isPlaying) {
-        audioRef.current.play().catch(err => console.error("Audio play failed on scene change:", err));
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => console.error("Audio interrupted on scene change:", err));
+        }
       }
     }
   }, [currentScene, fullAudioUrl]);
@@ -56,14 +68,19 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
   };
 
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
+    if (audioRef.current && audioRef.current.duration) {
       const newProgress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
       setProgress(newProgress);
     }
   };
   
   const handleAudioEnded = () => {
-    goToNextScene();
+    // Optional: Auto-advance to next scene when audio ends
+    if (currentScene < scenes.length - 1) {
+        goToNextScene();
+    } else {
+        setIsPlaying(false);
+    }
   };
 
   const handleDotClick = (index) => {
@@ -85,9 +102,9 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
   if (!scene) {
     return (
       <div className="story-player">
-        <p>Story has finished or is loading!</p>
+        <p>Story is loading...</p>
         <button className="restart-btn" onClick={onRestart}>
-          <FiRotateCw /> New Story
+          <FiRotateCw /> Try Again
         </button>
       </div>
     );
@@ -97,11 +114,11 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
     <div className="story-player">
       <audio
         ref={audioRef}
-        src={fullAudioUrl}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleAudioEnded}
         preload="auto"
       />
+      
       <div className="player-header">
         <h2>🎬 {storyData.title || "Story Time"}</h2>
         <button className="restart-btn" onClick={onRestart}>
@@ -124,7 +141,7 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
                 <img src={fullImageUrl} alt={`Scene ${currentScene + 1}`} />
               ) : (
                 <div className="placeholder-image">
-                  <p>{scene.image_description || "Image is being created..."}</p>
+                  <p>{scene.image_description || "Creating your illustration..."}</p>
                 </div>
               )}
             </div>
@@ -143,15 +160,27 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
         <div className="scene-counter">
           Scene {currentScene + 1} of {scenes.length}
         </div>
+        
         <div className="control-buttons">
-          <button onClick={goToPrevScene} disabled={currentScene === 0} className="control-btn"><FiSkipBack /></button>
-          <button onClick={togglePlay} className="control-btn play-btn">{isPlaying ? <FiPause /> : <FiPlay />}</button>
-          <button onClick={goToNextScene} className="control-btn">
-            {currentScene === scenes.length - 1 ? "📝" : <FiSkipForward />}
+          <button 
+            onClick={goToPrevScene} 
+            disabled={currentScene === 0} 
+            className="control-btn"
+          >
+            <FiSkipBack />
+          </button>
+          
+          <button onClick={togglePlay} className="control-btn play-btn">
+            {isPlaying ? <FiPause /> : <FiPlay />}
+          </button>
+          
+          <button onClick={goToNextScene} className="control-btn next-btn">
+            {currentScene === scenes.length - 1 ? "📝 Quiz" : <FiSkipForward />}
           </button>
         </div>
+
         <div className="scene-dots">
-          {(storyData?.scenes || []).map((_, index) => (
+          {scenes.map((_, index) => (
             <button
               key={`dot-${index}`}
               className={`dot ${index === currentScene ? 'active' : ''} ${index < currentScene ? 'completed' : ''}`}
