@@ -1,6 +1,8 @@
 import os
 import json
 import random
+import io
+import wave
 from google import genai
 from google.genai import types
 import docx
@@ -8,25 +10,22 @@ import pptx
 
 class GeminiService:
     def __init__(self):
-        # 1. Load API Key
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             print("CRITICAL WARNING: GEMINI_API_KEY is missing!")
         
         self.client = genai.Client(api_key=api_key)
         
-        # 2. EXACT MODELS FROM YOUR "CHECK_MODELS" LIST
-        # Text: Working fine
+        # 1. Text: Gemini 2.5 Flash
         self.text_model = "gemini-2.5-flash"
         
-        # Image: You have access to 4.0, so we use that!
+        # 2. Image: Imagen 4.0 (Working!)
         self.image_model = "imagen-4.0-generate-001" 
         
-        # Audio: Must use the specific audio model, not the text one
-        self.audio_model = "gemini-2.5-flash-native-audio-latest"
+        # 3. Audio: Switched to specific dated version for stability
+        self.audio_model = "gemini-2.5-flash-native-audio-preview-12-2025"
 
     def process_file_to_story(self, file_path: str):
-        """Reads PDF/Docx/PPTX and generates the JSON story structure."""
         ext = os.path.splitext(file_path)[1].lower()
         content_part = None
         
@@ -111,9 +110,8 @@ class GeminiService:
             return None
 
     def generate_voiceover(self, text: str):
-        """Generates Audio using the specialized Native Audio model."""
+        """Generates Audio (With Silent Fallback if API fails)."""
         try:
-            # We must use the AUDIO model, not the text one
             response = self.client.models.generate_content(
                 model=self.audio_model,
                 contents=f"Narrate this for a child in a cheerful, energetic voice: {text}",
@@ -124,7 +122,21 @@ class GeminiService:
             for part in response.candidates[0].content.parts:
                 if part.inline_data:
                     return part.inline_data.data
-            return None
+            
+            # If no audio data found, trigger fallback
+            raise Exception("No inline audio data returned")
+
         except Exception as e:
             print(f"Audio Gen Error: {e}")
-            return None
+            # FALLBACK: Generate 1 second of silence so the app doesn't break
+            return self._generate_silent_wav()
+
+    def _generate_silent_wav(self):
+        """Helper to create a dummy silent WAV file."""
+        buffer = io.BytesIO()
+        with wave.open(buffer, 'wb') as wav:
+            wav.setnchannels(1) # Mono
+            wav.setsampwidth(2) # 16-bit
+            wav.setframerate(44100)
+            wav.writeframes(b'\x00' * 44100) # 1 second of silence
+        return buffer.getvalue()
