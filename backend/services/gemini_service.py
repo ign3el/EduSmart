@@ -6,7 +6,7 @@ from typing import List
 from google import genai
 from google.genai import types
 
-# Define the structure for the quiz to avoid "empty object" errors
+# Define strict schemas to prevent "Empty Object" errors
 class QuizItem(BaseModel):
     question: str
     options: List[str]
@@ -24,20 +24,15 @@ class StorySchema(BaseModel):
 class GeminiService:
     def __init__(self):
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        # Optimized 2025 model selection from your VPS list
         self.text_model = "gemini-3-flash-preview"
         self.audio_model = "gemini-2.5-flash-preview-tts"
-        self.image_model = "imagen-4.0-fast-generate-001"
+        self.image_model = "imagen-3.0-generate-001"
 
     def process_file_to_story(self, file_path, grade_level):
-        """Analyzes PDF and returns a structured story using Gemini 3."""
         with open(file_path, "rb") as f:
             file_bytes = f.read()
 
-        prompt = (
-            f"Analyze this PDF and create a {grade_level} educational story. "
-            "Provide 5 engaging scenes and a 3-question quiz."
-        )
+        prompt = f"Create a {grade_level} educational story with 5 scenes and a 3-question quiz from this PDF."
 
         try:
             response = self.client.models.generate_content(
@@ -48,47 +43,43 @@ class GeminiService:
                 ],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    # Pass the Pydantic class to ensure strict JSON formatting
                     response_schema=StorySchema,
                     thinking_config=types.ThinkingConfig(include_thoughts=True)
                 )
             )
             return json.loads(response.text)
         except Exception as e:
-            print(f"STORY GEN ERROR: {e}")
+            print(f"Story Gen Error: {e}")
             return None
 
     def generate_image(self, prompt):
-        """Uses Imagen 4.0 via the dedicated generate_image method."""
+        """FIXED: Uses generate_images (plural) for the latest SDK."""
         try:
-            response = self.client.models.generate_image(
+            response = self.client.models.generate_images(
                 model=self.image_model,
-                prompt=f"Educational cartoon, high quality: {prompt}",
+                prompt=f"Child-friendly educational art: {prompt}",
+                config=types.GenerateImagesConfig(number_of_images=1)
             )
-            # The new SDK returns image_bytes directly in this method
-            return response.generated_images[0].image_bytes
+            # The bytes are in .image.image_bytes
+            return response.generated_images[0].image.image_bytes
         except Exception as e:
             print(f"Image Gen Error: {e}")
             return None
 
     def generate_voiceover(self, text):
-        """Generates high-fidelity native audio."""
         try:
             response = self.client.models.generate_content(
                 model=self.audio_model,
-                contents=f"Tell this story cheerfully: {text}",
+                contents=text,
                 config=types.GenerateContentConfig(
                     response_modalities=["AUDIO"],
                     speech_config=types.SpeechConfig(
                         voice_config=types.VoiceConfig(
-                            prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                                voice_name="Aoede" 
-                            )
+                            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Aoede")
                         )
                     )
                 )
             )
-            # Binary decode fix for browser compatibility
             data = response.candidates[0].content.parts[0].inline_data.data
             return base64.b64decode(data) if isinstance(data, str) else data
         except Exception as e:
