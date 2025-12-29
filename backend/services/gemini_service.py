@@ -13,8 +13,8 @@ class GeminiService:
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         self.text_model = "gemini-3-flash-preview"
         self.image_model = "gemini-3-pro-image-preview"
-        # SWITCHED TO LITE: Optimized for cost and availability
-        self.audio_model = "gemini-1.5-flash " 
+        # SWITCHED TO STABLE: gemini-1.5-flash is reliable for TTS in all regions
+        self.audio_model = "gemini-1.5-flash" 
 
     def process_file_to_story(self, file_path: str, grade_level: str) -> Optional[dict]:
         """Generates the story JSON structure."""
@@ -69,11 +69,12 @@ class GeminiService:
 
     def generate_voiceover(self, text: str, retries: int = 3) -> Optional[bytes]:
         """
-        TTS with Exponential Backoff + Jitter for 429/500 errors.
+        TTS using gemini-1.5-flash with Exponential Backoff + Jitter.
         """
         attempt = 0
         while attempt <= retries:
             try:
+                # Configuration for stable 1.5-flash audio generation
                 response = self.client.models.generate_content(
                     model=self.audio_model,
                     contents=text,
@@ -116,16 +117,12 @@ class GeminiService:
 
                 # IMPLEMENTING BACKOFF WITH JITTER
                 if "429" in error_msg or "500" in error_msg:
-                    # Base delay grows exponentially: 2s, 4s, 8s...
                     base_delay = 2 ** attempt
-                    # Jitter adds randomness (0-1s) to prevent synchronized retries
                     jitter = random.uniform(0, 1)
                     total_delay = base_delay + jitter
-                    
-                    print(f"⚠️ Rate Limit/Server Error. Sleeping {total_delay:.2f}s...")
+                    print(f"⚠️ Sleeping {total_delay:.2f}s...")
                     time.sleep(total_delay)
                 else:
-                    # Standard short retry for other errors
                     time.sleep(2)
                     
         return None
