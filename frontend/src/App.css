@@ -41,7 +41,9 @@ body {
 .app-header h1 {
   font-size: 3rem;
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  -webkit-background-clip: text;
+/* Update your CSS to include both lines */
+-webkit-background-clip: text; /* Your existing line */
+background-clip: text;         /* Add this standard property */
   -webkit-text-fill-color: transparent;
   margin-bottom: 0.5rem;
 }
