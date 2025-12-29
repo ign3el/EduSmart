@@ -22,15 +22,16 @@ app.add_middleware(
 
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 
-# --- FIXED: Restored Avatars Route ---
+# --- STATIC ROUTES ---
 @app.get("/api/avatars")
 async def get_avatars():
     return [
-        {"id": "wizard", "name": "Professor Paws", "description": "Wise teacher."},
-        {"id": "robot", "name": "Robo-Buddy", "description": "Tech explorer."},
+        {"id": "wizard", "name": "Professor Paws", "description": "Wise guide."},
+        {"id": "robot", "name": "Robo-Buddy", "description": "Tech expert."},
         {"id": "dinosaur", "name": "Dino-Explorer", "description": "Nature guide."}
     ]
 
+# --- BACKGROUND WORKFLOW ---
 async def generate_scene_media(job_id: str, i: int, scene: dict, semaphore: asyncio.Semaphore):
     async with semaphore:
         try:
@@ -42,7 +43,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict, semaphore: asyn
                     f.write(img_bytes)
                 scene["image_url"] = f"/api/outputs/{img_name}"
 
-            # 2. Wait to respect quota
+            # 2. Wait 30s to stay within the 2-per-minute audio quota
             await asyncio.sleep(30)
 
             # 3. Audio
@@ -53,7 +54,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict, semaphore: asyn
                     f.write(aud_bytes)
                 scene["audio_url"] = f"/api/outputs/{aud_name}"
         except Exception as e:
-            print(f"Media Error Scene {i}: {e}")
+            print(f"Media Task Error Scene {i}: {e}")
 
 async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
     try:
@@ -61,11 +62,10 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
         if not story_data:
-            raise Exception("AI Workflow Failed at text generation.")
+            raise Exception("AI Workflow failed during text generation.")
 
         scenes = story_data["scenes"]
         jobs[job_id]["progress"] = 30
-
         semaphore = asyncio.Semaphore(1)
         tasks = [generate_scene_media(job_id, i, scene, semaphore) for i, scene in enumerate(scenes)]
         await asyncio.gather(*tasks)
@@ -78,13 +78,13 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         jobs[job_id]["status"] = "failed"
         jobs[job_id]["error"] = str(e)
 
+# --- UPLOAD ROUTES ---
 @app.post("/api/upload")
 async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = File(...), grade_level: str = Form("Grade 4")):
     job_id = str(uuid.uuid4())
     upload_path = os.path.join("uploads", f"{job_id}_{file.filename}")
     with open(upload_path, "wb") as f:
         f.write(await file.read())
-
     jobs[job_id] = {"status": "processing", "progress": 0, "result": None}
     background_tasks.add_task(run_ai_workflow, job_id, upload_path, grade_level)
     return {"job_id": job_id}
