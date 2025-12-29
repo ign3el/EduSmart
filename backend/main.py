@@ -30,7 +30,7 @@ async def get_avatars():
     ]
 
 async def generate_scene_media(job_id: str, i: int, scene: dict):
-    # Staggered requests to prevent 429/Quota issues
+    # Staggered requests to prevent quota issues
     await asyncio.sleep(i * 3.5) 
     
     try:
@@ -47,7 +47,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
 
         if audio_bytes:
             aud_name = f"{job_id}_scene_{i}.mp3"
-            # Write as binary to fix 'NotSupportedError' in browser
+            # FIX: Write in binary mode 'wb' to prevent file corruption
             with open(os.path.join("outputs", aud_name), "wb") as f:
                 f.write(audio_bytes)
             scene["audio_url"] = f"/api/outputs/{aud_name}"
