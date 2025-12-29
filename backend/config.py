@@ -41,7 +41,7 @@ class Config:
     
     # Caching
     USE_CACHE = os.getenv("USE_CACHE", "true").lower() == "true"
-    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
     CACHE_TTL = int(os.getenv("CACHE_TTL", 86400))  # 24 hours
     
     # File handling
