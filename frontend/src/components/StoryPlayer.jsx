@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlay, FiPause, FiSkipForward, FiSkipBack, FiRotateCw } from 'react-icons/fi';
 import './StoryPlayer.css';
+import Quiz from './Quiz';
 
 const API_DOMAIN = "https://edusmart.ign3el.com";
 
 function StoryPlayer({ storyData, avatar, onRestart }) {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
   const [progress, setProgress] = useState(0);
   const audioRef = useRef(null);
 
@@ -43,6 +45,7 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
       setCurrentScene(currentScene + 1);
     } else {
       setIsPlaying(false);
+      setShowQuiz(true);
     }
   };
 
@@ -70,6 +73,14 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
   };
+
+  if (showQuiz && storyData?.quiz) {
+    return (
+      <div className="story-player">
+        <Quiz questions={storyData.quiz} onComplete={onRestart} />
+      </div>
+    );
+  }
 
   if (!scene) {
     return (
@@ -135,7 +146,9 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
         <div className="control-buttons">
           <button onClick={goToPrevScene} disabled={currentScene === 0} className="control-btn"><FiSkipBack /></button>
           <button onClick={togglePlay} className="control-btn play-btn">{isPlaying ? <FiPause /> : <FiPlay />}</button>
-          <button onClick={goToNextScene} disabled={currentScene === scenes.length - 1} className="control-btn"><FiSkipForward /></button>
+          <button onClick={goToNextScene} className="control-btn">
+            {currentScene === scenes.length - 1 ? "📝" : <FiSkipForward />}
+          </button>
         </div>
         <div className="scene-dots">
           {(storyData?.scenes || []).map((_, index) => (

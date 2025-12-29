@@ -15,18 +15,28 @@ function AvatarSelector({ onSelect }) {
         if (!response.ok) {
           throw new Error('Failed to fetch avatars')
         }
+        
         const data = await response.json()
-        // Add frontend-specific properties like emoji and color
-        const enhancedAvatars = data.avatars.map(avatar => ({
+        
+        // FIX: Ensure data is an array before mapping
+        // This handles both [{}, {}] and { avatars: [{}, {}] } formats
+        const rawList = Array.isArray(data) ? data : (data.avatars || []);
+        
+        const enhancedAvatars = rawList.map(avatar => ({
           ...avatar,
+          // Ensure we have a fallback emoji and color if backend IDs don't match
           emoji: getEmojiForAvatar(avatar.id),
           color: getColorForAvatar(avatar.id)
         }));
+        
         setAvatars(enhancedAvatars)
       } catch (error) {
         console.error("Error fetching avatars:", error)
-        // Fallback to a default avatar in case of an error
-        setAvatars([{ id: 'wizard', name: 'Wise Wizard', description: 'A magical teacher', emoji: '🧙‍♂️', color: '#8b5cf6' }])
+        // Fallback to a default list so the UI doesn't break
+        setAvatars([
+          { id: 'wizard', name: 'Professor Paws', description: 'Expert Guide', emoji: '🧙‍♂️', color: '#8b5cf6' },
+          { id: 'robot', name: 'Robo-Buddy', description: 'Tech Specialist', emoji: '🤖', color: '#3b82f6' }
+        ])
       } finally {
         setLoading(false)
       }
@@ -92,7 +102,6 @@ function AvatarSelector({ onSelect }) {
   )
 }
 
-// Helper functions to map backend data to frontend visuals
 const getEmojiForAvatar = (id) => {
   const map = {
     wizard: '🧙‍♂️',

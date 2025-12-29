@@ -72,12 +72,26 @@ def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         jobs[job_id]["error"] = str(e)
 
 # 5. API ROUTES
+# In main.py, update this specific route:
+
 @app.get("/api/avatars")
 async def get_avatars():
     return [
-        {"id": "teacher", "name": "Professor Paws", "image": "https://img.icons8.com/bubbles/200/teacher.png"},
-        {"id": "robot", "name": "Robo-Buddy", "image": "https://img.icons8.com/bubbles/200/robot-vacuum.png"},
-        {"id": "explorer", "name": "Captain Quest", "image": "https://img.icons8.com/bubbles/200/trekking.png"}
+        {
+            "id": "wizard", 
+            "name": "Professor Paws", 
+            "description": "A wise teacher who knows all about the UAE desert!"
+        },
+        {
+            "id": "robot", 
+            "name": "Robo-Buddy", 
+            "description": "Uses high-tech sensors to explain how plants survive."
+        },
+        {
+            "id": "dinosaur", 
+            "name": "Dino-Explorer", 
+            "description": "Let's explore nature from the past to the present!"
+        }
     ]
 
 @app.post("/api/upload")
