@@ -12,9 +12,10 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./backend:/app
-      - uploads:/app/uploads
-      - outputs:/app/outputs
-      - saved_stories:/app/saved_stories
+      - ./backend/outputs:/app/outputs
+      - ./backend/uploads:/app/uploads
+      - ./backend/saved_stories:/app/saved_stories
+    user: "0:0"
     restart: unless-stopped
     networks:
       - edusmart-network

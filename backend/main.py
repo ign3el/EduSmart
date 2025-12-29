@@ -1,11 +1,12 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+import os, uuid, json, asyncio
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import os, uuid, json, random
 from services.gemini_service import GeminiService
 
 app = FastAPI()
+gemini = GeminiService()
 
-# FIX: Ensure CORS matches your VPS domain
+# Allow CORS for your frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,51 +14,71 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-gemini = GeminiService()
+# In-memory store for tracking jobs
+# Format: { "job_id": { "status": "processing", "progress": 0, "result": None } }
+jobs = {}
 
-# VPS Paths - Absolute for Docker
-OUTPUT_DIR = "/app/outputs"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+def run_ai_workflow(job_id: str, file_path: str):
+    try:
+        # Step 1: Analyze Document
+        jobs[job_id]["progress"] = 10
+        story_data = gemini.process_file_to_story(file_path)
+        
+        if not story_data or "scenes" not in story_data:
+            raise Exception("AI failed to generate story structure.")
 
-@app.get("/api/avatars")
-async def get_avatars():
-    return {"avatars": [
-        {"id": "beep", "name": "Beep", "url": "https://api.dicebear.com/7.x/bottts/svg?seed=beep"},
-        {"id": "boop", "name": "Boop", "url": "https://api.dicebear.com/7.x/bottts/svg?seed=boop"}
-    ]}
+        # Step 2: Generate Media for each scene
+        total_scenes = len(story_data["scenes"])
+        for i, scene in enumerate(story_data["scenes"]):
+            # Update progress based on scene count
+            # Progress goes from 20% to 90% during scene generation
+            progress_val = 20 + int((i / total_scenes) * 70)
+            jobs[job_id]["progress"] = progress_val
+            
+            # Generate Image
+            image_bytes = gemini.generate_image(scene["image_description"])
+            if image_bytes:
+                img_path = f"outputs/{job_id}_scene_{i}.png"
+                with open(img_path, "wb") as f: f.write(image_bytes)
+                scene["image_url"] = f"/api/outputs/{job_id}_scene_{i}.png"
+
+            # Generate Audio
+            audio_bytes = gemini.generate_voiceover(scene["text"])
+            if audio_bytes:
+                audio_path = f"outputs/{job_id}_scene_{i}.mp3"
+                with open(audio_path, "wb") as f: f.write(audio_bytes)
+                scene["audio_url"] = f"/api/outputs/{job_id}_scene_{i}.mp3"
+
+        # Final Step: Complete
+        jobs[job_id]["progress"] = 100
+        jobs[job_id]["status"] = "completed"
+        jobs[job_id]["result"] = story_data
+
+    except Exception as e:
+        print(f"Error in background job {job_id}: {e}")
+        jobs[job_id]["status"] = "failed"
+        jobs[job_id]["error"] = str(e)
 
 @app.post("/api/upload")
-async def upload_story(file: UploadFile = File(...)):
-    session_id = str(uuid.uuid4())
-    # Process the story
-    story_data = gemini.process_file_to_story(file.filename)
-
-    if story_data is None:
-        # This will tell the frontend EXACTLY what happened
-        raise HTTPException(status_code=500, detail="Gemini API Model Not Found. Check backend logs.")
+async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    job_id = str(uuid.uuid4())
     
-    if not story_data or "scenes" not in story_data:
-        raise HTTPException(status_code=500, detail="Invalid Story Structure")
+    # Save uploaded file
+    upload_path = f"uploads/{file.filename}"
+    with open(upload_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
 
-    for i, scene in enumerate(story_data["scenes"]):
-        # Image Gen
-        img_bytes = gemini.generate_image(scene.get("image_description", "scene"))
-        if img_bytes:
-            img_name = f"{session_id}_{i}.png"
-            with open(os.path.join(OUTPUT_DIR, img_name), "wb") as f:
-                f.write(img_bytes)
-            scene["image_url"] = f"/outputs/{img_name}"
+    # Initialize job status
+    jobs[job_id] = {"status": "processing", "progress": 0, "result": None}
+    
+    # Start background task
+    background_tasks.add_task(run_ai_workflow, job_id, upload_path)
+    
+    return {"job_id": job_id}
 
-        # Audio Gen
-        audio_bytes = gemini.generate_voiceover(scene.get("text", "Hello"))
-        aud_name = f"{session_id}_{i}.wav"
-        with open(os.path.join(OUTPUT_DIR, aud_name), "wb") as f:
-            f.write(audio_bytes)
-        scene["audio_url"] = f"/outputs/{aud_name}"
-
-    result = {
-        "story_id": session_id,
-        "title": story_data.get("title", "New Story"),
-        "scenes": story_data.get("scenes", [])
-    }
-    return result
+@app.get("/api/status/{job_id}")
+async def get_status(job_id: str):
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return jobs[job_id]

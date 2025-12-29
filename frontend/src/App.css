@@ -137,3 +137,21 @@ body {
   background: #a02020;
 }
 
+.progress-container {
+  width: 100%;
+  max-width: 400px;
+  margin: 20px auto;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 12px;
+  background: #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+}
