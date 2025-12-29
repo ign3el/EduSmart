@@ -1,7 +1,7 @@
 import os
 import json
 import base64
-import re # Added for cleaning JSON strings
+import re
 from google import genai
 from google.genai import types
 
@@ -12,17 +12,48 @@ class GeminiService:
         self.audio_model = "gemini-2.0-flash-exp"
 
     def process_file_to_story(self, file_path, grade_level):
-        """Analyzes PDF and returns a cleaned, structured JSON story."""
+        """Analyzes PDF using a strict JSON schema to prevent missing 'scenes' errors."""
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-            
+
+        # Define the exact structure the AI MUST follow
+        story_schema = {
+            "type": "OBJECT",
+            "properties": {
+                "title": {"type": "STRING"},
+                "scenes": {
+                    "type": "ARRAY",
+                    "items": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "text": {"type": "STRING"},
+                            "image_description": {"type": "STRING"}
+                        },
+                        "required": ["text", "image_description"]
+                    }
+                },
+                "quiz": {
+                    "type": "ARRAY",
+                    "items": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "question": {"type": "STRING"},
+                            "options": {"type": "ARRAY", "items": {"type": "STRING"}},
+                            "answer": {"type": "STRING"}
+                        },
+                        "required": ["question", "options", "answer"]
+                    }
+                }
+            },
+            "required": ["title", "scenes", "quiz"]
+        }
+
         prompt = (
-            f"Analyze this PDF and create a {grade_level} story with exactly 5 scenes. "
-            "For each scene, provide 'text' and a detailed 'image_description'. "
-            "Also include a 'quiz' array with 3 multiple-choice questions. "
-            "Return the response ONLY as a JSON object."
+            f"Act as an expert educator. Analyze this PDF about desert plants and create a {grade_level} "
+            "educational story. Break it into 5-6 engaging scenes with narrations and image descriptions. "
+            "Finally, add a 3-question quiz."
         )
-        
+
         try:
             response = self.client.models.generate_content(
                 model=self.model_name,
@@ -31,21 +62,13 @@ class GeminiService:
                     prompt
                 ],
                 config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
+                    response_mime_type="application/json",
+                    response_schema=story_schema # Forces the correct keys
                 )
             )
             
-            # Clean response text in case AI added markdown formatting
-            raw_text = response.text
-            clean_json = re.sub(r'^```json\s*|\s*```$', '', raw_text.strip(), flags=re.MULTILINE)
-            
-            story_data = json.loads(clean_json)
-            
-            # Validation check
-            if "scenes" not in story_data or not story_data["scenes"]:
-                raise ValueError("Missing 'scenes' in AI response")
-                
-            return story_data
+            # response.text is guaranteed to follow the schema now
+            return json.loads(response.text)
 
         except Exception as e:
             print(f"STORY GEN ERROR: {e}")
@@ -55,7 +78,7 @@ class GeminiService:
         try:
             response = self.client.models.generate_content(
                 model="imagen-3.0-generate-001",
-                contents=f"Educational cartoon style, high quality: {prompt}",
+                contents=f"High quality educational illustration, cartoon style: {prompt}",
                 config=types.GenerateContentConfig(response_modalities=["IMAGE"])
             )
             return response.candidates[0].content.parts[0].inline_data.data
@@ -70,12 +93,9 @@ class GeminiService:
                 contents=text,
                 config=types.GenerateContentConfig(response_modalities=["AUDIO"])
             )
-            
             if response.candidates and response.candidates[0].content.parts:
                 audio_part = response.candidates[0].content.parts[0].inline_data.data
-                if isinstance(audio_part, str):
-                    return base64.b64decode(audio_part)
-                return audio_part
+                return base64.b64decode(audio_part) if isinstance(audio_part, str) else audio_part
             return None
         except Exception as e:
             print(f"Audio Gen Error: {e}")
