@@ -9,6 +9,12 @@ Services:
 All services are initialized in main.py and called via API endpoints.
 """
 
+"""
+Backend Services Package
+
+This package contains all the core AI services for EduSmart.
+"""
+
 from .gemini_service import GeminiService
 
 __all__ = [
