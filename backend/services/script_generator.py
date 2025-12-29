@@ -1,23 +1,22 @@
 """
 Script Generator Service
 Uses LangChain and an LLM to convert educational content into a structured screenplay.
-Supports both OpenAI API and local Ollama.
+Supports Google Gemini and local Ollama.
 """
 import logging
-import httpx
 from typing import List
 
 from langchain.prompts import ChatPromptTemplate
-from langchain.output_parsers import PydanticOutputParser, OutputFixingParser
+from langchain.output_parsers import PydanticOutputParser
 from models.story import Screenplay, Scene
 from config import Config
 from services.cache_manager import CacheManager
 
 # Conditional imports for LangChain LLMs
 try:
-    from langchain_openai import ChatOpenAI
+    from langchain_google_genai import ChatGoogleGenerativeAI
 except ImportError:
-    ChatOpenAI = None
+    ChatGoogleGenerativeAI = None
 
 try:
     from langchain_community.llms import Ollama
@@ -59,7 +58,7 @@ class ScriptGenerator:
         parser = PydanticOutputParser(pydantic_object=Screenplay)
         prompt_template = self._create_screenplay_prompt_template(parser, grade_level, avatar_type)
         
-        llm = self._get_llm(parser)
+        llm = self._get_llm()
         if not llm:
              logger.warning("No LLM is configured. Returning mock screenplay.")
              return self._generate_mock_screenplay(text, grade_level, avatar_type)
@@ -77,32 +76,31 @@ class ScriptGenerator:
             logger.error(f"Error generating screenplay: {e}", exc_info=True)
             return self._generate_mock_screenplay(text, grade_level, avatar_type)
     
-    def _get_llm(self, parser: PydanticOutputParser):
+    def _get_llm(self):
         """Initializes and returns the appropriate LLM based on config."""
         if self.use_local_llm:
             if Ollama is None:
                 logger.error("Ollama is selected but `langchain_community` is not installed.")
                 return None
             
-            # Ollama with JSON mode support is preferred
             return Ollama(
                 base_url=Config.OLLAMA_BASE_URL,
                 model=Config.OLLAMA_MODEL,
                 temperature=0.7,
-                # For Llama 3 and other models that support it
                 format="json", 
             )
 
-        if Config.OPENAI_API_KEY:
-            if ChatOpenAI is None:
-                logger.error("OpenAI is selected but `langchain_openai` is not installed.")
+        if Config.GEMINI_API_KEY:
+            if ChatGoogleGenerativeAI is None:
+                logger.error("Gemini is selected but `langchain_google_genai` is not installed.")
                 return None
-            # GPT-4 and newer models are good at following JSON instructions
-            return ChatOpenAI(
-                model_name=Config.OPENAI_MODEL,
+            
+            # Gemini requires the API key to be passed directly.
+            return ChatGoogleGenerativeAI(
+                model=Config.GEMINI_MODEL,
+                google_api_key=Config.GEMINI_API_KEY,
                 temperature=0.7,
-                openai_api_key=Config.OPENAI_API_KEY,
-                model_kwargs={"response_format": {"type": "json_object"}}
+                convert_system_message_to_human=True # Helps with some system prompts
             )
         
         return None
@@ -112,8 +110,9 @@ class ScriptGenerator:
         """Creates the LangChain prompt template for screenplay generation."""
         grade_instruction = self.grade_prompts.get(grade_level, "for an elementary school student.")
         
+        # Gemini works best with a clear instruction to output JSON.
         prompt = f"""
-You are an expert educational content creator for children's animated storybooks. Your task is to transform educational text into an engaging screenplay.
+You are an expert educational content creator for children's animated storybooks. Your task is to transform educational text into an engaging screenplay formatted as a JSON object.
 
 **Character/Narrator:** The story will be told by a friendly {avatar_type}.
 **Target Audience:** Explain the content {grade_instruction}.
@@ -124,7 +123,7 @@ You are an expert educational content creator for children's animated storybooks
 3.  For each scene, provide:
     - `scene_number`: A unique integer for the scene order.
     - `visual_description`: A brief, vivid description of what is shown on screen.
-    - `narration`: The {avatar_type}'s dialogue, which should be conversational and educational.
+    - `narration`: The {avatar_type}''s dialogue, which should be conversational and educational.
     - `learning_point`: A single, concise key takeaway for the scene.
 4.  Make the story interactive. Have the {avatar_type} ask questions to engage the viewer.
 
@@ -132,6 +131,7 @@ You are an expert educational content creator for children's animated storybooks
 {{educational_content}}
 
 **Output Format:**
+You must output your response as a single, valid JSON object that conforms to the following schema. Do not include any other text, just the JSON.
 {{format_instructions}}
 """
         return ChatPromptTemplate.from_messages([

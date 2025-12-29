@@ -23,8 +23,8 @@ class Config:
     USE_LOCAL_LLM = SERVICE_MODE == "local"
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")  # mistral, llama2, neural-chat
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-pro")
     
     # Image Generation Service
     USE_LOCAL_IMAGE_GEN = SERVICE_MODE == "local"
@@ -59,9 +59,9 @@ class Config:
         return {
             "service_mode": cls.SERVICE_MODE,
             "text_generation": {
-                "type": "local_ollama" if cls.USE_LOCAL_LLM else "openai",
-                "model": cls.OLLAMA_MODEL if cls.USE_LOCAL_LLM else cls.OPENAI_MODEL,
-                "endpoint": cls.OLLAMA_BASE_URL if cls.USE_LOCAL_LLM else "api.openai.com"
+                "type": "local_ollama" if cls.USE_LOCAL_LLM else "gemini",
+                "model": cls.OLLAMA_MODEL if cls.USE_LOCAL_LLM else cls.GEMINI_MODEL,
+                "endpoint": cls.OLLAMA_BASE_URL if cls.USE_LOCAL_LLM else "generativelanguage.googleapis.com"
             },
             "image_generation": {
                 "type": "local_diffusers" if cls.USE_LOCAL_IMAGE_GEN else "stability_ai",

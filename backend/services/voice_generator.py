@@ -31,10 +31,10 @@ class VoiceGenerator:
 
         # Maps generic styles to specific ElevenLabs voice IDs
         self.voice_profiles = {
-            "expressive_child": "Rachel", # Premade voice ID
-            "storyteller": "Bella",      # Premade voice ID
-            "friendly": "Antoni",      # Premade voice ID
-            "energetic": "Josh",         # Premade voice ID
+            "expressive_child": "21m00Tcm4TlvDq8ikWAM",  # Rachel
+            "storyteller": "EXAVITQu4vr4xnSDxMaL",       # Bella
+            "friendly": "ErXwobaYiN019PkySvjV",         # Antoni
+            "energetic": "TxGEqnHWrfWFTfGW9XjX",        # Josh
         }
         # Concurrency limit for API calls
         self.semaphore = asyncio.Semaphore(2)
