@@ -35,7 +35,7 @@ httpx==0.25.2
 
 # Caching
 redis==5.0.1
-aioredis==2.0.1
+# aioredis==2.0.1  # Removed: incompatible with Python 3.11+ (use redis[asyncio] instead)
 
 # Data Validation
 pydantic==2.5.3

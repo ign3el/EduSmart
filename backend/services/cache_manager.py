@@ -7,14 +7,14 @@ import json
 import logging
 from typing import Optional, Dict
 
-import aioredis
+import redis.asyncio as aioredis
 from config import Config
 
 logger = logging.getLogger(__name__)
 
 
 class CacheManager:
-    """Manages caching of AI-generated content using aioredis."""
+    """Manages caching of AI-generated content using redis.asyncio."""
 
     _redis: Optional[aioredis.Redis] = None
 
@@ -24,7 +24,7 @@ class CacheManager:
         self.use_cache = Config.USE_CACHE
 
     async def _get_redis(self) -> Optional[aioredis.Redis]:
-        """Initializes and returns the aioredis connection."""
+        """Initializes and returns the redis connection."""
         if not self.use_cache:
             return None
         if self._redis is None:
@@ -32,7 +32,7 @@ class CacheManager:
                 self._redis = aioredis.from_url(self.redis_url, decode_responses=True)
                 await self._redis.ping()
                 logger.info("Successfully connected to Redis.")
-            except (aioredis.exceptions.ConnectionError, OSError) as e:
+            except (aioredis.ConnectionError, OSError) as e:
                 logger.error(f"Redis connection failed: {e}. Continuing without cache.")
                 self._redis = None
         return self._redis
