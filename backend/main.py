@@ -20,11 +20,12 @@ gemini = GeminiService()
 
 @app.get("/api/avatars") 
 async def get_avatars(): 
-    return [ 
+    # Wrapped in an object to ensure frontend 'data.avatars.map' works
+    return { "avatars": [ 
         {"id": "beep", "name": "Beep", "url": "https://api.dicebear.com/7.x/bottts/svg?seed=beep"}, 
         {"id": "boop", "name": "Boop", "url": "https://api.dicebear.com/7.x/bottts/svg?seed=boop"}, 
         {"id": "zoom", "name": "Zoom", "url": "https://api.dicebear.com/7.x/bottts/svg?seed=zoom"} 
-    ]
+    ]}
 
 @app.post("/api/generate") 
 @app.post("/api/upload") 
@@ -36,8 +37,9 @@ async def generate_story(file: UploadFile = File(...)):
     with open(file_path, "wb") as f:
         f.write(await file.read())
     story_data = gemini.process_file_to_story(file_path)
-    if not story_data:
-        raise HTTPException(status_code=500, detail="Failed to generate story")
+    if not story_data or "scenes" not in story_data:
+        story_data = {"title": "Error", "scenes": []}
+        return story_data
     story_data["story_id"] = session_id 
     story_seed = random.randint(0, 99999999) 
     story_data["visual_seed"] = story_seed
