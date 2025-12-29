@@ -59,14 +59,23 @@ class GeminiService:
 
     def generate_voiceover(self, text):
         try:
+            print(f"DEBUG: Generating audio for text: {text[:30]}...")
             response = self.client.models.generate_content(
                 model=self.audio_model,
-                contents=text,
-                config=types.GenerateContentConfig(response_modalities=["AUDIO"])
+                contents=f"Narrate this story scene clearly for a student: {text}",
+                config=types.GenerateContentConfig(
+                    response_modalities=["AUDIO"]
+                )
             )
-            for part in response.candidates[0].content.parts:
-                if part.inline_data:
-                    return part.inline_data.data
+            
+            # Look specifically for the audio data in the first candidate
+            if response.candidates and response.candidates[0].content.parts:
+                for part in response.candidates[0].content.parts:
+                    if part.inline_data:
+                        print("DEBUG: Audio data found in inline_data!")
+                        return part.inline_data.data
+            
+            print("DEBUG: No audio data found in response parts.")
             return None
         except Exception as e:
             print(f"AUDIO ERROR: {e}")

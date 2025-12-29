@@ -57,9 +57,12 @@ def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
             audio_bytes = gemini.generate_voiceover(scene["text"])
             if audio_bytes:
                 aud_name = f"{job_id}_scene_{i}.mp3"
-                with open(os.path.join("outputs", aud_name), "wb") as f:
+                full_path = os.path.join("outputs", aud_name)
+                with open(full_path, "wb") as f:
                     f.write(audio_bytes)
+                # This URL must match your app.mount path
                 scene["audio_url"] = f"/api/outputs/{aud_name}"
+                print(f"DEBUG: Audio saved to {full_path}")
 
         # Finalize
         jobs[job_id]["progress"] = 100
