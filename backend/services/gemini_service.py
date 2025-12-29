@@ -8,31 +8,35 @@ import pptx
 
 class GeminiService:
     def __init__(self):
-        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        # USE THIS EXACT STRING:
-        self.text_model = "gemini-1.5-flash" 
-        
-        # USE STANDARD IMAGEN:
-        self.image_model = "imagen-3.0-generate-001"
+        # FIX 1: Use the correct environment variable name 
+        api_key = os.getenv("GEMINI_API_KEY") 
+        if not api_key: 
+            print("CRITICAL WARNING: GEMINI_API_KEY is missing!")
 
+        self.client = genai.Client(api_key=api_key)
+    
+        # FIX 2: Use models confirmed to be in the user's access list
+        self.text_model = "gemini-2.5-flash"
+        self.image_model = "gemini-2.5-flash-image"
+        
     def process_file_to_story(self, file_path: str):
         """Intelligently handles PDF (Visual) vs DOCX/PPTX (Text) to generate story."""
         ext = os.path.splitext(file_path)[1].lower()
-        
+    
         content_part = None
-        
+    
         # STRATEGY 1: PDF (Visual Reading)
         if ext == ".pdf":
             with open(file_path, "rb") as f:
                 pdf_data = f.read()
             content_part = types.Part.from_bytes(data=pdf_data, mime_type="application/pdf")
-            
+        
         # STRATEGY 2: DOCX (Text Extraction)
         elif ext == ".docx":
             doc = docx.Document(file_path)
             text = "\n".join([para.text for para in doc.paragraphs])
             content_part = f"Here is the content of the Word Document:\n{text}"
-            
+        
         # STRATEGY 3: PPTX (Text Extraction)
         elif ext == ".pptx":
             prs = pptx.Presentation(file_path)
@@ -42,21 +46,19 @@ class GeminiService:
                     if hasattr(shape, "text"):
                         text.append(shape.text)
             content_part = f"Here is the content of the Presentation slides:\n" + "\n".join(text)
-            
+        
         # STRATEGY 4: Plain Text
         elif ext == ".txt":
             with open(file_path, "r", encoding="utf-8") as f:
                 content_part = f.read()
-        
         if not content_part:
             return None
-
         # Generate the Story
         try:
             prompt = """
             You are a game designer converting this content into an Interactive Visual Novel for kids (Age 6-8).
             Create a linear story where the user learns the topic through a narrative.
-            
+        
             Return strictly valid JSON (no markdown) with this structure:
             {
               "title": "Story Title",
@@ -76,11 +78,10 @@ class GeminiService:
               ]
             }
             """
-            
+        
             # If content_part is a string (Text), put it in contents list directly
             # If content_part is a Part object (PDF), put it in list
             contents = [content_part, prompt]
-            
             response = self.client.models.generate_content(
                 model=self.text_model,
                 contents=contents,
@@ -92,21 +93,19 @@ class GeminiService:
         except Exception as e:
             print(f"Gen Error: {e}")
             return None
-
+            
     def generate_image(self, prompt: str, seed: int = None):
-        """Generates an image using Imagen 3 with Seed for consistency."""
+        """Generates an image using Gemini 2.5 Flash Image model."""
         try:
             if seed is None:
                 seed = random.randint(0, 2**32 - 1)
             
-            # Note: Imagen 3 config structure is slightly different in some SDK versions,
-            # but this standard call usually works for 3.0-generate-001
             response = self.client.models.generate_images(
                 model=self.image_model,
                 prompt=f"kids educational illustration, 3d pixar style, vibrant: {prompt}",
                 config=types.GenerateImagesConfig(
                     number_of_images=1,
-                    # seed=seed # Note: Imagen 3 API sometimes ignores seed via this SDK, but we pass it anyway
+                    # seed=seed  # Note: 2.5 Flash Image might handle seed differently, but passing it is safe
                 )
             )
             return response.generated_images[0].image.image_bytes

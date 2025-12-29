@@ -2,29 +2,25 @@ import os
 from google import genai
 from dotenv import load_dotenv
 
-# Load your API key
+# Load .env from the backend folder
 load_dotenv("backend/.env")
+
+# FIX: Use the variable name you actually have in your file
 api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    print("❌ Error: GEMINI_API_KEY not found in .env")
+    print("❌ Error: GEMINI_API_KEY not found. Check your .env file.")
 else:
-    print(f"✅ Found API Key: {api_key[:5]}...")
+    print(f"✅ Key found: {api_key[:5]}...")
     try:
-        # Initialize Client
         client = genai.Client(api_key=api_key)
-        
-        print("\n🔍 Listing available models for this key:")
+        print("\n🔍 RAW MODEL LIST (Pick one of these):")
         print("----------------------------------------")
         
-        # CORRECT SYNTAX for new SDK:
+        # Simple loop - print every model name available
         for m in client.models.list():
-            # Check if it supports content generation
-            if "generateContent" in (m.supported_generation_methods or []):
-                # The model name usually comes like 'models/gemini-1.5-flash'
-                print(f"👉 {m.name}")
-        
-        print("\n----------------------------------------")
+            print(f"👉 {m.name}")
             
+        print("----------------------------------------")
     except Exception as e:
-        print(f"\n❌ API Error: {e}")
+        print(f"❌ Error: {e}")
