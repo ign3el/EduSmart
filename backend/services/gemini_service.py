@@ -3,7 +3,7 @@ import json
 import random
 import time
 import requests
-import urllib.parse  # <--- NEW: For safe URL encoding
+import urllib.parse
 from google import genai
 from google.genai import types
 import docx
@@ -86,37 +86,39 @@ class GeminiService:
             return None
 
     def generate_image(self, prompt: str, seed: int = None):
-        """Generates image with Smart Retry (High Quality -> Safe Mode)."""
+        """Generates image with 120s Timeout & Fail-Safe Backup."""
         try:
-            # 1. Clean the prompt safely
             clean_prompt = urllib.parse.quote(prompt)
             seed_param = f"&seed={seed}" if seed else ""
             
-            # ATTEMPT 1: High Quality (Flux Model + Enhance)
+            # ATTEMPT 1: High Quality (120s Timeout)
             url_hq = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=576&model=flux&nologo=true&enhance=true{seed_param}"
-            
             try:
-                response = requests.get(url_hq, timeout=30)
+                print(f"Generating HQ Image...")
+                response = requests.get(url_hq, timeout=120) # Given 2 minutes
                 if response.status_code == 200:
                     return response.content
-                else:
-                    print(f"HQ Image Failed ({response.status_code}), retrying safe mode...")
-            except:
-                print("HQ Image Timeout, retrying safe mode...")
+            except Exception as e:
+                print(f"HQ Timeout: {e}")
 
-            # ATTEMPT 2: Safe Mode (Turbo Model + No Extra Params)
-            # This is much faster and rarely crashes 500
+            # ATTEMPT 2: Safe Mode (Turbo)
+            print("Retrying with Safe Mode...")
             url_safe = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=576&model=turbo{seed_param}"
-            
-            response = requests.get(url_safe, timeout=30)
-            if response.status_code == 200:
-                return response.content
-            
-            print(f"All Image Attempts Failed: {response.status_code}")
-            return None
+            try:
+                response = requests.get(url_safe, timeout=60)
+                if response.status_code == 200:
+                    return response.content
+            except:
+                pass
+
+            # ATTEMPT 3: FAIL-SAFE (Static Backup)
+            # If all else fails, return a generic 'Storybook' image so the app doesn't crash.
+            print("All AI Failed. Using Backup Image.")
+            backup_url = "https://images.unsplash.com/photo-1519337265831-281ec6cc8514?q=80&w=1024&auto=format&fit=crop"
+            return requests.get(backup_url, timeout=10).content
             
         except Exception as e:
-            print(f"Image Gen Critical Error: {e}")
+            print(f"Critical Image Error: {e}")
             return None
 
     def generate_voiceover(self, text: str):
