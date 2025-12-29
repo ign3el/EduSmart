@@ -3,6 +3,7 @@ import json
 import random
 import time
 import requests
+import urllib.parse  # <--- NEW: For safe URL encoding
 from google import genai
 from google.genai import types
 import docx
@@ -10,22 +11,17 @@ import pptx
 
 class GeminiService:
     def __init__(self):
-        # 1. Load API Key
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             print("CRITICAL WARNING: GEMINI_API_KEY is missing!")
         
         self.client = genai.Client(api_key=api_key)
-        
-        # 2. Text Model (Free & Reliable)
         self.text_model = "gemini-2.5-flash"
 
     def process_file_to_story(self, file_path: str):
-        """Reads file and generates story structure."""
         ext = os.path.splitext(file_path)[1].lower()
         content_part = None
         
-        # File Processing
         if ext == ".pdf":
             with open(file_path, "rb") as f:
                 pdf_data = f.read()
@@ -53,10 +49,8 @@ class GeminiService:
         if not content_part:
             return None
 
-        # Generate Story JSON
         try:
-            time.sleep(1) 
-            
+            time.sleep(1)
             prompt = """
             You are a game designer converting this content into an Interactive Visual Novel for kids (Age 6-8).
             Create a linear story where the user learns the topic through a narrative.
@@ -82,7 +76,7 @@ class GeminiService:
             """
             contents = [content_part, prompt]
             response = self.client.models.generate_content(
-                model=self.text_model, # Corrected from self.text_.model
+                model=self.text_model,
                 contents=contents,
                 config=types.GenerateContentConfig(response_mime_type="application/json")
             )
@@ -92,26 +86,38 @@ class GeminiService:
             return None
 
     def generate_image(self, prompt: str, seed: int = None):
-        """Generates image using Pollinations.ai (Free) with longer timeout."""
+        """Generates image with Smart Retry (High Quality -> Safe Mode)."""
         try:
-            clean_prompt = prompt.replace(" ", "%20")
-            if seed:
-                clean_prompt += f"&seed={seed}"
-                
-            image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=576&nologo=true"
+            # 1. Clean the prompt safely
+            clean_prompt = urllib.parse.quote(prompt)
+            seed_param = f"&seed={seed}" if seed else ""
             
-            # FIX: Increased timeout to 60 seconds to avoid "Read timed out"
-            response = requests.get(image_url, timeout=60)
+            # ATTEMPT 1: High Quality (Flux Model + Enhance)
+            url_hq = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=576&model=flux&nologo=true&enhance=true{seed_param}"
             
+            try:
+                response = requests.get(url_hq, timeout=30)
+                if response.status_code == 200:
+                    return response.content
+                else:
+                    print(f"HQ Image Failed ({response.status_code}), retrying safe mode...")
+            except:
+                print("HQ Image Timeout, retrying safe mode...")
+
+            # ATTEMPT 2: Safe Mode (Turbo Model + No Extra Params)
+            # This is much faster and rarely crashes 500
+            url_safe = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=576&model=turbo{seed_param}"
+            
+            response = requests.get(url_safe, timeout=30)
             if response.status_code == 200:
                 return response.content
-            else:
-                print(f"Pollinations Error: {response.status_code}")
-                return None
+            
+            print(f"All Image Attempts Failed: {response.status_code}")
+            return None
+            
         except Exception as e:
-            print(f"Image Gen Error: {e}")
+            print(f"Image Gen Critical Error: {e}")
             return None
 
     def generate_voiceover(self, text: str):
-        """Placeholder for Audio (Google Audio is Billed-Only)."""
         return None
