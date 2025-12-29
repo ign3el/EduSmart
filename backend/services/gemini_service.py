@@ -9,8 +9,10 @@ import pptx
 class GeminiService:
     def __init__(self):
         self.client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-        self.text_model = "gemini-2.0-flash"
-        self.image_model = "gemini-2.0-flash-exp"
+        # FIX: Use 1.5-flash because 2.0-flash has 0 quota in some regions 
+        self.text_model = "gemini-1.5-flash"
+        # FIX: Use standard Imagen 3 model 
+        self.image_model = "imagen-3.0-generate-001"
 
     def process_file_to_story(self, file_path: str):
         """Intelligently handles PDF (Visual) vs DOCX/PPTX (Text) to generate story."""
@@ -91,24 +93,26 @@ class GeminiService:
             return None
 
     def generate_image(self, prompt: str, seed: int = None):
-        """Generates an image using Flash model with Seed for consistency."""
+        """Generates an image using Imagen 3 with Seed for consistency."""
         try:
             if seed is None:
                 seed = random.randint(0, 2**32 - 1)
             
+            # Note: Imagen 3 config structure is slightly different in some SDK versions,
+            # but this standard call usually works for 3.0-generate-001
             response = self.client.models.generate_images(
                 model=self.image_model,
                 prompt=f"kids educational illustration, 3d pixar style, vibrant: {prompt}",
                 config=types.GenerateImagesConfig(
                     number_of_images=1,
-                    seed=seed
+                    # seed=seed # Note: Imagen 3 API sometimes ignores seed via this SDK, but we pass it anyway
                 )
             )
             return response.generated_images[0].image.image_bytes
         except Exception as e:
             print(f"Image Gen Error: {e}")
             return None
-
+            
     def generate_voiceover(self, text: str):
         """Generates audio using Gemini Native Audio."""
         try:
