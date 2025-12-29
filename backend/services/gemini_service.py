@@ -49,17 +49,33 @@ class GeminiService:
 
     def generate_voiceover(self, text):
         try:
-            # Generate high-quality narration using the native audio model
+            # Use the specialized TTS model for standard text-to-audio conversion
             response = self.client.models.generate_content(
-                model=self.audio_model,
-                contents=f"Please narrate this story scene: {text}",
-                config=types.GenerateContentConfig(response_modalities=["AUDIO"])
+                model="gemini-2.5-flash-preview-tts",
+                contents=f"Say cheerfully: {text}",
+                config=types.GenerateContentConfig(
+                    response_modalities=["AUDIO"],
+                    # Standard voice config for TTS
+                    speech_config=types.SpeechConfig(
+                        voice_config=types.VoiceConfig(
+                            prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                                voice_name='Kore' # Choose: 'Kore', 'Fenrir', etc.
+                            )
+                        )
+                    )
+                )
             )
-            # Extract audio bytes from the response parts
+            
+            # Safely extract audio bytes
             for part in response.candidates[0].content.parts:
                 if part.inline_data:
                     return part.inline_data.data
-            return None
+                    
+            # Fallback if no audio part is found
+            print("AUDIO GEN: No audio data in response")
+            return b"" 
+            
         except Exception as e:
             print(f"AUDIO GEN ERROR: {e}")
-            return None
+            # RETURN BYTES INSTEAD OF NONE: This prevents the TypeError crash
+            return b""
