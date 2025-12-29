@@ -1,54 +1,65 @@
-import os, json, re, io, wave
+import os
+import json
 from google import genai
 from google.genai import types
 
 class GeminiService:
     def __init__(self):
+        # Initialize the client with your API key
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        # TRY THIS: The most basic stable name
-        self.text_model = "gemini-1.5-flash" 
-        # FALLBACK: If 1.5 still fails, use "gemini-2.0-flash-exp"
         
-        self.image_model = "imagen-3.0-generate-001" 
+        # Use the high-performance 2.5 Flash model
+        self.text_model = "gemini-2.5-flash" 
+        
+        # Use the state-of-the-art Imagen 4.0
+        self.image_model = "imagen-4.0-generate-001" 
+        
+        # Use the specialized native audio model found in your list
+        self.audio_model = "gemini-2.5-flash-native-audio-latest"
 
     def process_file_to_story(self, file_path):
         try:
-            prompt = "Generate a kids story in JSON format with 'title' and a 'scenes' list. Each scene needs 'text' and 'image_description'."
-            
-            # Use the simplified string. The SDK adds 'models/' internally.
+            prompt = (
+                "Generate a kids story in JSON format. Output must be a JSON object "
+                "with a 'title' string and a 'scenes' list. Each scene needs 'text' "
+                "and 'image_description'."
+            )
             response = self.client.models.generate_content(
                 model=self.text_model,
                 contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                )
+                config=types.GenerateContentConfig(response_mime_type="application/json")
             )
             return json.loads(response.text)
         except Exception as e:
-            # This helps us see if the error changes from 404 to something else
-            print(f"STORY GEN ERROR: {str(e)}")
+            print(f"STORY GEN ERROR: {e}")
             return None
 
     def generate_image(self, prompt):
         try:
-            # Try the standard imagen 3 name
+            # Generate image using Imagen 4.0
             response = self.client.models.generate_images(
-                model="imagen-3.0-generate-001", 
-                prompt=prompt,
+                model=self.image_model,
+                prompt=f"Whimsical storybook illustration style: {prompt}",
                 config=types.GenerateImagesConfig(number_of_images=1)
             )
             return response.generated_images[0].image.image_bytes
         except Exception as e:
-            print(f"Image Error (Imagen 3): {e}")
+            print(f"IMAGE GEN ERROR: {e}")
             return None
 
     def generate_voiceover(self, text):
-        # If native audio is failing or rate-limited, use a silent fallback 
-        # so the story doesn't crash
-        return self._silent_fallback()
-
-    def _silent_fallback(self):
-        buffer = io.BytesIO()
-        with wave.open(buffer, 'wb') as wav:
-            wav.setnchannels(1); wav.setsampwidth(2); wav.setframerate(44100); wav.writeframes(b'\x00' * 44100)
-        return buffer.getvalue()
+        try:
+            # Generate high-quality narration using the native audio model
+            response = self.client.models.generate_content(
+                model=self.audio_model,
+                contents=f"Please narrate this story scene: {text}",
+                config=types.GenerateContentConfig(response_modalities=["AUDIO"])
+            )
+            # Extract audio bytes from the response parts
+            for part in response.candidates[0].content.parts:
+                if part.inline_data:
+                    return part.inline_data.data
+            return None
+        except Exception as e:
+            print(f"AUDIO GEN ERROR: {e}")
+            return None
