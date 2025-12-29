@@ -23,76 +23,69 @@ class StorySchema(BaseModel):
 class GeminiService:
     def __init__(self):
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        # Using Gemini 3 models from your previous terminal list
+        # Using the exact strings from your VPS list
         self.text_model = "gemini-3-flash-preview"
         self.audio_model = "gemini-2.5-flash-preview-tts"
-        # The multimodal image model
-        self.image_model = "gemini-3-pro-image-preview" 
+        self.image_model = "gemini-3-pro-image-preview"
 
     def process_file_to_story(self, file_path, grade_level):
+        print(f"DEBUG: Processing PDF at {file_path}")
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-        prompt = f"Analyze this PDF and create a {grade_level} story with 5 scenes and a 3-question quiz. Return JSON."
+
         try:
             response = self.client.models.generate_content(
                 model=self.text_model,
                 contents=[
                     types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
-                    prompt
+                    f"Create a {grade_level} educational story as JSON."
                 ],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=StorySchema,
-                    thinking_config=types.ThinkingConfig(include_thoughts=True)
                 )
             )
+            print("DEBUG: Story text generated successfully.")
             return json.loads(response.text)
         except Exception as e:
-            print(f"Story Error: {e}")
+            print(f"CRITICAL STORY ERROR: {e}")
             return None
 
     def generate_image(self, prompt):
-        """
-        Uses Gemini 3 multimodal generation.
-        This fixes the 404 error by avoiding the 'predict' method.
-        """
+        """Native multimodal image generation."""
         try:
-            # We call generate_content because this is a multimodal model
+            print(f"DEBUG: Starting image gen for: {prompt[:30]}...")
             response = self.client.models.generate_content(
                 model=self.image_model,
-                contents=f"Generate a child-friendly educational illustration: {prompt}",
-                config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE"] # Tells Gemini to output an image
-                )
+                contents=f"Educational cartoon: {prompt}",
+                config=types.GenerateContentConfig(response_modalities=["IMAGE"])
             )
-            
-            # The image data is returned as an 'inline_data' part
-            if response.candidates and response.candidates[0].content.parts:
-                for part in response.candidates[0].content.parts:
-                    if part.inline_data:
-                        # Success: return the raw bytes
-                        return part.inline_data.data
+            for part in response.candidates[0].content.parts:
+                if part.inline_data:
+                    return part.inline_data.data
             return None
         except Exception as e:
-            print(f"Image Gen Error: {e}")
+            print(f"IMAGE ERROR: {e}")
             return None
 
     def generate_voiceover(self, text):
+        """Native TTS with strict Base64 to Binary conversion."""
         try:
+            print(f"DEBUG: Starting audio gen for text length: {len(text)}")
             response = self.client.models.generate_content(
                 model=self.audio_model,
                 contents=text,
-                config=types.GenerateContentConfig(
-                    response_modalities=["AUDIO"],
-                    speech_config=types.SpeechConfig(
-                        voice_config=types.VoiceConfig(
-                            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Aoede")
-                        )
-                    )
-                )
+                config=types.GenerateContentConfig(response_modalities=["AUDIO"])
             )
-            data = response.candidates[0].content.parts[0].inline_data.data
-            return base64.b64decode(data) if isinstance(data, str) else data
+            
+            audio_part = response.candidates[0].content.parts[0].inline_data.data
+            
+            # If the data is a string, it MUST be decoded to binary bytes
+            # Otherwise, it saves as a text file which causes 'NotSupportedError'
+            if isinstance(audio_part, str):
+                return base64.b64decode(audio_part)
+            
+            return audio_part
         except Exception as e:
-            print(f"Audio Gen Error: {e}")
+            print(f"AUDIO ERROR: {e}")
             return None
