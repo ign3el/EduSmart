@@ -20,6 +20,17 @@
   min-height: 50px;
 }
 
+.upload-link {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  text-decoration: underline;
+  opacity: 0.9;
+}
+
+.upload-link:hover {
+  color: var(--primary-color);
+}
+
 .player-header h2 {
   font-size: clamp(0.9rem, 3.5vw, 1.5rem);
   color: var(--text-primary);

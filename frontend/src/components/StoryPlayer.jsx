@@ -18,6 +18,7 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
 
   const fullAudioUrl = scene?.audio_url ? `${API_DOMAIN}${scene.audio_url}` : '';
   const fullImageUrl = scene?.image_url ? `${API_DOMAIN}${scene.image_url}` : '';
+  const uploadUrl = storyData?.upload_url ? `${API_DOMAIN}${storyData.upload_url}` : '';
 
   // Handle Play/Pause Toggle
   useEffect(() => {
@@ -125,6 +126,11 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
         <button className="restart-btn" onClick={onRestart}>
           <FiRotateCw /> New Story
         </button>
+        {uploadUrl && (
+          <a className="upload-link" href={uploadUrl} target="_blank" rel="noreferrer">
+            See Your Uploaded File
+          </a>
+        )}
       </div>
 
       <div className="scene-display">

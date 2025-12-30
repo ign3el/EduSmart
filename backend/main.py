@@ -32,6 +32,7 @@ app.add_middleware(
 
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
+app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/api/avatars")
 async def get_avatars():
@@ -94,6 +95,7 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str, voice: 
 
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"
+        story_data["upload_url"] = f"/api/uploads/{os.path.basename(file_path)}"
         jobs[job_id]["result"] = story_data
     except Exception as e:
         print(f"WORKFLOW ERROR: {e}")
@@ -110,6 +112,7 @@ async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = Fil
     jobs[job_id] = {"status": "processing", "progress": 0, "result": None}
     background_tasks.add_task(run_ai_workflow, job_id, upload_path, grade_level, voice)
     return {"job_id": job_id}
+
 
 @app.get("/api/status/{job_id}")
 async def get_status(job_id: str):
