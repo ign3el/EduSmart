@@ -26,7 +26,7 @@ class GeminiService:
 
             # Professional teacher-led prompt
             teacher_prompt = f"""
-As a {grade_level} teacher, I need you to transform this educational content into an engaging, interactive animated storybook for my students.
+As a professional {grade_level} educational teacher, I need you to transform this educational content into an engaging, interactive animated storybook for my students.
 
 TEACHING OBJECTIVES:
 • Make complex concepts accessible and fun for {grade_level} learners
