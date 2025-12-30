@@ -201,6 +201,7 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false }) 
           <FiRotateCw /> {isSaved ? 'Back to Home' : 'Start New Story'}
         </button>
       </div>
+    </div>
   );
 }
 
