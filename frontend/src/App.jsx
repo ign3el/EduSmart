@@ -211,6 +211,20 @@ function App() {
             </motion.div>
           )}
 
+          {step === 'load' && (
+            <motion.div key="load" className="step-container">
+              <LoadStory 
+                onLoad={(storyData, storyName) => {
+                  setStoryData(storyData)
+                  setSelectedAvatar({ id: 'loaded', name: 'Saved Story' })
+                  setIsSaved(true)
+                  setStep('playing')
+                }}
+                onBack={() => setStep('home')}
+              />
+            </motion.div>
+          )}
+
           {step === 'avatar' && (
             <motion.div key="avatar" className="step-container">
               <AvatarSelector onSelect={handleAvatarSelect} />
