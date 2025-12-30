@@ -2,9 +2,11 @@ import os
 from dotenv import load_dotenv
 import uuid
 import asyncio
+import time
 import mimetypes
 import io
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException
+from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +22,10 @@ mimetypes.add_type('image/png', '.png')
 app = FastAPI()
 gemini = GeminiService()
 
+@app.on_event("startup")
+async def start_cleanup_task():
+    asyncio.create_task(cleanup_scheduler())
+
 os.makedirs("outputs", exist_ok=True)
 os.makedirs("uploads", exist_ok=True)
 os.makedirs("saved_stories", exist_ok=True)
@@ -33,6 +39,37 @@ app.add_middleware(
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
 app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# -------- Periodic cleanup for temp files --------
+CLEAN_PATHS = ["outputs", "uploads"]
+CLEAN_AGE_SECONDS = 60 * 60  # 1 hour
+CLEAN_INTERVAL_SECONDS = 60 * 60 * 24  # 24 hours
+
+async def cleanup_old_files():
+    now = time.time()
+    removed = 0
+    for path in CLEAN_PATHS:
+        if not os.path.exists(path):
+            continue
+        for fname in os.listdir(path):
+            fpath = os.path.join(path, fname)
+            try:
+                mtime = os.path.getmtime(fpath)
+                if now - mtime > CLEAN_AGE_SECONDS:
+                    os.remove(fpath)
+                    removed += 1
+            except Exception:
+                continue
+    if removed:
+        print(f"Cleanup removed {removed} stale files from outputs/uploads")
+
+async def cleanup_scheduler():
+    while True:
+        try:
+            await cleanup_old_files()
+        except Exception as e:
+            print(f"Cleanup scheduler error: {e}")
+        await asyncio.sleep(CLEAN_INTERVAL_SECONDS)
 
 @app.get("/api/avatars")
 async def get_avatars():
