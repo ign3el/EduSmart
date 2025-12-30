@@ -2,10 +2,12 @@ import os
 import json
 import base64
 import time
+import io
 from typing import Optional, Any
 from google import genai
 from google.genai import types
 from models import StorySchema
+from pydub import AudioSegment
 
 class GeminiService:
     def __init__(self) -> None:
@@ -100,11 +102,36 @@ class GeminiService:
                     # Gemini returns bytes directly, not base64 string
                     if isinstance(audio_data, bytes):
                         print(f"Audio is bytes, length: {len(audio_data)}")
-                        return audio_data
+                        
+                        # Convert to MP3 format (Gemini likely returns WAV or PCM)
+                        try:
+                            # Load audio data (auto-detects format)
+                            audio = AudioSegment.from_file(io.BytesIO(audio_data))
+                            
+                            # Export as MP3
+                            mp3_buffer = io.BytesIO()
+                            audio.export(mp3_buffer, format="mp3", bitrate="128k")
+                            mp3_bytes = mp3_buffer.getvalue()
+                            
+                            print(f"Converted to MP3, new length: {len(mp3_bytes)}")
+                            return mp3_bytes
+                        except Exception as conv_err:
+                            print(f"Audio conversion error: {conv_err}")
+                            # If conversion fails, return raw bytes
+                            return audio_data
                     elif isinstance(audio_data, str):
-                        # If it's base64 string, decode it
+                        # If it's base64 string, decode it first then convert
                         print(f"Audio is base64 string, decoding...")
-                        return base64.b64decode(audio_data)
+                        raw_bytes = base64.b64decode(audio_data)
+                        
+                        try:
+                            audio = AudioSegment.from_file(io.BytesIO(raw_bytes))
+                            mp3_buffer = io.BytesIO()
+                            audio.export(mp3_buffer, format="mp3", bitrate="128k")
+                            return mp3_buffer.getvalue()
+                        except Exception as conv_err:
+                            print(f"Audio conversion error: {conv_err}")
+                            return raw_bytes
                     else:
                         raise ValueError(f"Unexpected audio data type: {type(audio_data)}")
                 
