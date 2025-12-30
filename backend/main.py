@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 import uuid
 import asyncio
 import mimetypes
@@ -11,6 +12,7 @@ from services.gemini_service import GeminiService
 from models import StoryResponse
 
 # Fix for NotSupportedError in browsers
+load_dotenv()
 mimetypes.add_type('audio/mpeg', '.mp3')
 mimetypes.add_type('image/png', '.png')
 
