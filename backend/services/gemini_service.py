@@ -146,77 +146,130 @@ Please transform the attached document into this interactive educational story f
             return None
 
     def generate_image(self, prompt: str) -> Optional[bytes]:
-        """Image generation with fallback chain: Hugging Face → Gemini (skipping Pollinations due to strict rate limits)."""
+        """Image generation via RunPod (seed-capable). HF/Gemini fallbacks removed."""
         educational_prompt = f"Educational cartoon illustration for children: {prompt}"
-        
-        # Try 1: Hugging Face Inference API (free with token, reliable, higher limits)
-        hf_token = os.getenv("HF_TOKEN")
-        if hf_token:
-            # Try up to 2 times with model loading wait
-            for attempt in range(2):
-                try:
-                    print(f"Trying Hugging Face (attempt {attempt + 1}/2)...")
-                    api_url = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
-                    headers = {"Authorization": f"Bearer {hf_token}"}
-                    response = requests.post(
-                        api_url,
-                        headers=headers,
-                        json={"inputs": educational_prompt},
-                        timeout=90
-                    )
-                    
-                    if response.status_code == 200 and len(response.content) > 1000:
-                        print("✓ Image generated via Hugging Face")
-                        return response.content
-                    elif response.status_code == 503:
-                        # Model is loading, wait and retry
-                        wait_time = 20 if attempt == 0 else 0
-                        if wait_time > 0:
-                            print(f"⚠ HF model loading, waiting {wait_time}s...")
-                            time.sleep(wait_time)
-                        continue
-                    else:
-                        # 4xx (e.g., 410) or other errors: stop and do not hit paid fallback unless explicitly allowed
-                        print(f"HF returned status {response.status_code}")
-                        break
-                except Exception as e:
-                    print(f"HF attempt {attempt + 1} failed: {str(e)[:80]}")
-                    if attempt == 0:
-                        time.sleep(2)
-                    continue
-        else:
-            print("HF_TOKEN not set; skipping Hugging Face image generation")
 
-        # Optional paid fallback (Gemini) guarded by env flag to avoid surprise spend
-        allow_gemini_fallback = os.getenv("ALLOW_GEMINI_IMAGE_FALLBACK", "false").lower() == "true"
-        if not allow_gemini_fallback:
-            print("Skipping Gemini fallback (ALLOW_GEMINI_IMAGE_FALLBACK not true)")
+        endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID")
+        api_key = os.getenv("RUNPOD_KEY")
+
+        if not endpoint_id or not api_key:
+            print("RUNPOD_ENDPOINT_ID or RUNPOD_KEY not set; cannot generate image")
             return None
 
-        # Try 2: Gemini (paid fallback, always reliable)
+        # Simple spend guard (estimates). Reset monthly and block when over cap.
+        cap_aed = float(os.getenv("RUNPOD_MONTHLY_CAP_AED", "25"))
+        est_cost_per_image = float(os.getenv("RUNPOD_COST_AED_PER_IMAGE", "0.015"))
+        usage_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runpod_usage.json")
+        month_key = time.strftime("%Y-%m")
+
+        def load_usage():
+            if os.path.exists(usage_file):
+                try:
+                    with open(usage_file, "r") as f:
+                        return json.load(f)
+                except Exception:
+                    return {"month": month_key, "images": 0}
+            return {"month": month_key, "images": 0}
+
+        def save_usage(data):
+            try:
+                with open(usage_file, "w") as f:
+                    json.dump(data, f)
+            except Exception as e:
+                print(f"Usage file save failed: {e}")
+
+        usage = load_usage()
+        if usage.get("month") != month_key:
+            usage = {"month": month_key, "images": 0}
+
+        projected_cost = (usage.get("images", 0) + 1) * est_cost_per_image
+        if cap_aed > 0 and projected_cost > cap_aed:
+            print(f"RunPod cap reached (~{projected_cost:.2f} AED > {cap_aed} AED); skipping image")
+            return None
+
+        seed_env = os.getenv("RUNPOD_SEED")
+        payload_input = {"prompt": educational_prompt}
+        if seed_env:
+            try:
+                payload_input["seed"] = int(seed_env)
+            except ValueError:
+                pass
+
+        url = f"https://api.runpod.ai/v2/{endpoint_id}/run"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
         try:
-            print("Trying Gemini (paid fallback)...")
-            def _generate():
-                return self.client.models.generate_content(
-                    model=self.image_model,
-                    contents=educational_prompt,
-                    config=types.GenerateContentConfig(response_modalities=["IMAGE"])
-                )
-            
-            response = self._call_with_exponential_backoff(_generate)
-            
-            if not (response and response.candidates and 
-                    response.candidates[0].content and 
-                    response.candidates[0].content.parts):
+            resp = requests.post(url, headers=headers, json={"input": payload_input}, timeout=90)
+            if resp.status_code != 200:
+                print(f"RunPod returned {resp.status_code}: {resp.text[:120]}")
                 return None
 
-            for part in response.candidates[0].content.parts:
-                if part.inline_data and part.inline_data.data:
-                    print("✓ Image generated via Gemini")
-                    return part.inline_data.data
+            data = resp.json()
+            # If synchronous output is returned directly
+            if data.get("status") == "COMPLETED" and data.get("output"):
+                output = data.get("output")
+            # Otherwise poll status endpoint
+            elif data.get("id"):
+                request_id = data["id"]
+                status_url = f"https://api.runpod.ai/v2/{endpoint_id}/status/{request_id}"
+                output = None
+                for _ in range(30):  # up to ~60s
+                    time.sleep(2)
+                    status_resp = requests.get(status_url, headers=headers, timeout=20)
+                    if status_resp.status_code != 200:
+                        continue
+                    status_data = status_resp.json()
+                    if status_data.get("status") == "COMPLETED" and status_data.get("output"):
+                        output = status_data.get("output")
+                        break
+                    if status_data.get("status") in {"FAILED", "CANCELLED"}:
+                        print(f"RunPod job failed: {status_data}")
+                        return None
+            else:
+                print("RunPod response missing output/id")
+                return None
+
+            image_bytes = None
+            if isinstance(output, str):
+                try:
+                    image_bytes = base64.b64decode(output)
+                except Exception:
+                    image_bytes = None
+            elif isinstance(output, dict):
+                b64 = output.get("image") or output.get("image_base64") or output.get("output")
+                if isinstance(b64, str):
+                    try:
+                        image_bytes = base64.b64decode(b64)
+                    except Exception:
+                        image_bytes = None
+            elif isinstance(output, list) and output:
+                first = output[0]
+                if isinstance(first, str):
+                    try:
+                        image_bytes = base64.b64decode(first)
+                    except Exception:
+                        image_bytes = None
+                elif isinstance(first, dict):
+                    b64 = first.get("image") or first.get("image_base64") or first.get("output")
+                    if isinstance(b64, str):
+                        try:
+                            image_bytes = base64.b64decode(b64)
+                        except Exception:
+                            image_bytes = None
+
+            if image_bytes:
+                usage["images"] = usage.get("images", 0) + 1
+                save_usage(usage)
+                print("✓ Image generated via RunPod")
+                return image_bytes
+
+            print("RunPod output could not be parsed")
             return None
         except Exception as e:
-            print(f"All image generation methods failed. Last error: {e}")
+            print(f"RunPod error: {str(e)[:120]}")
             return None
 
     def generate_voiceover(self, text: str, voice: str = "en-US-JennyNeural") -> Optional[bytes]:
