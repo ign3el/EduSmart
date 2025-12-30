@@ -5,6 +5,7 @@ import AvatarSelector from './components/AvatarSelector'
 import StoryPlayer from './components/StoryPlayer'
 import SaveStoryModal from './components/SaveStoryModal'
 import LoadStory from './components/LoadStory'
+import OfflineManager from './components/OfflineManager'
 import './App.css'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
   const [currentJobId, setCurrentJobId] = useState(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [isOfflineMode, setIsOfflineMode] = useState(false)
 
   const handleFileUpload = (file) => {
     setUploadedFile(file)
@@ -99,6 +101,7 @@ function App() {
     setProgress(0)
     setCurrentJobId(null)
     setIsSaved(false)
+    setIsOfflineMode(false)
   }
 
   const handleSaveStory = () => {
@@ -111,11 +114,32 @@ function App() {
     alert(`✅ Story "${storyName}" saved successfully!`)
   }
 
-  const handleLoadStory = (loadedStoryData, storyName) => {
+  const handleLoadOffline = (loadedStoryData, storyName) => {
     setStoryData(loadedStoryData)
-    setSelectedAvatar({ id: 'loaded', name: 'Saved Story' })
+    setSelectedAvatar({ id: 'offline', name: 'Offline Story' })
     setIsSaved(true)
+    setIsOfflineMode(true)
     setStep('playing')
+  }
+
+  const handleSaveOffline = async (storyData, storyName) => {
+    try {
+      // Save to localStorage
+      const storyId = `local_${Date.now()}`
+      const localStory = {
+        id: storyId,
+        name: storyName,
+        storyData: storyData,
+        savedAt: Date.now(),
+        isOffline: true
+      }
+      
+      localStorage.setItem(`edusmart_story_${storyId}`, JSON.stringify(localStory))
+      alert(`✅ Story "${storyName}" saved locally!`)
+      return storyId
+    } catch (error) {
+      throw new Error('Failed to save locally: ' + error.message)
+    }
   }
 
   return (
@@ -151,7 +175,15 @@ function App() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  📚 Load Saved Story
+                  📚 Load Online Story
+                </motion.button>
+                <motion.button 
+                  className="home-btn offline-btn"
+                  onClick={() => setStep('offline')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  📱 Offline Manager
                 </motion.button>
               </div>
             </motion.div>
@@ -170,10 +202,10 @@ function App() {
             </motion.div>
           )}
 
-          {step === 'load' && (
-            <motion.div key="load" className="step-container">
-              <LoadStory 
-                onLoad={handleLoadStory}
+          {step === 'offline' && (
+            <motion.div key="offline" className="step-container">
+              <OfflineManager 
+                onLoadOffline={handleLoadOffline}
                 onBack={() => setStep('home')}
               />
             </motion.div>
@@ -214,6 +246,7 @@ function App() {
                 onRestart={handleRestart}
                 onSave={handleSaveStory}
                 isSaved={isSaved}
+                isOffline={isOfflineMode}
               />
             </motion.div>
           )}

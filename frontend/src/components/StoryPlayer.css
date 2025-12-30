@@ -265,9 +265,25 @@
   transition: all 0.3s ease;
 }
 
-.save-story-btn:hover {
+.save-offline-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 2rem;
+  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+  border: 2px solid #38ef7d;
+  border-radius: 10px;
+  color: #38ef7d;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.save-offline-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(17, 153, 142, 0.4);
+  box-shadow: 0 5px 20px rgba(56, 239, 125, 0.3);
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
 }
 
 @media (max-width: 768px) {

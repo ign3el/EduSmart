@@ -6,7 +6,7 @@ import Quiz from './Quiz';
 
 const API_DOMAIN = "https://edusmart.ign3el.com";
 
-function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false }) {
+function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false }) {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
@@ -192,9 +192,38 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false }) 
       </div>
 
       <div className="action-buttons">
-        {!isSaved && onSave && (
+        {!isSaved && !isOffline && onSave && (
           <button className="save-story-btn" onClick={onSave}>
-            💾 Save Story
+            💾 Save Online
+          </button>
+        )}
+        {!isSaved && (
+          <button 
+            className="save-offline-btn" 
+            onClick={() => {
+              const storyName = prompt('Enter story name for local save:')
+              if (storyName?.trim()) {
+                // Save to localStorage
+                const storyId = `local_${Date.now()}`
+                const localStory = {
+                  id: storyId,
+                  name: storyName.trim(),
+                  storyData: storyData,
+                  savedAt: Date.now(),
+                  isOffline: true
+                }
+                
+                try {
+                  localStorage.setItem(`edusmart_story_${storyId}`, JSON.stringify(localStory))
+                  alert(`✅ Story "${storyName}" saved locally!`)
+                  window.location.reload() // Refresh to show in offline manager
+                } catch (error) {
+                  alert('Failed to save locally: ' + error.message)
+                }
+              }
+            }}
+          >
+            💻 Save Locally
           </button>
         )}
         <button className="restart-btn" onClick={onRestart}>

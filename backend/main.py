@@ -223,17 +223,90 @@ async def cleanup_job(job_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
 
-@app.delete("/api/delete-story/{story_id}")
-async def delete_story(story_id: str):
-    """Delete a saved story."""
+@app.get("/api/export-story/{story_id}")
+async def export_story(story_id: str):
+    """Export a saved story as a downloadable ZIP file."""
     story_dir = os.path.join("saved_stories", story_id)
+    metadata_path = os.path.join(story_dir, "metadata.json")
     
-    if not os.path.exists(story_dir):
+    if not os.path.exists(metadata_path):
         raise HTTPException(status_code=404, detail="Story not found")
     
     try:
-        import shutil
-        shutil.rmtree(story_dir)
-        return {"message": "Story deleted successfully"}
+        import json
+        import zipfile
+        import io
+        
+        with open(metadata_path, "r") as f:
+            metadata = json.load(f)
+        
+        # Create ZIP file in memory
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # Add metadata
+            zip_file.writestr("metadata.json", json.dumps(metadata, indent=2))
+            
+            # Add all media files
+            for filename in os.listdir(story_dir):
+                if filename != "metadata.json":
+                    file_path = os.path.join(story_dir, filename)
+                    zip_file.write(file_path, filename)
+        
+        zip_buffer.seek(0)
+        story_name = metadata["name"].replace(" ", "_").replace("/", "_")
+        filename = f"{story_name}_{story_id[:8]}.zip"
+        
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete story: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+@app.post("/api/import-story")
+async def import_story(file: UploadFile = File(...)):
+    """Import a story from a ZIP file."""
+    try:
+        import zipfile
+        import json
+        import uuid
+        
+        # Read ZIP file
+        zip_content = await file.read()
+        zip_buffer = io.BytesIO(zip_content)
+        
+        story_id = str(uuid.uuid4())
+        story_dir = os.path.join("saved_stories", story_id)
+        os.makedirs(story_dir, exist_ok=True)
+        
+        with zipfile.ZipFile(zip_buffer, 'r') as zip_file:
+            # Extract all files
+            zip_file.extractall(story_dir)
+            
+            # Validate metadata
+            metadata_path = os.path.join(story_dir, "metadata.json")
+            if not os.path.exists(metadata_path):
+                raise ValueError("Invalid story package: missing metadata.json")
+            
+            with open(metadata_path, "r") as f:
+                metadata = json.load(f)
+            
+            # Update story ID in metadata
+            metadata["id"] = story_id
+            metadata["saved_at"] = str(uuid.uuid1().time)
+            
+            with open(metadata_path, "w") as f:
+                json.dump(metadata, f, indent=2)
+        
+        return {
+            "story_id": story_id,
+            "name": metadata["name"],
+            "message": "Story imported successfully"
+        }
+    except Exception as e:
+        # Cleanup on failure
+        if os.path.exists(story_dir):
+            import shutil
+            shutil.rmtree(story_dir)
+        raise HTTPException(status_code=400, detail=f"Import failed: {str(e)}")

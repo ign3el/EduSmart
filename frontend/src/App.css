@@ -193,6 +193,12 @@ background-clip: text;         /* Add this standard property */
   color: white;
 }
 
+.offline-btn {
+  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+  color: #38ef7d;
+  border: 2px solid #38ef7d;
+}
+
 .back-to-home-btn {
   display: block;
   margin: 2rem auto 0;
