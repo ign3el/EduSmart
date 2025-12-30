@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { FiCheck, FiFile } from 'react-icons/fi'
 import './FileConfirmation.css'
 
-function FileConfirmation({ file, gradeLevel, onConfirm, onBack }) {
+function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload }) {
   const [selectedVoice, setSelectedVoice] = useState('en-US-JennyNeural')
 
   const voices = [
@@ -75,9 +75,14 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack }) {
       </div>
 
       <div className="confirmation-actions">
-        <button className="back-btn" onClick={onBack}>
-          ← Back to Upload
-        </button>
+        <div className="action-left">
+          <button className="back-btn" onClick={onBack}>
+            ← Back
+          </button>
+          <button className="secondary-btn" onClick={onReupload}>
+            Re-upload File
+          </button>
+        </div>
         <button className="confirm-btn" onClick={handleConfirm}>
           Confirm & Generate Story →
         </button>

@@ -23,6 +23,37 @@ function App() {
   const [isSaved, setIsSaved] = useState(false)
   const [isOfflineMode, setIsOfflineMode] = useState(false)
 
+  const previousStep = (current) => {
+    switch (current) {
+      case 'playing':
+      case 'generating':
+        return 'avatar'
+      case 'avatar':
+        return 'confirm'
+      case 'confirm':
+        return 'upload'
+      case 'upload':
+      case 'offline':
+      case 'load':
+      default:
+        return 'home'
+    }
+  }
+
+  // Handle browser back button to navigate within app steps
+  useEffect(() => {
+    const handlePopState = (event) => {
+      event.preventDefault()
+      const prev = previousStep(step)
+      setStep(prev)
+      window.history.pushState({ step: prev }, '')
+    }
+
+    window.history.pushState({ step }, '')
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [step])
+
   const handleFileUpload = (file) => {
     setUploadedFile(file)
     setStep('confirm')  // Go to confirmation instead of avatar
@@ -33,6 +64,13 @@ function App() {
   const handleConfirmFile = (voice) => {
     setSelectedVoice(voice)
     setStep('avatar')
+  }
+
+  const handleReupload = () => {
+    setUploadedFile(null)
+    setSelectedAvatar(null)
+    setStoryData(null)
+    setStep('upload')
   }
 
   const handleAvatarSelect = async (avatar) => {
@@ -69,10 +107,11 @@ function App() {
           const job = await statusRes.json()
 
           if (job.status === 'processing') {
-            setProgress(job.progress)
+            setProgress((prev) => Math.max(prev, job.progress ?? prev))
           } else if (job.status === 'completed') {
             clearInterval(pollTimer)
             setStoryData(job.result)
+            setProgress(100)
             setStep('playing')
           } else if (job.status === 'failed') {
             clearInterval(pollTimer)
@@ -217,6 +256,7 @@ function App() {
                 gradeLevel={gradeLevel}
                 onConfirm={handleConfirmFile}
                 onBack={() => setStep('upload')}
+                onReupload={handleReupload}
               />
             </motion.div>
           )}

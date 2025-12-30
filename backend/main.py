@@ -81,8 +81,16 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str, voice: 
             raise Exception("AI failed to generate story content.")
 
         jobs[job_id]["progress"] = 30
-        tasks = [generate_scene_media(job_id, i, scene, voice) for i, scene in enumerate(story_data["scenes"])]
-        await asyncio.gather(*tasks)
+
+        scenes = story_data.get("scenes", [])
+        total_scenes = len(scenes) if scenes else 1
+
+        # Generate scenes sequentially to provide consistent progress updates
+        for i, scene in enumerate(scenes):
+            await generate_scene_media(job_id, i, scene, voice)
+            # Progress from 30 -> 95 as scenes complete
+            scene_progress = 30 + int(((i + 1) / total_scenes) * 65)
+            jobs[job_id]["progress"] = scene_progress
 
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"

@@ -150,7 +150,12 @@
   justify-content: space-between;
 }
 
-.back-btn, .confirm-btn {
+.action-left {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.back-btn, .confirm-btn, .secondary-btn {
   flex: 1;
   padding: 1rem 2rem;
   border-radius: 12px;
@@ -176,6 +181,16 @@
   color: white;
 }
 
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .confirm-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
@@ -183,6 +198,10 @@
 
 @media (max-width: 768px) {
   .confirmation-actions {
+    flex-direction: column;
+  }
+
+  .action-left {
     flex-direction: column;
   }
   
