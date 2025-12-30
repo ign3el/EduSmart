@@ -5,6 +5,8 @@ import asyncio
 import time
 import mimetypes
 import io
+import re
+from datetime import datetime, timedelta
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,6 +42,15 @@ app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
 app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+
+def _safe_story_dirname(story_name: str, story_id: str) -> str:
+    """Create a filesystem-friendly folder name; fallback to ID fragment on collision/empty."""
+    slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", story_name.strip().lower()) if story_name else ""
+    slug = slug.strip("-") or f"story-{story_id[:8]}"
+    if os.path.exists(os.path.join("saved_stories", slug)):
+        slug = f"{slug}-{story_id[:8]}"
+    return slug
+
 # -------- Periodic cleanup for temp files --------
 CLEAN_PATHS = ["outputs", "uploads"]
 CLEAN_AGE_SECONDS = 60 * 60  # 1 hour
@@ -65,11 +76,16 @@ async def cleanup_old_files():
 
 async def cleanup_scheduler():
     while True:
+        # Sleep until next local midnight to avoid drift from simple intervals
+        now = datetime.now()
+        next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        sleep_seconds = max(0, (next_midnight - now).total_seconds())
+        await asyncio.sleep(sleep_seconds)
+
         try:
             await cleanup_old_files()
         except Exception as e:
             print(f"Cleanup scheduler error: {e}")
-        await asyncio.sleep(CLEAN_INTERVAL_SECONDS)
 
 @app.get("/api/avatars")
 async def get_avatars():
@@ -146,7 +162,7 @@ async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = Fil
     with open(upload_path, "wb") as f:
         f.write(await file.read())
     
-    jobs[job_id] = {"status": "processing", "progress": 0, "result": None}
+    jobs[job_id] = {"status": "processing", "progress": 0, "result": None, "upload_path": upload_path}
     background_tasks.add_task(run_ai_workflow, job_id, upload_path, grade_level, voice)
     return {"job_id": job_id}
 
@@ -166,12 +182,29 @@ async def save_story(job_id: str, story_name: str = Form(...)):
     try:
         story_data = jobs[job_id]["result"]
         story_id = str(uuid.uuid4())
-        story_dir = os.path.join("saved_stories", story_id)
+        folder_name = _safe_story_dirname(story_name, story_id)
+        story_dir = os.path.join("saved_stories", folder_name)
         os.makedirs(story_dir, exist_ok=True)
+
+        # Persist the originally uploaded file alongside the story and remove from uploads
+        upload_path = jobs[job_id].get("upload_path")
+        upload_filename = None
+        if upload_path and os.path.exists(upload_path):
+            upload_filename = os.path.basename(upload_path)
+            if upload_filename.startswith(f"{job_id}_"):
+                upload_filename = upload_filename[len(job_id) + 1 :]
+            import shutil
+            try:
+                shutil.move(upload_path, os.path.join(story_dir, upload_filename))
+            except Exception:
+                # Fallback to copy-then-remove if move fails across devices
+                shutil.copy2(upload_path, os.path.join(story_dir, upload_filename))
+                os.remove(upload_path)
+            story_data["upload_url"] = f"/api/saved-stories/{folder_name}/{upload_filename}"
         
         # Save metadata and story content
         metadata = {
-            "id": story_id,
+            "id": folder_name,
             "name": story_name,
             "job_id": job_id,
             "saved_at": str(uuid.uuid1().time),
@@ -182,15 +215,19 @@ async def save_story(job_id: str, story_name: str = Form(...)):
         with open(os.path.join(story_dir, "metadata.json"), "w") as f:
             json.dump(metadata, f, indent=2)
         
-        # Copy all output files for this job to saved_stories
+        # Move all output files for this job to saved_stories, removing them from outputs
         for filename in os.listdir("outputs"):
             if filename.startswith(job_id):
                 src = os.path.join("outputs", filename)
                 dst = os.path.join(story_dir, filename)
                 import shutil
-                shutil.copy2(src, dst)
+                try:
+                    shutil.move(src, dst)
+                except Exception:
+                    shutil.copy2(src, dst)
+                    os.remove(src)
         
-        return {"story_id": story_id, "message": "Story saved successfully"}
+        return {"story_id": folder_name, "message": "Story saved successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save story: {str(e)}")
 
@@ -237,6 +274,10 @@ async def load_story(story_id: str):
             if scene.get("audio_url"):
                 filename = os.path.basename(scene["audio_url"])
                 scene["audio_url"] = f"/api/saved-stories/{story_id}/{filename}"
+
+        if story_data.get("upload_url"):
+            upload_filename = os.path.basename(story_data["upload_url"])
+            story_data["upload_url"] = f"/api/saved-stories/{story_id}/{upload_filename}"
         
         return {
             "name": metadata["name"],
