@@ -150,25 +150,40 @@ Please transform the attached document into this interactive educational story f
         educational_prompt = f"Educational cartoon illustration for children: {prompt}"
         
         # Try 1: Hugging Face Inference API (free with token, reliable, higher limits)
-        try:
-            hf_token = os.getenv("HF_TOKEN")
-            if hf_token:
-                print("Trying Hugging Face...")
-                api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1"
-                headers = {"Authorization": f"Bearer {hf_token}"}
-                response = requests.post(
-                    api_url,
-                    headers=headers,
-                    json={"inputs": educational_prompt},
-                    timeout=60
-                )
-                if response.status_code == 200 and len(response.content) > 1000:
-                    print("✓ Image generated via Hugging Face")
-                    return response.content
-                elif response.status_code == 503:
-                    print("⚠ HF model loading, will retry via Gemini...")
-        except Exception as e:
-            print(f"Hugging Face failed: {str(e)[:80]}")
+        hf_token = os.getenv("HF_TOKEN")
+        if hf_token:
+            # Try up to 2 times with model loading wait
+            for attempt in range(2):
+                try:
+                    print(f"Trying Hugging Face (attempt {attempt + 1}/2)...")
+                    # Use SD 1.5 - faster and more likely to be loaded
+                    api_url = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
+                    headers = {"Authorization": f"Bearer {hf_token}"}
+                    response = requests.post(
+                        api_url,
+                        headers=headers,
+                        json={"inputs": educational_prompt},
+                        timeout=90
+                    )
+                    
+                    if response.status_code == 200 and len(response.content) > 1000:
+                        print("✓ Image generated via Hugging Face")
+                        return response.content
+                    elif response.status_code == 503:
+                        # Model is loading, wait and retry
+                        wait_time = 20 if attempt == 0 else 0
+                        if wait_time > 0:
+                            print(f"⚠ HF model loading, waiting {wait_time}s...")
+                            time.sleep(wait_time)
+                        continue
+                    else:
+                        print(f"HF returned status {response.status_code}")
+                        break
+                except Exception as e:
+                    print(f"HF attempt {attempt + 1} failed: {str(e)[:80]}")
+                    if attempt == 0:
+                        time.sleep(2)
+                    continue
         
         # Try 2: Gemini (paid fallback, always reliable)
         try:
@@ -220,10 +235,11 @@ Please transform the attached document into this interactive educational story f
         async def _generate_edge_tts():
             try:
                 # Use Microsoft Edge TTS with natural voice optimized for kids
+                # Voice options: JennyNeural (most natural), AriaNeural (warm), GuyNeural (male)
                 communicate = edge_tts.Communicate(
                     text, 
-                    voice="en-US-AriaNeural",  # Warm, clear female voice (great for children)
-                    rate="+0%",  # Normal speed
+                    voice="en-US-JennyNeural",  # Most natural, expressive storytelling voice
+                    rate="-10%",  # Slightly slower for clarity with kids
                     volume="+0%"
                 )
                 
