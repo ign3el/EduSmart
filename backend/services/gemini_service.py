@@ -60,9 +60,15 @@ STORY REQUIREMENTS:
      * Add 3-4 plausible wrong answer options if not provided
      * Keep the original correct answer
      * Generate explanations for each original question
-   - If no exercises in document OR if they provide less than 7 questions:
-     * Create additional questions based on story content to reach 7-10 total questions
-     * Ensure new questions align with {grade_level}
+   - TOTAL QUESTIONS REQUIRED: Always generate exactly 10 questions total
+   - ADDITIONAL QUESTIONS (to reach 10 total):
+     * Analyze the style, difficulty, and format of the original exercise questions
+     * Create NEW questions that MATCH the same style and complexity level
+     * Mirror the question types used in the original exercises (e.g., if exercises ask about definitions, create more definition questions)
+     * Use similar vocabulary and sentence structure as the original questions
+     * Maintain the same difficulty level as the document's exercise questions
+     * Ensure new questions test related concepts from the story
+     * Example: If document has 5 exercise questions, generate 5 MORE similar questions for 10 total
    - GRADE LEVEL REQUIREMENTS for any new questions:
      * KG-Grade 2: Simple yes/no, basic recall, picture-based thinking, 1-2 sentence questions
      * Grade 3-4: Short answer concepts, "what happens when", cause-effect, vocabulary in context
