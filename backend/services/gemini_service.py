@@ -57,6 +57,7 @@ STORY REQUIREMENTS:
    - Use age-appropriate vocabulary for {grade_level}
    - Make options plausible to encourage critical thinking
    - Ensure one clearly correct answer per question
+   - At the end of Quiz, display score with Review Answer tab to check all answers with explanations
 
 TONE: Warm, encouraging, enthusiastic teacher voice that celebrates learning and discovery!
 
