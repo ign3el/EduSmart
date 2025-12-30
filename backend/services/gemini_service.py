@@ -4,6 +4,10 @@ import base64
 import time
 import io
 import wave
+import asyncio
+import requests
+import edge_tts
+from urllib.parse import quote
 from typing import Optional, Any
 from google import genai
 from google.genai import types
@@ -12,19 +16,39 @@ from models import StorySchema
 class GeminiService:
     def __init__(self) -> None:
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        # Using exact strings from your provided 'ListModels' output
-        self.text_model = "gemini-3-flash-preview"
-        self.image_model = "gemini-3-pro-image-preview"
-        # 2.0-flash is supported for generateContent in your environment
-        self.audio_model = "gemini-2.5-pro-preview-tts" 
+        # Recommended models for cost efficiency and high-volume usage
+        self.text_model = "gemini-2.0-flash-lite"  # Cheapest, highest quota
+        self.image_model = "gemini-2.5-flash-image"  # Best balance for mass users
+        self.audio_model = "gemini-2.5-flash-preview-tts"  # Optimized TTS
+        # Exponential backoff configuration
+        self.base_delay = 1  # Start with 1 second
+        self.max_retries = 5  # Maximum retry attempts 
+
+    def _exponential_backoff(self, attempt: int) -> int:
+        """Calculate exponential backoff delay: base_delay * (2 ^ attempt)."""
+        return self.base_delay * (2 ** attempt)
+
+    def _call_with_exponential_backoff(self, func, *args, **kwargs):
+        """Execute API call with exponential backoff retry logic."""
+        for attempt in range(self.max_retries + 1):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if attempt < self.max_retries:
+                    delay = self._exponential_backoff(attempt)
+                    print(f"Attempt {attempt + 1} failed: {str(e)[:100]}... Retrying in {delay}s...")
+                    time.sleep(delay)
+                else:
+                    print(f"All {self.max_retries + 1} attempts failed. Last error: {e}")
+                    raise
 
     def process_file_to_story(self, file_path: str, grade_level: str) -> Optional[dict]:
-        """Generates the story JSON structure with safety checks."""
+        """Generates the story JSON structure with exponential backoff."""
         try:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # Professional teacher-led prompt
+            # Professional teacher-led prompt (same as before)
             teacher_prompt = f"""
 As a professional {grade_level} educational teacher, I need you to transform this educational content into an engaging, interactive animated storybook for my students.
 
@@ -99,19 +123,22 @@ TONE: Warm, encouraging, enthusiastic teacher voice that celebrates learning and
 Please transform the attached document into this interactive educational story format.
 """
 
-            response = self.client.models.generate_content(
-                model=self.text_model,
-                contents=[
-                    types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
-                    teacher_prompt
-                ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=StorySchema,
+            def _generate_story():
+                return self.client.models.generate_content(
+                    model=self.text_model,
+                    contents=[
+                        types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
+                        teacher_prompt
+                    ],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=StorySchema,
+                    )
                 )
-            )
             
-            if response.text:
+            response = self._call_with_exponential_backoff(_generate_story)
+            
+            if response and response.text:
                 return json.loads(response.text)
             return None
         except Exception as e:
@@ -119,90 +146,99 @@ Please transform the attached document into this interactive educational story f
             return None
 
     def generate_image(self, prompt: str) -> Optional[bytes]:
-        """Multimodal image generation with exhaustive attribute checking."""
+        """Image generation with fallback chain: Pollinations → Hugging Face → Gemini."""
+        educational_prompt = f"Educational cartoon illustration for children: {prompt}"
+        
+        # Try 1: Pollinations.ai (free, fast when working)
         try:
-            response = self.client.models.generate_content(
-                model=self.image_model,
-                contents=f"Educational cartoon illustration: {prompt}",
-                config=types.GenerateContentConfig(response_modalities=["IMAGE"])
-            )
+            print("Trying Pollinations.ai...")
+            url = f"https://image.pollinations.ai/prompt/{quote(educational_prompt)}"
+            response = requests.get(url, timeout=15)
+            if response.status_code == 200 and len(response.content) > 1000:
+                print("✓ Image generated via Pollinations")
+                return response.content
+        except Exception as e:
+            print(f"Pollinations failed: {str(e)[:50]}")
+        
+        # Try 2: Hugging Face Inference API (free, more reliable)
+        try:
+            hf_token = os.getenv("HF_TOKEN")
+            if hf_token:
+                print("Trying Hugging Face...")
+                api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1"
+                headers = {"Authorization": f"Bearer {hf_token}"}
+                response = requests.post(
+                    api_url,
+                    headers=headers,
+                    json={"inputs": educational_prompt},
+                    timeout=60
+                )
+                if response.status_code == 200 and len(response.content) > 1000:
+                    print("✓ Image generated via Hugging Face")
+                    return response.content
+        except Exception as e:
+            print(f"Hugging Face failed: {str(e)[:50]}")
+        
+        # Try 3: Gemini (paid fallback, always reliable)
+        try:
+            print("Trying Gemini (paid fallback)...")
+            def _generate():
+                return self.client.models.generate_content(
+                    model=self.image_model,
+                    contents=educational_prompt,
+                    config=types.GenerateContentConfig(response_modalities=["IMAGE"])
+                )
             
-            # Pylance safety check: ensures no part of the chain is None
-            if not (response.candidates and 
+            response = self._call_with_exponential_backoff(_generate)
+            
+            if not (response and response.candidates and 
                     response.candidates[0].content and 
                     response.candidates[0].content.parts):
                 return None
 
             for part in response.candidates[0].content.parts:
-                # Fixes 'data is not a known attribute of None'
                 if part.inline_data and part.inline_data.data:
+                    print("✓ Image generated via Gemini")
                     return part.inline_data.data
             return None
         except Exception as e:
-            print(f"IMAGE ERROR: {e}")
+            print(f"All image generation methods failed. Last error: {e}")
             return None
 
-    def generate_voiceover(self, text: str, retries: int = 3) -> Optional[bytes]:
-        """Generate TTS audio. Returns WAV-formatted bytes."""
-        attempt = 0
-        while attempt <= retries:
+    def generate_voiceover(self, text: str) -> Optional[bytes]:
+        """Generate TTS audio using Microsoft Edge-TTS (free, unlimited, ARM-compatible)."""
+        async def _generate_edge_tts():
             try:
-                response = self.client.models.generate_content(
-                    model=self.audio_model,
-                    contents=text,
-                    config=types.GenerateContentConfig(
-                        response_modalities=["AUDIO"],
-                        speech_config=types.SpeechConfig(
-                            voice_config=types.VoiceConfig(
-                                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Aoede")
-                            )
-                        )
-                    )
+                # Use Microsoft Edge TTS with natural voice optimized for kids
+                communicate = edge_tts.Communicate(
+                    text, 
+                    voice="en-US-AriaNeural",  # Warm, clear female voice (great for children)
+                    rate="+0%",  # Normal speed
+                    volume="+0%"
                 )
                 
-                if not (response.candidates and 
-                        response.candidates[0].content and 
-                        response.candidates[0].content.parts):
-                    raise ValueError("Incomplete audio response structure")
-
-                audio_part = response.candidates[0].content.parts[0]
+                # Generate unique temp file to avoid conflicts
+                temp_file = f"temp_audio_{os.getpid()}_{int(time.time())}.mp3"
+                await communicate.save(temp_file)
                 
-                # Check MIME type if available
-                if audio_part.inline_data and audio_part.inline_data.mime_type:
-                    print(f"Audio MIME type: {audio_part.inline_data.mime_type}")
+                # Read audio as bytes
+                with open(temp_file, 'rb') as f:
+                    audio_bytes = f.read()
                 
-                # Verified binary access to avoid Pylance errors
-                if audio_part.inline_data and audio_part.inline_data.data:
-                    pcm_data = audio_part.inline_data.data
-                    
-                    if not isinstance(pcm_data, bytes):
-                        raise ValueError(f"Expected bytes, got {type(pcm_data)}")
-                    
-                    print(f"PCM data size: {len(pcm_data)} bytes")
-                    
-                    # Gemini returns raw PCM audio - wrap it in WAV container
-                    # Format: 24000 Hz, 16-bit, mono (per Gemini docs)
-                    wav_buffer = io.BytesIO()
-                    with wave.open(wav_buffer, 'wb') as wav_file:
-                        wav_file.setnchannels(1)       # Mono
-                        wav_file.setsampwidth(2)        # 16-bit (2 bytes)
-                        wav_file.setframerate(24000)    # 24 kHz
-                        wav_file.writeframes(pcm_data)
-                    
-                    wav_bytes = wav_buffer.getvalue()
-                    print(f"WAV file created: {len(wav_bytes)} bytes")
-                    print(f"WAV header: {wav_bytes[:16].hex()}")
-                    
-                    return wav_bytes
+                # Clean up temp file
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
                 
-                raise ValueError("No binary audio data found in response")
-
+                print(f"✓ Audio generated via Edge-TTS: {len(audio_bytes)} bytes")
+                return audio_bytes
+                
             except Exception as e:
-                attempt += 1
-                print(f"AUDIO ERROR (Attempt {attempt}/{retries}): {e}")
-                # Wait longer if hitting quota limits
-                if "429" in str(e):
-                    time.sleep(12 * attempt) 
-                else:
-                    time.sleep(2)
-        return None
+                print(f"Edge-TTS error: {e}")
+                return None
+        
+        # Run async function synchronously (FastAPI compatible)
+        try:
+            return asyncio.run(_generate_edge_tts())
+        except Exception as e:
+            print(f"AUDIO GENERATION FAILED: {e}")
+            return None
