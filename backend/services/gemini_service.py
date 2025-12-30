@@ -24,11 +24,50 @@ class GeminiService:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
+            # Professional teacher-led prompt
+            teacher_prompt = f"""
+As a {grade_level} teacher, I need you to transform this educational content into an engaging, interactive animated storybook for my students.
+
+TEACHING OBJECTIVES:
+• Make complex concepts accessible and fun for {grade_level} learners
+• Use age-appropriate language, examples, and storytelling techniques
+• Create memorable characters and scenarios that students can relate to
+• Ensure the content aligns with {grade_level} curriculum standards
+
+STORY REQUIREMENTS:
+1. DYNAMIC LENGTH: Analyze the content complexity and create the OPTIMAL number of scenes (typically 5-10 scenes). More complex topics need more scenes; simpler topics need fewer.
+
+2. ENGAGING NARRATIVE:
+   - Start with a captivating hook that grabs student attention
+   - Introduce relatable characters (children, animals, friendly guides)
+   - Use conversational, encouraging tone like a storytelling teacher
+   - Include interactive elements (questions, discoveries, challenges)
+   - Build excitement and curiosity throughout
+   - End with a satisfying conclusion that reinforces learning
+
+3. VISUAL DESCRIPTIONS:
+   - Each scene needs vivid, colorful imagery perfect for cartoon illustrations
+   - Describe settings, characters, and actions clearly for visual artists
+   - Use bright, cheerful, educational cartoon style
+   - Make it visually diverse to maintain engagement
+
+4. COMPREHENSION QUIZ:
+   - Create 3-5 questions based on key concepts from the story
+   - Questions should test understanding, not just memorization
+   - Use age-appropriate vocabulary for {grade_level}
+   - Make options plausible to encourage critical thinking
+   - Ensure one clearly correct answer per question
+
+TONE: Warm, encouraging, enthusiastic teacher voice that celebrates learning and discovery!
+
+Please transform the attached document into this interactive educational story format.
+"""
+
             response = self.client.models.generate_content(
                 model=self.text_model,
                 contents=[
                     types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
-                    f"Create a {grade_level} educational story with 5-6 scenes and a quiz as JSON."
+                    teacher_prompt
                 ],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
