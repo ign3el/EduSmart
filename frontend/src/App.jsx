@@ -3,21 +3,27 @@ import { motion, AnimatePresence } from 'framer-motion'
 import FileUpload from './components/FileUpload'
 import AvatarSelector from './components/AvatarSelector'
 import StoryPlayer from './components/StoryPlayer'
+import SaveStoryModal from './components/SaveStoryModal'
+import LoadStory from './components/LoadStory'
 import './App.css'
 
 function App() {
-  const [step, setStep] = useState('upload') 
+  const [step, setStep] = useState('home') 
   const [uploadedFile, setUploadedFile] = useState(null)
   const [selectedAvatar, setSelectedAvatar] = useState(null)
   const [storyData, setStoryData] = useState(null)
   const [progress, setProgress] = useState(0) // <--- Check if this exists
   const [error, setError] = useState(null)
   const [gradeLevel, setGradeLevel] = useState(3)
+  const [currentJobId, setCurrentJobId] = useState(null)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
 
   const handleFileUpload = (file) => {
     setUploadedFile(file)
     setStep('avatar')
     setError(null) 
+    setIsSaved(false)
   }
 
   const handleAvatarSelect = async (avatar) => {
@@ -30,6 +36,7 @@ function App() {
       setStep('generating')
       setError(null)
       setProgress(0)
+      setIsSaved(false)
 
       const formData = new FormData()
       formData.append('file', uploadedFile)
@@ -41,6 +48,7 @@ function App() {
       if (!response.ok) throw new Error("Failed to start story generation.")
       
       const { job_id } = await response.json()
+      setCurrentJobId(job_id)
 
       // Polling Loop
       const pollTimer = setInterval(async () => {
@@ -73,13 +81,41 @@ function App() {
     }
   }
 
-  const handleRestart = () => {
-    setStep('upload')
+  const handleRestart = async () => {
+    // Cleanup unsaved story
+    if (currentJobId && !isSaved) {
+      try {
+        await fetch(`/api/cleanup/${currentJobId}`, { method: 'DELETE' })
+      } catch (error) {
+        console.error('Cleanup failed:', error)
+      }
+    }
+    
+    setStep('home')
     setUploadedFile(null)
     setSelectedAvatar(null)
     setStoryData(null)
     setError(null)
     setProgress(0)
+    setCurrentJobId(null)
+    setIsSaved(false)
+  }
+
+  const handleSaveStory = () => {
+    setShowSaveModal(true)
+  }
+
+  const handleSaveComplete = async (storyId, storyName) => {
+    setShowSaveModal(false)
+    setIsSaved(true)
+    alert(`✅ Story "${storyName}" saved successfully!`)
+  }
+
+  const handleLoadStory = (loadedStoryData, storyName) => {
+    setStoryData(loadedStoryData)
+    setSelectedAvatar({ id: 'loaded', name: 'Saved Story' })
+    setIsSaved(true)
+    setStep('playing')
   }
 
   return (
@@ -98,12 +134,47 @@ function App() {
         )}
         
         <AnimatePresence mode="wait">
+          {step === 'home' && (
+            <motion.div key="home" className="home-container">
+              <div className="home-buttons">
+                <motion.button 
+                  className="home-btn create-btn"
+                  onClick={() => setStep('upload')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  ✨ Create New Story
+                </motion.button>
+                <motion.button 
+                  className="home-btn load-btn"
+                  onClick={() => setStep('load')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  📚 Load Saved Story
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+
           {step === 'upload' && (
             <motion.div key="upload" className="step-container">
               <FileUpload 
                 onUpload={handleFileUpload}
                 gradeLevel={gradeLevel}
                 onGradeLevelChange={setGradeLevel}
+              />
+              <button className="back-to-home-btn" onClick={() => setStep('home')}>
+                ← Back to Home
+              </button>
+            </motion.div>
+          )}
+
+          {step === 'load' && (
+            <motion.div key="load" className="step-container">
+              <LoadStory 
+                onLoad={handleLoadStory}
+                onBack={() => setStep('home')}
               />
             </motion.div>
           )}
@@ -140,11 +211,21 @@ function App() {
               <StoryPlayer 
                 storyData={storyData} 
                 avatar={selectedAvatar} 
-                onRestart={handleRestart} 
+                onRestart={handleRestart}
+                onSave={handleSaveStory}
+                isSaved={isSaved}
               />
             </motion.div>
           )}
         </AnimatePresence>
+
+        {showSaveModal && (
+          <SaveStoryModal 
+            jobId={currentJobId}
+            onSave={handleSaveComplete}
+            onCancel={() => setShowSaveModal(false)}
+          />
+        )}
       </main>
     </div>
   )

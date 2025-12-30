@@ -6,7 +6,7 @@ import Quiz from './Quiz';
 
 const API_DOMAIN = "https://edusmart.ign3el.com";
 
-function StoryPlayer({ storyData, avatar, onRestart }) {
+function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false }) {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
@@ -190,7 +190,17 @@ function StoryPlayer({ storyData, avatar, onRestart }) {
           ))}
         </div>
       </div>
-    </div>
+
+      <div className="action-buttons">
+        {!isSaved && onSave && (
+          <button className="save-story-btn" onClick={onSave}>
+            💾 Save Story
+          </button>
+        )}
+        <button className="restart-btn" onClick={onRestart}>
+          <FiRotateCw /> {isSaved ? 'Back to Home' : 'Start New Story'}
+        </button>
+      </div>
   );
 }
 

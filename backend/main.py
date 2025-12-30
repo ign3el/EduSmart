@@ -17,6 +17,7 @@ gemini = GeminiService()
 
 os.makedirs("outputs", exist_ok=True)
 os.makedirs("uploads", exist_ok=True)
+os.makedirs("saved_stories", exist_ok=True)
 jobs = {}
 
 app.add_middleware(
@@ -25,6 +26,7 @@ app.add_middleware(
 )
 
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
+app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
 
 @app.get("/api/avatars")
 async def get_avatars():
@@ -110,3 +112,128 @@ async def get_status(job_id: str):
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     return jobs[job_id]
+
+@app.post("/api/save-story/{job_id}")
+async def save_story(job_id: str, story_name: str = Form(...)):
+    """Save a completed story with a custom name."""
+    if job_id not in jobs or jobs[job_id]["status"] != "completed":
+        raise HTTPException(status_code=404, detail="Story not found or not completed")
+    
+    try:
+        story_data = jobs[job_id]["result"]
+        story_id = str(uuid.uuid4())
+        story_dir = os.path.join("saved_stories", story_id)
+        os.makedirs(story_dir, exist_ok=True)
+        
+        # Save metadata and story content
+        metadata = {
+            "id": story_id,
+            "name": story_name,
+            "job_id": job_id,
+            "saved_at": str(uuid.uuid1().time),
+            "story_data": story_data
+        }
+        
+        import json
+        with open(os.path.join(story_dir, "metadata.json"), "w") as f:
+            json.dump(metadata, f, indent=2)
+        
+        # Copy all output files for this job to saved_stories
+        for filename in os.listdir("outputs"):
+            if filename.startswith(job_id):
+                src = os.path.join("outputs", filename)
+                dst = os.path.join(story_dir, filename)
+                import shutil
+                shutil.copy2(src, dst)
+        
+        return {"story_id": story_id, "message": "Story saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save story: {str(e)}")
+
+@app.get("/api/list-stories")
+async def list_stories():
+    """List all saved stories."""
+    stories = []
+    try:
+        for story_id in os.listdir("saved_stories"):
+            metadata_path = os.path.join("saved_stories", story_id, "metadata.json")
+            if os.path.exists(metadata_path):
+                import json
+                with open(metadata_path, "r") as f:
+                    metadata = json.load(f)
+                    stories.append({
+                        "id": metadata["id"],
+                        "name": metadata["name"],
+                        "saved_at": metadata["saved_at"]
+                    })
+        return sorted(stories, key=lambda x: x["saved_at"], reverse=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list stories: {str(e)}")
+
+@app.get("/api/load-story/{story_id}")
+async def load_story(story_id: str):
+    """Load a saved story."""
+    story_dir = os.path.join("saved_stories", story_id)
+    metadata_path = os.path.join(story_dir, "metadata.json")
+    
+    if not os.path.exists(metadata_path):
+        raise HTTPException(status_code=404, detail="Story not found")
+    
+    try:
+        import json
+        with open(metadata_path, "r") as f:
+            metadata = json.load(f)
+        
+        # Update URLs to point to saved_stories
+        story_data = metadata["story_data"]
+        for scene in story_data.get("scenes", []):
+            if scene.get("image_url"):
+                filename = os.path.basename(scene["image_url"])
+                scene["image_url"] = f"/api/saved-stories/{story_id}/{filename}"
+            if scene.get("audio_url"):
+                filename = os.path.basename(scene["audio_url"])
+                scene["audio_url"] = f"/api/saved-stories/{story_id}/{filename}"
+        
+        return {
+            "name": metadata["name"],
+            "story_data": story_data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load story: {str(e)}")
+
+@app.delete("/api/cleanup/{job_id}")
+async def cleanup_job(job_id: str):
+    """Delete all files associated with an unsaved job."""
+    try:
+        # Delete uploaded file
+        for filename in os.listdir("uploads"):
+            if filename.startswith(job_id):
+                os.remove(os.path.join("uploads", filename))
+        
+        # Delete output files
+        for filename in os.listdir("outputs"):
+            if filename.startswith(job_id):
+                os.remove(os.path.join("outputs", filename))
+        
+        # Remove job from memory
+        if job_id in jobs:
+            del jobs[job_id]
+        
+        return {"message": "Cleanup successful"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
+
+@app.delete("/api/delete-story/{story_id}")
+async def delete_story(story_id: str):
+    """Delete a saved story."""
+    story_dir = os.path.join("saved_stories", story_id)
+    
+    if not os.path.exists(story_dir):
+        raise HTTPException(status_code=404, detail="Story not found")
+    
+    try:
+        import shutil
+        shutil.rmtree(story_dir)
+        return {"message": "Story deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete story: {str(e)}")
