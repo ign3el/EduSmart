@@ -17,7 +17,7 @@ class GeminiService:
     def __init__(self) -> None:
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         # Recommended models for cost efficiency and high-volume usage
-        self.text_model = "gemini-2.0-flash-lite"  # Cheapest, highest quota
+        self.text_model = "gemini-2.5-flash-lite"  # Free tier, high quota
         self.image_model = "gemini-2.5-flash-image"  # Best balance for mass users
         self.audio_model = "gemini-2.5-flash-preview-tts"  # Optimized TTS
         # Exponential backoff configuration
@@ -188,7 +188,7 @@ Please transform the attached document into this interactive educational story f
             return None
 
         seed_env = os.getenv("RUNPOD_SEED")
-        payload_input = {"prompt": educational_prompt}
+        payload_input: dict[str, Any] = {"prompt": educational_prompt}
         if seed_env:
             try:
                 payload_input["seed"] = int(seed_env)
