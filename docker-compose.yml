@@ -11,6 +11,11 @@ services:
       - HF_TOKEN=${HF_TOKEN:-}
       - CORS_ORIGINS=${CORS_ORIGINS:-https://edusmart.ign3el.com}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - RUNPOD_ENDPOINT_ID=${RUNPOD_ENDPOINT_ID:-}
+      - RUNPOD_KEY=${RUNPOD_KEY:-}
+      - RUNPOD_SEED=${RUNPOD_SEED:-20240601}
+      - RUNPOD_MONTHLY_CAP_AED=${RUNPOD_MONTHLY_CAP_AED:-25}
+      - RUNPOD_COST_AED_PER_IMAGE=${RUNPOD_COST_AED_PER_IMAGE:-0.015}
     volumes:
       - ./backend:/app
       - ./backend/outputs:/app/outputs

@@ -12,7 +12,8 @@ from services.gemini_service import GeminiService
 from models import StoryResponse
 
 # Fix for NotSupportedError in browsers
-load_dotenv()
+load_dotenv()  # current working directory
+load_dotenv(dotenv_path=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env")))
 mimetypes.add_type('audio/mpeg', '.mp3')
 mimetypes.add_type('image/png', '.png')
 
