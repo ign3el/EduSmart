@@ -60,15 +60,24 @@ STORY REQUIREMENTS:
      * Add 3-4 plausible wrong answer options if not provided
      * Keep the original correct answer
      * Generate explanations for each original question
-   - TOTAL QUESTIONS REQUIRED: Always generate exactly 10 questions total
-   - ADDITIONAL QUESTIONS (to reach 10 total):
+   - TOTAL QUESTIONS REQUIRED: 
+     * MINIMUM: 10 questions (can be more based on topic complexity and length)
+     * MAXIMUM: No limit - scale based on content depth and complexity
+     * For simple topics: 10-12 questions
+     * For moderate topics: 12-15 questions
+     * For complex/lengthy topics: 15-20+ questions
+   - ADDITIONAL PRACTICE QUESTIONS (Always generate beyond document exercises):
+     * ALWAYS add extra questions for practice, even if document already has many exercises
+     * If document has fewer than 10 exercises, generate enough to reach MINIMUM 10 total
+     * If document has 10+ exercises, still add 2-5 MORE practice questions
      * Analyze the style, difficulty, and format of the original exercise questions
      * Create NEW questions that MATCH the same style and complexity level
      * Mirror the question types used in the original exercises (e.g., if exercises ask about definitions, create more definition questions)
      * Use similar vocabulary and sentence structure as the original questions
      * Maintain the same difficulty level as the document's exercise questions
      * Ensure new questions test related concepts from the story
-     * Example: If document has 5 exercise questions, generate 5 MORE similar questions for 10 total
+     * Example: If document has 5 exercise questions, generate 5-7 MORE = 10-12 total
+     * Example: If document has 12 exercise questions, generate 3-5 MORE = 15-17 total
    - GRADE LEVEL REQUIREMENTS for any new questions:
      * KG-Grade 2: Simple yes/no, basic recall, picture-based thinking, 1-2 sentence questions
      * Grade 3-4: Short answer concepts, "what happens when", cause-effect, vocabulary in context
