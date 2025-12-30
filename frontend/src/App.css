@@ -93,7 +93,7 @@ body {
 .player-container {
   width: 100%;
   max-width: 1400px;  /* Increased for desktop */
-  height: calc(100vh - 140px);  /* Full height minus header */
+  min-height: calc(100vh - 180px);  /* Fill most of viewport, allow growth */
   display: flex;
   flex-direction: column;
 }
@@ -105,7 +105,7 @@ body {
   }
 
   .player-container {
-    height: calc(100vh - 160px);
+    min-height: calc(100vh - 200px);
   }
 }
 
