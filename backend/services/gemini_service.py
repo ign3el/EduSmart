@@ -3,11 +3,11 @@ import json
 import base64
 import time
 import io
+import wave
 from typing import Optional, Any
 from google import genai
 from google.genai import types
 from models import StorySchema
-from pydub import AudioSegment
 
 class GeminiService:
     def __init__(self) -> None:
@@ -68,7 +68,7 @@ class GeminiService:
             return None
 
     def generate_voiceover(self, text: str, retries: int = 3) -> Optional[bytes]:
-        """TTS logic with binary decoding and exponential backoff."""
+        """Generate TTS audio. Returns WAV-formatted bytes."""
         attempt = 0
         while attempt <= retries:
             try:
@@ -92,48 +92,33 @@ class GeminiService:
 
                 audio_part = response.candidates[0].content.parts[0]
                 
+                # Check MIME type if available
+                if audio_part.inline_data and audio_part.inline_data.mime_type:
+                    print(f"Audio MIME type: {audio_part.inline_data.mime_type}")
+                
                 # Verified binary access to avoid Pylance errors
                 if audio_part.inline_data and audio_part.inline_data.data:
-                    audio_data = audio_part.inline_data.data
+                    pcm_data = audio_part.inline_data.data
                     
-                    # Debug: Print data type
-                    print(f"Audio data type: {type(audio_data)}")
+                    if not isinstance(pcm_data, bytes):
+                        raise ValueError(f"Expected bytes, got {type(pcm_data)}")
                     
-                    # Gemini returns bytes directly, not base64 string
-                    if isinstance(audio_data, bytes):
-                        print(f"Audio is bytes, length: {len(audio_data)}")
-                        
-                        # Convert to MP3 format (Gemini likely returns WAV or PCM)
-                        try:
-                            # Load audio data (auto-detects format)
-                            audio = AudioSegment.from_file(io.BytesIO(audio_data))
-                            
-                            # Export as MP3
-                            mp3_buffer = io.BytesIO()
-                            audio.export(mp3_buffer, format="mp3", bitrate="128k")
-                            mp3_bytes = mp3_buffer.getvalue()
-                            
-                            print(f"Converted to MP3, new length: {len(mp3_bytes)}")
-                            return mp3_bytes
-                        except Exception as conv_err:
-                            print(f"Audio conversion error: {conv_err}")
-                            # If conversion fails, return raw bytes
-                            return audio_data
-                    elif isinstance(audio_data, str):
-                        # If it's base64 string, decode it first then convert
-                        print(f"Audio is base64 string, decoding...")
-                        raw_bytes = base64.b64decode(audio_data)
-                        
-                        try:
-                            audio = AudioSegment.from_file(io.BytesIO(raw_bytes))
-                            mp3_buffer = io.BytesIO()
-                            audio.export(mp3_buffer, format="mp3", bitrate="128k")
-                            return mp3_buffer.getvalue()
-                        except Exception as conv_err:
-                            print(f"Audio conversion error: {conv_err}")
-                            return raw_bytes
-                    else:
-                        raise ValueError(f"Unexpected audio data type: {type(audio_data)}")
+                    print(f"PCM data size: {len(pcm_data)} bytes")
+                    
+                    # Gemini returns raw PCM audio - wrap it in WAV container
+                    # Format: 24000 Hz, 16-bit, mono (per Gemini docs)
+                    wav_buffer = io.BytesIO()
+                    with wave.open(wav_buffer, 'wb') as wav_file:
+                        wav_file.setnchannels(1)       # Mono
+                        wav_file.setsampwidth(2)        # 16-bit (2 bytes)
+                        wav_file.setframerate(24000)    # 24 kHz
+                        wav_file.writeframes(pcm_data)
+                    
+                    wav_bytes = wav_buffer.getvalue()
+                    print(f"WAV file created: {len(wav_bytes)} bytes")
+                    print(f"WAV header: {wav_bytes[:16].hex()}")
+                    
+                    return wav_bytes
                 
                 raise ValueError("No binary audio data found in response")
 

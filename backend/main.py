@@ -51,7 +51,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
             scene["image_url"] = f"/api/outputs/{img_name}"
 
         if audio_bytes:
-            aud_name = f"{job_id}_scene_{i}.mp3"
+            aud_name = f"{job_id}_scene_{i}.wav"  # Changed to .wav
             aud_path = os.path.join("outputs", aud_name)
             
             # Write bytes directly using 'wb'
@@ -62,12 +62,12 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
             file_size = os.path.getsize(aud_path)
             print(f"SUCCESS: Saved audio for scene {i} - Size: {file_size} bytes")
             
-            # Check if it's a valid MP3 (should start with ID3 or FF FB/FF FA)
+            # Check if it's a valid WAV (should start with RIFF)
             with open(aud_path, "rb") as f:
                 header = f.read(4)
                 print(f"Audio file header: {header.hex()}")
-                if not (header[:3] == b'ID3' or header[:2] == b'\xff\xfb' or header[:2] == b'\xff\xfa'):
-                    print(f"WARNING: Audio file may not be valid MP3!")
+                if header[:4] != b'RIFF':
+                    print(f"WARNING: Audio file may not be valid WAV!")
             
             scene["audio_url"] = f"/api/outputs/{aud_name}"
             
