@@ -94,10 +94,19 @@ class GeminiService:
                 if audio_part.inline_data and audio_part.inline_data.data:
                     audio_data = audio_part.inline_data.data
                     
-                    # Convert Base64 string to raw binary bytes for MP3 saving
-                    if isinstance(audio_data, str):
+                    # Debug: Print data type
+                    print(f"Audio data type: {type(audio_data)}")
+                    
+                    # Gemini returns bytes directly, not base64 string
+                    if isinstance(audio_data, bytes):
+                        print(f"Audio is bytes, length: {len(audio_data)}")
+                        return audio_data
+                    elif isinstance(audio_data, str):
+                        # If it's base64 string, decode it
+                        print(f"Audio is base64 string, decoding...")
                         return base64.b64decode(audio_data)
-                    return audio_data
+                    else:
+                        raise ValueError(f"Unexpected audio data type: {type(audio_data)}")
                 
                 raise ValueError("No binary audio data found in response")
 
