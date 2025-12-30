@@ -51,17 +51,22 @@ STORY REQUIREMENTS:
    - Use bright, cheerful, educational cartoon style
    - Make it visually diverse to maintain engagement
 
-4. COMPREHENSION QUIZ:
-   - Create 7-10 questions based on key concepts from the story
-   - Questions should test understanding, not just memorization
-   - Use age-appropriate vocabulary for {grade_level}
-   - Make options plausible to encourage critical thinking
+4. COMPREHENSION QUIZ (CRITICAL - Must match {grade_level} difficulty):
+   - Create 7-10 questions specifically designed for {grade_level} students
+   - GRADE LEVEL REQUIREMENTS:
+     * KG-Grade 2: Simple yes/no, basic recall, picture-based thinking, 1-2 sentence questions
+     * Grade 3-4: Short answer concepts, "what happens when", cause-effect, vocabulary in context
+     * Grade 5-7: Analysis questions, "why do you think", compare/contrast, application of concepts
+   - Vocabulary MUST match reading level: use words that {grade_level} students know
+   - Question complexity should align with cognitive development of {grade_level}
+   - Sentence length appropriate for {grade_level} (shorter for younger, more complex for older)
+   - Make options plausible but distinguishable at the {grade_level} comprehension level
    - Ensure one clearly correct answer per question
-   - For each question, provide a clear explanation that:
-     * Explains why the correct answer is right
-     * References the story content that supports the answer
-     * Uses simple, encouraging language appropriate for {grade_level}
-     * Helps reinforce the learning objective
+   - For each question, provide an explanation that:
+     * Uses vocabulary and sentence structure appropriate for {grade_level}
+     * Explains why the correct answer is right in terms {grade_level} students understand
+     * References specific story moments students remember
+     * Encourages and celebrates learning at their level
    - Students will see these explanations in a "Review Answers" section after completing the quiz
 
 TONE: Warm, encouraging, enthusiastic teacher voice that celebrates learning and discovery!
