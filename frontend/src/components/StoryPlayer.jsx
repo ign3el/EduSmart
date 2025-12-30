@@ -197,11 +197,11 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
             💾 Save Online
           </button>
         )}
-        {!isSaved && (
+        {!isOffline && (
           <button 
             className="save-offline-btn" 
             onClick={() => {
-              const storyName = prompt('Enter story name for local save:')
+              const storyName = prompt('Enter story name for offline save:', storyData.title || 'My Story')
               if (storyName?.trim()) {
                 // Save to localStorage
                 const storyId = `local_${Date.now()}`
@@ -215,19 +215,18 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
                 
                 try {
                   localStorage.setItem(`edusmart_story_${storyId}`, JSON.stringify(localStory))
-                  alert(`✅ Story "${storyName}" saved locally!`)
-                  window.location.reload() // Refresh to show in offline manager
+                  alert(`✅ Story "${storyName}" saved locally for offline viewing!\n\nYou can access it anytime from the Offline Manager, even without internet.`)
                 } catch (error) {
                   alert('Failed to save locally: ' + error.message)
                 }
               }
             }}
           >
-            💻 Save Locally
+            📥 Download for Offline
           </button>
         )}
         <button className="restart-btn" onClick={onRestart}>
-          <FiRotateCw /> {isSaved ? 'Back to Home' : 'Start New Story'}
+          <FiRotateCw /> {isSaved || isOffline ? 'Back to Home' : 'Start New Story'}
         </button>
       </div>
     </div>

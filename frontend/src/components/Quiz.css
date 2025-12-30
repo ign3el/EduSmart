@@ -101,3 +101,186 @@
   transform: scale(1.05);
   background: #2563eb;
 }
+
+/* Result Buttons */
+.result-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.review-btn {
+  padding: 0.8rem 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.review-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* Review Mode Styles */
+.review-mode {
+  max-width: 800px;
+  background: white;
+  overflow-y: auto;
+  max-height: 80vh;
+}
+
+.review-mode h2 {
+  color: #1e293b;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.review-item {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border-left: 4px solid #e2e8f0;
+}
+
+.review-item.correct-answer {
+  border-left-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.review-item.wrong-answer {
+  border-left-color: #ef4444;
+  background: #fef2f2;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.review-number {
+  font-weight: bold;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.review-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.badge-correct {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge-wrong {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.review-item h4 {
+  color: #1e293b;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.review-answers {
+  margin: 1rem 0;
+}
+
+.review-answers p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+}
+
+.user-answer,
+.correct-answer-text {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.text-correct {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.text-wrong {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.explanation {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.explanation strong {
+  color: #3b82f6;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.explanation p {
+  color: #475569;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.review-footer {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e2e8f0;
+  text-align: center;
+}
+
+.final-score {
+  font-size: 1.3rem;
+  color: #1e293b;
+  margin-bottom: 1.5rem;
+}
+
+.final-score strong {
+  color: #3b82f6;
+  font-size: 1.5rem;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .result-buttons {
+    flex-direction: column;
+  }
+
+  .review-mode {
+    max-height: 100vh;
+    padding: 1rem;
+  }
+
+  .review-item {
+    padding: 1rem;
+  }
+
+  .review-item h4 {
+    font-size: 1rem;
+  }
+}

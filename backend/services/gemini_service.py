@@ -57,7 +57,12 @@ STORY REQUIREMENTS:
    - Use age-appropriate vocabulary for {grade_level}
    - Make options plausible to encourage critical thinking
    - Ensure one clearly correct answer per question
-   - At the end of Quiz, display score with Review Answer tab to check all answers with explanations
+   - For each question, provide a clear explanation that:
+     * Explains why the correct answer is right
+     * References the story content that supports the answer
+     * Uses simple, encouraging language appropriate for {grade_level}
+     * Helps reinforce the learning objective
+   - Students will see these explanations in a "Review Answers" section after completing the quiz
 
 TONE: Warm, encouraging, enthusiastic teacher voice that celebrates learning and discovery!
 

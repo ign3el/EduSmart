@@ -4,6 +4,26 @@ import './OfflineManager.css'
 
 function OfflineManager({ onLoadOffline, onBack }) {
   const [onlineStories, setOnlineStories] = useState([])
+  const [localStories, setLocalStories] = useState([])
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [loading, setLoading] = useState(false)
+
+  const loadLocalStories = () => {
+    const stories = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith('edusmart_story_')) {
+        try {
+          const story = JSON.parse(localStorage.getItem(key))
+          stories.push(story)
+        } catch (error) {
+          console.error('Error loading story:', error)
+        }
+      }
+    }
+    stories.sort((a, b) => b.savedAt - a.savedAt)
+    setLocalStories(stories)
+  }
 
   useEffect(() => {
     loadLocalStories()

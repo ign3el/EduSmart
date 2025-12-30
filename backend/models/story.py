@@ -6,6 +6,7 @@ class QuizItem(BaseModel):
     question: str
     options: List[str]
     answer: str
+    explanation: str  # Added explanation for review mode
 
 class Scene(BaseModel):
     text: str
