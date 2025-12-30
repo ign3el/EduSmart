@@ -2,8 +2,10 @@ import os
 import uuid
 import asyncio
 import mimetypes
+import io
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from services.gemini_service import GeminiService
 from models import StoryResponse
