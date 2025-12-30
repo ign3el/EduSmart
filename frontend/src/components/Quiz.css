@@ -12,6 +12,22 @@
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
 
+.quiz-container.results {
+  background: white;
+  color: #1e293b;
+}
+
+.quiz-container.results h2 {
+  color: #1e293b;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.quiz-container.results p {
+  color: #475569;
+  font-size: 1.1rem;
+}
+
 .quiz-progress {
   margin-bottom: 1.5rem;
   color: #64748b;
@@ -130,9 +146,12 @@
 /* Review Mode Styles */
 .review-mode {
   max-width: 800px;
+  width: 100%;
   background: white;
   overflow-y: auto;
-  max-height: 80vh;
+  max-height: 85vh;
+  padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .review-mode h2 {
@@ -146,6 +165,8 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  padding-bottom: 2rem;
+  overflow-y: visible;
 }
 
 .review-item {
@@ -274,6 +295,12 @@
   .review-mode {
     max-height: 100vh;
     padding: 1rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .review-list {
+    padding-top: 0.5rem;
   }
 
   .review-item {
@@ -282,5 +309,9 @@
 
   .review-item h4 {
     font-size: 1rem;
+  }
+  
+  .quiz-container {
+    padding: 1rem;
   }
 }

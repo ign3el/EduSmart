@@ -32,20 +32,20 @@ body {
 
 .app-header {
   text-align: center;
-  padding: 1.5rem 1rem;
+  padding: clamp(0.75rem, 2vw, 1.5rem) 1rem;
   background: rgba(30, 41, 59, 0.5);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .app-header h1 {
-  font-size: clamp(1.5rem, 5vw, 3rem);
+  font-size: clamp(1.2rem, 4vw, 3rem);
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-/* Update your CSS to include both lines */
--webkit-background-clip: text; /* Your existing line */
-background-clip: text;         /* Add this standard property */
+  -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 0.5rem;
+  line-height: 1.2;
 }
 
 .app-header p {
