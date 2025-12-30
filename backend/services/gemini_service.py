@@ -153,12 +153,18 @@ Please transform the attached document into this interactive educational story f
         try:
             print("Trying Pollinations.ai...")
             url = f"https://image.pollinations.ai/prompt/{quote(educational_prompt)}"
-            response = requests.get(url, timeout=15)
-            if response.status_code == 200 and len(response.content) > 1000:
+            response = requests.get(url, timeout=20)
+            
+            # Check for rate limit responses
+            if response.status_code == 429 or "tier limit" in response.text.lower():
+                print("⚠ Pollinations rate limit hit, trying next provider...")
+                time.sleep(2)  # Brief delay before trying next provider
+            elif response.status_code == 200 and len(response.content) > 1000:
                 print("✓ Image generated via Pollinations")
+                time.sleep(0.5)  # Small delay to avoid hammering the API
                 return response.content
         except Exception as e:
-            print(f"Pollinations failed: {str(e)[:50]}")
+            print(f"Pollinations failed: {str(e)[:80]}")
         
         # Try 2: Hugging Face Inference API (free, more reliable)
         try:

@@ -55,23 +55,14 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
             scene["image_url"] = f"/api/outputs/{img_name}"
 
         if audio_bytes:
-            aud_name = f"{job_id}_scene_{i}.wav"  # Changed to .wav
+            aud_name = f"{job_id}_scene_{i}.mp3"  # Edge-TTS returns MP3 format
             aud_path = os.path.join("outputs", aud_name)
             
-            # Write bytes directly using 'wb'
             with open(aud_path, "wb") as f:
                 f.write(audio_bytes)
             
-            # Verify file was written correctly
             file_size = os.path.getsize(aud_path)
-            print(f"SUCCESS: Saved audio for scene {i} - Size: {file_size} bytes")
-            
-            # Check if it's a valid WAV (should start with RIFF)
-            with open(aud_path, "rb") as f:
-                header = f.read(4)
-                print(f"Audio file header: {header.hex()}")
-                if header[:4] != b'RIFF':
-                    print(f"WARNING: Audio file may not be valid WAV!")
+            print(f"✓ Audio saved for scene {i}: {file_size} bytes (MP3)")
             
             scene["audio_url"] = f"/api/outputs/{aud_name}"
             
