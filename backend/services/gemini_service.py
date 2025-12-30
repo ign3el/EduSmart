@@ -52,8 +52,18 @@ STORY REQUIREMENTS:
    - Make it visually diverse to maintain engagement
 
 4. COMPREHENSION QUIZ (CRITICAL - Must match {grade_level} difficulty):
-   - Create 7-10 questions specifically designed for {grade_level} students
-   - GRADE LEVEL REQUIREMENTS:
+   - FIRST PRIORITY: Check if the document contains an Exercise, Test, Quiz, Assessment, or Review Questions section
+   - If exercise/test questions are found in the document:
+     * Include ALL of those questions COMPULSORY in the quiz
+     * Convert them to multiple-choice format if they aren't already
+     * Preserve the original question intent and difficulty
+     * Add 3-4 plausible wrong answer options if not provided
+     * Keep the original correct answer
+     * Generate explanations for each original question
+   - If no exercises in document OR if they provide less than 7 questions:
+     * Create additional questions based on story content to reach 7-10 total questions
+     * Ensure new questions align with {grade_level}
+   - GRADE LEVEL REQUIREMENTS for any new questions:
      * KG-Grade 2: Simple yes/no, basic recall, picture-based thinking, 1-2 sentence questions
      * Grade 3-4: Short answer concepts, "what happens when", cause-effect, vocabulary in context
      * Grade 5-7: Analysis questions, "why do you think", compare/contrast, application of concepts
