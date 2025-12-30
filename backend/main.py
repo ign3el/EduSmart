@@ -38,13 +38,13 @@ async def get_avatars():
         {"id": "dinosaur", "name": "Dino-Explorer", "description": "Nature guide."}
     ]
 
-async def generate_scene_media(job_id: str, i: int, scene: dict):
+async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "en-US-JennyNeural"):
     # Stagger requests by 5 seconds to stay under RPM limits
     await asyncio.sleep(i * 5.0) 
     
     try:
         img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
-        aud_task = asyncio.to_thread(gemini.generate_voiceover, scene["text"])
+        aud_task = asyncio.to_thread(gemini.generate_voiceover, scene["text"], voice)
         
         image_bytes, audio_bytes = await asyncio.gather(img_task, aud_task)
 
@@ -69,7 +69,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
     except Exception as e:
         print(f"FAILED: Media for Scene {i}: {e}")
 
-async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
+async def run_ai_workflow(job_id: str, file_path: str, grade_level: str, voice: str = "en-US-JennyNeural"):
     try:
         jobs[job_id]["progress"] = 10
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
@@ -78,7 +78,7 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
             raise Exception("AI failed to generate story content.")
 
         jobs[job_id]["progress"] = 30
-        tasks = [generate_scene_media(job_id, i, scene) for i, scene in enumerate(story_data["scenes"])]
+        tasks = [generate_scene_media(job_id, i, scene, voice) for i, scene in enumerate(story_data["scenes"])]
         await asyncio.gather(*tasks)
 
         jobs[job_id]["progress"] = 100
@@ -90,14 +90,14 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str):
         jobs[job_id]["error"] = str(e)
 
 @app.post("/api/upload")
-async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = File(...), grade_level: str = Form("Grade 4")):
+async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = File(...), grade_level: str = Form("Grade 4"), voice: str = Form("en-US-JennyNeural")):
     job_id = str(uuid.uuid4())
     upload_path = os.path.join("uploads", f"{job_id}_{file.filename}")
     with open(upload_path, "wb") as f:
         f.write(await file.read())
     
     jobs[job_id] = {"status": "processing", "progress": 0, "result": None}
-    background_tasks.add_task(run_ai_workflow, job_id, upload_path, grade_level)
+    background_tasks.add_task(run_ai_workflow, job_id, upload_path, grade_level, voice)
     return {"job_id": job_id}
 
 @app.get("/api/status/{job_id}")

@@ -92,7 +92,21 @@ body {
 
 .player-container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;  /* Increased for desktop */
+  height: calc(100vh - 140px);  /* Full height minus header */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Desktop-specific improvements */
+@media (min-width: 1024px) {
+  .app-main {
+    padding: 2rem;
+  }
+
+  .player-container {
+    height: calc(100vh - 160px);
+  }
 }
 
 /* Responsive */

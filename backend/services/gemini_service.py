@@ -230,7 +230,7 @@ Please transform the attached document into this interactive educational story f
             print(f"All image generation methods failed. Last error: {e}")
             return None
 
-    def generate_voiceover(self, text: str) -> Optional[bytes]:
+    def generate_voiceover(self, text: str, voice: str = "en-US-JennyNeural") -> Optional[bytes]:
         """Generate TTS audio using Microsoft Edge-TTS (free, unlimited, ARM-compatible)."""
         async def _generate_edge_tts():
             try:
@@ -238,7 +238,7 @@ Please transform the attached document into this interactive educational story f
                 # Voice options: JennyNeural (most natural), AriaNeural (warm), GuyNeural (male)
                 communicate = edge_tts.Communicate(
                     text, 
-                    voice="en-US-JennyNeural",  # Most natural, expressive storytelling voice
+                    voice=voice,  # User-selected voice
                     rate="-10%",  # Slightly slower for clarity with kids
                     volume="+0%"
                 )

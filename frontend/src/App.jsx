@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react' // <--- MUST include useEffect
 import { motion, AnimatePresence } from 'framer-motion'
 import FileUpload from './components/FileUpload'
+import FileConfirmation from './components/FileConfirmation'
 import AvatarSelector from './components/AvatarSelector'
 import StoryPlayer from './components/StoryPlayer'
 import SaveStoryModal from './components/SaveStoryModal'
@@ -12,6 +13,7 @@ function App() {
   const [step, setStep] = useState('home') 
   const [uploadedFile, setUploadedFile] = useState(null)
   const [selectedAvatar, setSelectedAvatar] = useState(null)
+  const [selectedVoice, setSelectedVoice] = useState('en-US-JennyNeural')
   const [storyData, setStoryData] = useState(null)
   const [progress, setProgress] = useState(0) // <--- Check if this exists
   const [error, setError] = useState(null)
@@ -23,9 +25,14 @@ function App() {
 
   const handleFileUpload = (file) => {
     setUploadedFile(file)
-    setStep('avatar')
+    setStep('confirm')  // Go to confirmation instead of avatar
     setError(null) 
     setIsSaved(false)
+  }
+
+  const handleConfirmFile = (voice) => {
+    setSelectedVoice(voice)
+    setStep('avatar')
   }
 
   const handleAvatarSelect = async (avatar) => {
@@ -44,6 +51,7 @@ function App() {
       formData.append('file', uploadedFile)
       formData.append('grade_level', gradeLevel)
       formData.append('avatar_type', avatar.id)
+      formData.append('voice', selectedVoice)  // Send selected voice to backend
 
       const response = await fetch('/api/upload', { method: 'POST', body: formData })
       
@@ -199,6 +207,17 @@ function App() {
               <button className="back-to-home-btn" onClick={() => setStep('home')}>
                 ← Back to Home
               </button>
+            </motion.div>
+          )}
+
+          {step === 'confirm' && (
+            <motion.div key="confirm" className="step-container">
+              <FileConfirmation
+                file={uploadedFile}
+                gradeLevel={gradeLevel}
+                onConfirm={handleConfirmFile}
+                onBack={() => setStep('upload')}
+              />
             </motion.div>
           )}
 

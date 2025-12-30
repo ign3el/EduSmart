@@ -6,7 +6,7 @@
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  max-height: calc(100dvh - 100px);
+    height: 100%;
 }
 
 .player-header {
@@ -53,22 +53,53 @@
 
 .scene-display {
   position: relative;
-  min-height: 300px;
   background: rgba(0, 0, 0, 0.3);
-  flex: 1;
-  overflow-y: auto;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .scene-content {
-  padding: clamp(1rem, 4vw, 2rem);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(1rem, 4vw, 2rem);
 }
 
-.scene-image {
-  width: 100%;
-  height: clamp(200px, 50vw, 400px);
+/* Desktop layout - side-by-side image and text */
+@@media (min-width: 1024px)
+  .scene-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 2rem;
+    height: 100%;
+    align-items: start;
+  }
+
+  .scene-image {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    max-height: 600px;
+    position: sticky;
+    top: 0;
+  }
+
+  .scene-narration {
+    height: 100%;
+    overflow-y: auto;
+  }
+
+/* Tablet and mobile - stacked layout */
+@@media (max-width: 1023px)
+  .scene-content {
+    padding: clamp(1rem, 4vw, 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1rem, 4vw, 2rem);
+  }
+  
+  .scene-image {
+    width: 100%;
+    height: clamp(200px, 50vw, 400px);
+  }
   border-radius: var(--border-radius);
   overflow: hidden;
   background: rgba(0, 0, 0, 0.4);
@@ -168,6 +199,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   align-items: center;
   width: 100%;
+    flex-shrink: 0;
 }
   flex-direction: column;
   gap: 1.5rem;
@@ -270,6 +302,22 @@
   padding: clamp(1rem, 3vw, 1.5rem);
   background: rgba(0, 0, 0, 0.2);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+
+  /* Desktop specific - horizontal layout for save buttons */
+  @@media (min-width: 1024px)
+    .action-buttons {
+      flex-direction: row;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+  
+    .save-story-btn,
+    .save-offline-btn {
+      flex: 0 1 auto;
+      min-width: 200px;
+    }
 }
 
 .save-story-btn {
