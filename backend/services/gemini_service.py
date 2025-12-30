@@ -146,27 +146,31 @@ Please transform the attached document into this interactive educational story f
             return None
 
     def generate_image(self, prompt: str) -> Optional[bytes]:
-        """Image generation with fallback chain: Pollinations → Hugging Face → Gemini."""
+        """Image generation with fallback chain: Hugging Face → Gemini (skipping Pollinations due to strict rate limits)."""
         educational_prompt = f"Educational cartoon illustration for children: {prompt}"
         
-        # Try 1: Pollinations.ai (free, fast when working)
+        # Try 1: Hugging Face Inference API (free with token, reliable, higher limits)
         try:
-            print("Trying Pollinations.ai...")
-            url = f"https://image.pollinations.ai/prompt/{quote(educational_prompt)}"
-            response = requests.get(url, timeout=20)
-            
-            # Check for rate limit responses
-            if response.status_code == 429 or "tier limit" in response.text.lower():
-                print("⚠ Pollinations rate limit hit, trying next provider...")
-                time.sleep(2)  # Brief delay before trying next provider
-            elif response.status_code == 200 and len(response.content) > 1000:
-                print("✓ Image generated via Pollinations")
-                time.sleep(0.5)  # Small delay to avoid hammering the API
-                return response.content
+            hf_token = os.getenv("HF_TOKEN")
+            if hf_token:
+                print("Trying Hugging Face...")
+                api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1"
+                headers = {"Authorization": f"Bearer {hf_token}"}
+                response = requests.post(
+                    api_url,
+                    headers=headers,
+                    json={"inputs": educational_prompt},
+                    timeout=60
+                )
+                if response.status_code == 200 and len(response.content) > 1000:
+                    print("✓ Image generated via Hugging Face")
+                    return response.content
+                elif response.status_code == 503:
+                    print("⚠ HF model loading, will retry via Gemini...")
         except Exception as e:
-            print(f"Pollinations failed: {str(e)[:80]}")
+            print(f"Hugging Face failed: {str(e)[:80]}")
         
-        # Try 2: Hugging Face Inference API (free, more reliable)
+        # Try 2: Gemini (paid fallback, always reliable)
         try:
             hf_token = os.getenv("HF_TOKEN")
             if hf_token:
