@@ -156,7 +156,6 @@ Please transform the attached document into this interactive educational story f
             for attempt in range(2):
                 try:
                     print(f"Trying Hugging Face (attempt {attempt + 1}/2)...")
-                    # Use SD 1.5 - faster and more likely to be loaded
                     api_url = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
                     headers = {"Authorization": f"Bearer {hf_token}"}
                     response = requests.post(
@@ -177,6 +176,7 @@ Please transform the attached document into this interactive educational story f
                             time.sleep(wait_time)
                         continue
                     else:
+                        # 4xx (e.g., 410) or other errors: stop and do not hit paid fallback unless explicitly allowed
                         print(f"HF returned status {response.status_code}")
                         break
                 except Exception as e:
@@ -184,27 +184,16 @@ Please transform the attached document into this interactive educational story f
                     if attempt == 0:
                         time.sleep(2)
                     continue
-        
+        else:
+            print("HF_TOKEN not set; skipping Hugging Face image generation")
+
+        # Optional paid fallback (Gemini) guarded by env flag to avoid surprise spend
+        allow_gemini_fallback = os.getenv("ALLOW_GEMINI_IMAGE_FALLBACK", "false").lower() == "true"
+        if not allow_gemini_fallback:
+            print("Skipping Gemini fallback (ALLOW_GEMINI_IMAGE_FALLBACK not true)")
+            return None
+
         # Try 2: Gemini (paid fallback, always reliable)
-        try:
-            hf_token = os.getenv("HF_TOKEN")
-            if hf_token:
-                print("Trying Hugging Face...")
-                api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1"
-                headers = {"Authorization": f"Bearer {hf_token}"}
-                response = requests.post(
-                    api_url,
-                    headers=headers,
-                    json={"inputs": educational_prompt},
-                    timeout=60
-                )
-                if response.status_code == 200 and len(response.content) > 1000:
-                    print("✓ Image generated via Hugging Face")
-                    return response.content
-        except Exception as e:
-            print(f"Hugging Face failed: {str(e)[:50]}")
-        
-        # Try 3: Gemini (paid fallback, always reliable)
         try:
             print("Trying Gemini (paid fallback)...")
             def _generate():
