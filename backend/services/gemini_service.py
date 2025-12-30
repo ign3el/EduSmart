@@ -14,7 +14,7 @@ class GeminiService:
         self.text_model = "gemini-3-flash-preview"
         self.image_model = "gemini-3-pro-image-preview"
         # 2.0-flash is supported for generateContent in your environment
-        self.audio_model = "gemini-2.0-flash" 
+        self.audio_model = "gemini-2.5-pro-preview-tts" 
 
     def process_file_to_story(self, file_path: str, grade_level: str) -> Optional[dict]:
         """Generates the story JSON structure with safety checks."""
