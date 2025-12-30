@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from services.gemini_service import GeminiService
 from models import StoryResponse
 
-# Enforce correct headers for the browser
+# Fix for NotSupportedError in browsers
 mimetypes.add_type('audio/mpeg', '.mp3')
 mimetypes.add_type('image/png', '.png')
 
@@ -35,8 +35,8 @@ async def get_avatars():
     ]
 
 async def generate_scene_media(job_id: str, i: int, scene: dict):
-    # Staggered requests to prevent 429 errors
-    await asyncio.sleep(i * 4.0) 
+    # Stagger requests by 5 seconds to stay under RPM limits
+    await asyncio.sleep(i * 5.0) 
     
     try:
         img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
@@ -52,7 +52,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict):
 
         if audio_bytes:
             aud_name = f"{job_id}_scene_{i}.mp3"
-            # Write bytes directly to fix browser playback issues
+            # Write bytes directly using 'wb'
             with open(os.path.join("outputs", aud_name), "wb") as f:
                 f.write(audio_bytes)
             scene["audio_url"] = f"/api/outputs/{aud_name}"
