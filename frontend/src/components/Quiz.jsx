@@ -11,6 +11,16 @@ const Quiz = ({ questions, onComplete }) => {
   const [userAnswers, setUserAnswers] = useState([]);
   const [reviewMode, setReviewMode] = useState(false);
 
+  const retakeQuiz = () => {
+    setCurrentQuestion(0);
+    setScore(0);
+    setShowResults(false);
+    setSelectedOption(null);
+    setIsCorrect(null);
+    setUserAnswers([]);
+    setReviewMode(false);
+  };
+
   const handleAnswer = (option) => {
     if (selectedOption !== null) return; // Prevent double clicking
 
@@ -49,6 +59,7 @@ const Quiz = ({ questions, onComplete }) => {
         </div>
         <p>{score === questions.length ? "Perfect Score! Excellent work!" : "Great job! Keep learning!"}</p>
         <div className="result-buttons">
+          <button onClick={retakeQuiz} className="retake-btn">🔄 Retake Quiz</button>
           <button onClick={() => setReviewMode(true)} className="review-btn">📖 Review Answers</button>
           <button onClick={onComplete} className="finish-btn">Back to Library</button>
         </div>

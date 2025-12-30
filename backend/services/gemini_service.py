@@ -52,7 +52,7 @@ STORY REQUIREMENTS:
    - Make it visually diverse to maintain engagement
 
 4. COMPREHENSION QUIZ:
-   - Create 3-5 questions based on key concepts from the story
+   - Create 7-10 questions based on key concepts from the story
    - Questions should test understanding, not just memorization
    - Use age-appropriate vocabulary for {grade_level}
    - Make options plausible to encourage critical thinking
