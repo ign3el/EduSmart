@@ -2,7 +2,7 @@
   width: 100%;
   max-width: 1000px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: clamp(1rem, 4vw, 2rem);
   color: white;
 }
 
@@ -11,10 +11,12 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .offline-header h2 {
-  font-size: 2.5rem;
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -23,10 +25,10 @@
 }
 
 .connection-status {
-  padding: 0.5rem 1rem;
+  padding: clamp(0.4rem, 2vw, 0.5rem) clamp(0.8rem, 3vw, 1rem);
   border-radius: 20px;
   font-weight: bold;
-  font-size: 0.9rem;
+  font-size: clamp(0.75rem, 2vw, 0.9rem);
 }
 
 .connection-status.online {
@@ -43,32 +45,38 @@
 
 .offline-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: clamp(1rem, 2vw, 1.5rem);
   margin-bottom: 3rem;
+}
+
+@media (max-width: 768px) {
+  .offline-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .action-section {
   background: rgba(255, 255, 255, 0.1);
-  padding: 1.5rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
   border-radius: 15px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .action-section h3 {
   margin: 0 0 0.5rem 0;
-  font-size: 1.3rem;
+  font-size: clamp(1.1rem, 4vw, 1.3rem);
 }
 
 .action-section p {
   margin: 0 0 1rem 0;
   opacity: 0.8;
-  font-size: 0.9rem;
+  font-size: clamp(0.8rem, 2vw, 0.9rem);
 }
 
 .action-btn {
   display: inline-block;
-  padding: 0.8rem 1.5rem;
+  padding: clamp(0.6rem, 2vw, 0.8rem) clamp(1rem, 3vw, 1.5rem);
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
@@ -77,6 +85,11 @@
   font-weight: bold;
   transition: all 0.3s;
   text-decoration: none;
+  font-size: clamp(0.8rem, 2vw, 0.95rem);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn:hover {
@@ -95,7 +108,7 @@
 .export-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: clamp(0.25rem, 1vw, 0.5rem);
   margin-top: 1rem;
 }
 
@@ -103,26 +116,35 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem;
+  padding: clamp(0.4rem, 2vw, 0.5rem);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .export-item span {
   flex: 1;
   font-weight: 500;
+  font-size: clamp(0.8rem, 2vw, 0.95rem);
+  min-width: 150px;
 }
 
 .export-btn {
-  padding: 0.4rem 0.8rem;
+  padding: clamp(0.3rem, 1vw, 0.4rem) clamp(0.6rem, 2vw, 0.8rem);
   background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: clamp(0.7rem, 2vw, 0.8rem);
   font-weight: bold;
   transition: all 0.3s;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .export-btn:hover:not(:disabled) {
@@ -168,7 +190,7 @@
 
 .story-card h4 {
   margin: 0 0 0.5rem 0;
-  font-size: 1.2rem;
+  font-size: clamp(1rem, 4vw, 1.2rem);
 }
 
 .story-meta {
@@ -176,7 +198,9 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  font-size: 0.8rem;
+  font-size: clamp(0.7rem, 2vw, 0.8rem);
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .story-type {
@@ -191,18 +215,29 @@
 
 .story-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: clamp(0.25rem, 1vw, 0.5rem);
+  flex-direction: column;
+}
+
+@media (max-width: 480px) {
+  .story-actions {
+    flex-direction: column;
+  }
 }
 
 .story-actions button {
   flex: 1;
-  padding: 0.6rem;
+  padding: clamp(0.5rem, 2vw, 0.6rem);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
   transition: all 0.3s;
-  font-size: 0.9rem;
+  font-size: clamp(0.75rem, 2vw, 0.9rem);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .load-btn {
@@ -235,25 +270,29 @@
 }
 
 .no-stories p {
-  font-size: 1.2rem;
+  font-size: clamp(1rem, 4vw, 1.2rem);
   margin-bottom: 0.5rem;
 }
 
 .offline-footer {
   text-align: center;
-  margin-top: 3rem;
+  margin-top: clamp(1.5rem, 4vw, 3rem);
 }
 
 .back-btn {
-  padding: 1rem 3rem;
+  padding: clamp(0.75rem, 2vw, 1rem) clamp(2rem, 5vw, 3rem);
   background: rgba(255, 255, 255, 0.1);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 15px;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
   font-weight: bold;
   transition: all 0.3s;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .back-btn:hover {
