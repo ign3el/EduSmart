@@ -220,11 +220,9 @@ Transform the document into JSON format with this exact structure:
             return None
 
         seed_env = os.getenv("RUNPOD_SEED")
-        # SDXL-turbo minimal payload with quality parameters
+        # SDXL-turbo minimal payload - endpoint has strict validation
         payload_input: dict[str, Any] = {
             "prompt": enhanced_prompt,
-            "num_inference_steps": 4,  # SDXL-turbo is optimized for 4 steps
-            "guidance_scale": 7.5,  # Good balance for quality
         }
         if seed_env:
             try:
