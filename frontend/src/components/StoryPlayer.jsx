@@ -271,39 +271,49 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
         >
-          ⚙️
+          ⋮
         </motion.button>
         
         <AnimatePresence>
           {showActionMenu && (
             <motion.div 
-              className="action-menu"
-              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              onClick={(e) => e.stopPropagation()}
+              className="action-menu-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowActionMenu(false)}
             >
-              {!isSaved && !isOffline && onSave && (
-                <button className="action-menu-item save-online" onClick={() => { onSave(); setShowActionMenu(false); }}>
-                  <span className="action-icon">💾</span>
-                  <span>Save Online</span>
+              <motion.div 
+                className="action-menu"
+                initial={{ y: -50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -50, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button className="menu-close" onClick={() => setShowActionMenu(false)}>✕</button>
+                {!isSaved && !isOffline && onSave && (
+                  <button className="action-menu-item save-online" onClick={() => { onSave(); setShowActionMenu(false); }}>
+                    <span className="action-icon">💾</span>
+                    <span>Save Online</span>
+                  </button>
+                )}
+                {!isOffline && (
+                  <button 
+                    className="action-menu-item download-offline" 
+                    onClick={() => { handleOfflineDownload(); setShowActionMenu(false); }}
+                    disabled={isDownloading}
+                  >
+                    <span className="action-icon">📥</span>
+                    <span>{isDownloading ? 'Downloading...' : 'Download Offline'}</span>
+                  </button>
+                )}
+                <button className="action-menu-item go-home" onClick={() => { onRestart(); setShowActionMenu(false); }}>
+                  <span className="action-icon"><FiRotateCw /></span>
+                  <span>{isSaved || isOffline ? 'Back Home' : 'New Story'}</span>
                 </button>
-              )}
-              {!isOffline && (
-                <button 
-                  className="action-menu-item download-offline" 
-                  onClick={() => { handleOfflineDownload(); setShowActionMenu(false); }}
-                  disabled={isDownloading}
-                >
-                  <span className="action-icon">📥</span>
-                  <span>{isDownloading ? 'Downloading...' : 'Download Offline'}</span>
-                </button>
-              )}
-              <button className="action-menu-item go-home" onClick={() => { onRestart(); setShowActionMenu(false); }}>
-                <span className="action-icon"><FiRotateCw /></span>
-                <span>{isSaved || isOffline ? 'Back Home' : 'New Story'}</span>
-              </button>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
