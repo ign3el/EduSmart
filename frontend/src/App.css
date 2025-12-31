@@ -132,12 +132,16 @@
 
 .home-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
 .home-btn {
   position: relative;
+  width: 100%;
+  max-width: 360px;
   padding: 1rem 1.1rem;
   min-height: 130px;
   border: 1px solid var(--edge);

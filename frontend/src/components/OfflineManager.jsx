@@ -30,6 +30,11 @@ function OfflineManager({ onLoadOffline, onBack }) {
     if (isOnline) {
       loadOnlineStories()
     }
+    const handleStorage = (event) => {
+      if (event.key?.startsWith('edusmart_story_')) {
+        loadLocalStories()
+      }
+    }
     
     const handleOnline = () => {
       setIsOnline(true)
@@ -39,10 +44,12 @@ function OfflineManager({ onLoadOffline, onBack }) {
     
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
+    window.addEventListener('storage', handleStorage)
     
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('storage', handleStorage)
     }
   }, [])
 
@@ -196,7 +203,7 @@ function OfflineManager({ onLoadOffline, onBack }) {
         </div>
 
         <div className="action-section">
-          <h3>� Import Stories</h3>
+          <h3>📥 Import Stories</h3>
           <p>Upload exported story packages</p>
           <input
             type="file"
@@ -209,6 +216,43 @@ function OfflineManager({ onLoadOffline, onBack }) {
             📁 Import Story
           </label>
         </div>
+      </div>
+
+      <div className="offline-library">
+        <div className="library-header">
+          <div>
+            <h3>🎒 Offline Stories</h3>
+            <p>Play adventures you've saved for offline fun.</p>
+          </div>
+          <button className="refresh-btn" onClick={loadLocalStories}>↻ Refresh</button>
+        </div>
+
+        {localStories.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-emoji">🌟</div>
+            <div>
+              <h4>No offline stories yet</h4>
+              <p>Export a story or save one locally to see it here.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="story-grid">
+            {localStories.map((story, index) => (
+              <div key={story.id} className={`story-card variant-${(index % 4) + 1}`}>
+                <div className="story-card-top">
+                  <span className="story-chip">Offline ready</span>
+                  <span className="story-date">Saved {formatDate(story.savedAt)}</span>
+                </div>
+                <h4>{story.name || 'Untitled Story'}</h4>
+                <p className="story-subtext">{story.storyData?.title || 'Ready to play anywhere.'}</p>
+                <div className="story-card-actions">
+                  <button className="story-btn primary" onClick={() => loadFromLocal(story.id)}>▶ Play</button>
+                  <button className="story-btn ghost" onClick={() => deleteLocal(story.id)}>🗑 Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="offline-footer">
