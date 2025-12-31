@@ -257,6 +257,7 @@ function App() {
                 onConfirm={handleConfirmFile}
                 onBack={() => setStep('upload')}
                 onReupload={handleReupload}
+                onEditGrade={(newGrade) => setGradeLevel(newGrade)}
               />
             </motion.div>
           )}

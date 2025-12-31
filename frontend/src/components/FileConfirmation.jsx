@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { FiCheck, FiFile } from 'react-icons/fi'
+import { FiCheck, FiFile, FiEdit2 } from 'react-icons/fi'
 import './FileConfirmation.css'
 
-function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload }) {
+function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onEditGrade }) {
   const [selectedVoice, setSelectedVoice] = useState('en-US-JennyNeural')
+  const [showGradeSelector, setShowGradeSelector] = useState(false)
 
   const voices = [
     { id: 'en-US-JennyNeural', name: 'Jenny (Female)', description: 'Natural, expressive storytelling' },
@@ -27,6 +28,11 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload }) {
     onConfirm(selectedVoice)
   }
 
+  const handleGradeChange = (newGrade) => {
+    onEditGrade(newGrade)
+    setShowGradeSelector(false)
+  }
+
   return (
     <div className="file-confirmation">
       <h2>✅ Confirm Your Story Settings</h2>
@@ -40,6 +46,13 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload }) {
             <p className="filename">{file.name}</p>
             <p className="filesize">({(file.size / 1024 / 1024).toFixed(2)} MB)</p>
           </div>
+          <button 
+            className="edit-icon-btn"
+            onClick={onReupload}
+            title="Re-upload file"
+          >
+            <FiEdit2 />
+          </button>
         </div>
 
         <div className="grade-info">
@@ -48,6 +61,27 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload }) {
             <h3>Grade Level</h3>
             <p>{gradeLabels[gradeLevel]}</p>
           </div>
+          <button 
+            className="edit-icon-btn"
+            onClick={() => setShowGradeSelector(!showGradeSelector)}
+            title="Change grade level"
+          >
+            <FiEdit2 />
+          </button>
+
+          {showGradeSelector && (
+            <div className="grade-selector-dropdown">
+              {[1, 2, 3, 4, 5, 6, 7].map((grade) => (
+                <button
+                  key={grade}
+                  className={`grade-option ${gradeLevel === grade ? 'selected' : ''}`}
+                  onClick={() => handleGradeChange(grade)}
+                >
+                  {gradeLabels[grade]}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -75,14 +109,9 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload }) {
       </div>
 
       <div className="confirmation-actions">
-        <div className="action-left">
-          <button className="back-btn" onClick={onBack}>
-            ← Back
-          </button>
-          <button className="secondary-btn" onClick={onReupload}>
-            Re-upload File
-          </button>
-        </div>
+        <button className="back-btn" onClick={onBack}>
+          ← Back
+        </button>
         <button className="confirm-btn" onClick={handleConfirm}>
           Confirm & Generate Story →
         </button>
