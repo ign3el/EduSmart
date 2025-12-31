@@ -196,15 +196,9 @@ Please transform the attached document into this interactive educational story f
             return None
 
         seed_env = os.getenv("RUNPOD_SEED")
-        # SDXL-turbo optimized payload for speed and quality
+        # SDXL-turbo minimal payload (your endpoint has strict validation)
         payload_input: dict[str, Any] = {
             "prompt": educational_prompt,
-            "negative_prompt": "nsfw, nude, inappropriate, scary, violent, dark, blurry, low quality",
-            "steps": 4,  # SDXL-turbo optimal (1-4 steps for fast generation)
-            "cfg_scale": 1.0,  # Low guidance for turbo model
-            "width": 768,
-            "height": 768,
-            "sampler_name": "DPM++ SDE Karras",  # Best sampler for SDXL-turbo
         }
         if seed_env:
             try:
@@ -335,15 +329,27 @@ Please transform the attached document into this interactive educational story f
                 import tempfile
                 temp_dir = tempfile.gettempdir()
                 temp_file = os.path.join(temp_dir, f"temp_audio_{os.getpid()}_{int(time.time())}.mp3")
+                
+                # Save audio to temp file
                 await communicate.save(temp_file)
+                
+                # Wait briefly to ensure file is fully written
+                await asyncio.sleep(0.1)
+                
+                # Verify file exists before reading
+                if not os.path.exists(temp_file):
+                    raise FileNotFoundError(f"Temp audio file not created: {temp_file}")
                 
                 # Read audio as bytes
                 with open(temp_file, 'rb') as f:
                     audio_bytes = f.read()
                 
                 # Clean up temp file
-                if os.path.exists(temp_file):
-                    os.remove(temp_file)
+                try:
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+                except Exception as cleanup_error:
+                    print(f"Temp file cleanup warning: {cleanup_error}")
                 
                 print(f"✓ Audio generated via Edge-TTS: {len(audio_bytes)} bytes")
                 return audio_bytes
