@@ -48,82 +48,94 @@ class GeminiService:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # Concise, optimized teacher prompt for faster generation
-            teacher_prompt = f"""
-Transform this document into a {grade_level} educational animated dynamic storybook with interactive options(Generate as many scenes as required based on the uploaded file). Keep the original intent and concept of 
+            # STEP 1: Extract Learning Objectives & Key Concepts
+            analysis_prompt = f"""Analyze this educational document and extract:
+1. Main learning objectives (what should students learn?)
+2. Key concepts/topics to focus on
+3. Important facts or skills to teach
+4. Real-world applications or examples
+5. Any specific vocabulary that must be included
 
-LANGUAGE: Keep the original document language throughout (Arabic stays Arabic, English stays English, etc).
+Be concise and specific. The output will be used to create an accurate educational story."""
 
-⚠️ STRICT SAFETY REQUIREMENTS:
-- ALL content MUST be family-friendly and age-appropriate for {grade_level}
-- NO nudity, violence, drugs, alcohol, or inappropriate themes
-- NO sexual content, profanity, or disturbing imagery
-- Characters must be fully clothed at all times
-- All visuals must be suitable for educational children's content
-- Educational and positive tone throughout
+            def _analyze_document():
+                return self.client.models.generate_content(
+                    model=self.text_model,
+                    contents=[
+                        types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
+                        analysis_prompt
+                    ]
+                )
+            
+            analysis_response = self._call_with_exponential_backoff(_analyze_document)
+            learning_objectives = analysis_response.text if analysis_response else ""
 
-STORY:
-- Hook, relatable characters, conversational tone, interactive elements, satisfying ending
-- CRITICAL IMAGE DESCRIPTIONS:
-  * Each scene MUST have a detailed, concrete image_description (2-3 sentences minimum)
-  * Image description MUST directly match and reflect the scene's narrative content
-  * Include SPECIFIC visual elements: objects, characters, actions, colors, settings
-  * Example (WRONG): "A school scene" → Example (CORRECT): "Children sitting at colorful desks in a bright classroom, with a teacher pointing at a whiteboard showing math problems"
-  * If scene mentions pizza, image MUST explicitly include pizza visuals
-  * If scene mentions a house, image MUST show the house as the main element
-  * Avoid generic/abstract descriptions—be concrete and detailed
-  * Include specific colors, objects, and actions that match the story exactly
-  * Make descriptions vivid enough for AI to generate accurate matching visuals
-- Age-appropriate for {grade_level}
+            # STEP 2: Generate Story Using Extracted Learning Objectives
+            teacher_prompt = f"""You are an expert educational content creator for {grade_level} students.
 
-QUIZ (10+ questions):
-- Include ALL exercise/test questions from document if present
-- Add practice questions to reach at least 10 total
-- Match {grade_level} difficulty and vocabulary
-- Provide clear explanations
-- One correct answer per question, plausible options
-     * Convert them to multiple-choice format if they aren't already
-     * Preserve the original question intent and difficulty
-     * Add 3-4 plausible wrong answer options if not provided
-     * Keep the original correct answer
-     * Generate explanations for each original question
-   - TOTAL QUESTIONS REQUIRED: 
-     * MINIMUM: 10 questions (can be more based on topic complexity and length)
-     * MAXIMUM: No limit - scale based on content depth and complexity
-     * For simple topics: 10-12 questions
-     * For moderate topics: 12-15 questions
-     * For complex/lengthy topics: 15-20+ questions
-   - ADDITIONAL PRACTICE QUESTIONS (Always generate beyond document exercises):
-     * ALWAYS add extra questions for practice, even if document already has many exercises
-     * If document has fewer than 10 exercises, generate enough to reach MINIMUM 10 total
-     * If document has 10+ exercises, still add 2-5 MORE practice questions
-     * Analyze the style, difficulty, and format of the original exercise questions
-     * Create NEW questions that MATCH the same style and complexity level
-     * Mirror the question types used in the original exercises (e.g., if exercises ask about definitions, create more definition questions)
-     * Use similar vocabulary and sentence structure as the original questions
-     * Maintain the same difficulty level as the document's exercise questions
-     * Ensure new questions test related concepts from the story
-     * Example: If document has 5 exercise questions, generate 5-7 MORE = 10-12 total
-     * Example: If document has 12 exercise questions, generate 3-5 MORE = 15-17 total
-   - GRADE LEVEL REQUIREMENTS for any new questions:
-     * KG-Grade 2: Simple yes/no, basic recall, picture-based thinking, 1-2 sentence questions
-     * Grade 3-4: Short answer concepts, "what happens when", cause-effect, vocabulary in context
-     * Grade 5-7: Analysis questions, "why do you think", compare/contrast, application of concepts
-   - Vocabulary MUST match reading level: use words that {grade_level} students know
-   - Question complexity should align with cognitive development of {grade_level}
-   - Sentence length appropriate for {grade_level} (shorter for younger, more complex for older)
-   - Make options plausible but distinguishable at the {grade_level} comprehension level
-   - Ensure one clearly correct answer per question
-   - For each question, provide an explanation that:
-     * Uses vocabulary and sentence structure appropriate for {grade_level}
-     * Explains why the correct answer is right in terms {grade_level} students understand
-     * References specific story moments students remember
-     * Encourages and celebrates learning at their level
-   - Students will see these explanations in a "Review Answers" section after completing the quiz
+DOCUMENT ANALYSIS (must use to create story):
+{learning_objectives}
 
-TONE: Warm, encouraging, enthusiastic teacher voice that celebrates learning and discovery!
+NOW, transform the document into an engaging educational animated storybook using ONLY the concepts, facts, and learning objectives extracted above. 
 
-Please transform the attached document into this interactive educational story format.
+CRITICAL REQUIREMENTS:
+
+1. STORY ACCURACY & RELEVANCE:
+   - Story MUST directly teach the extracted learning objectives
+   - Every scene MUST reinforce key concepts from the analysis
+   - Story events must logically flow from the educational content
+   - Include specific facts, numbers, or details from the document
+   - Focus on the exact topic - don't go off-topic
+   - Make connections between story narrative and real-world learning
+
+2. LANGUAGE: Keep the original document language throughout (Arabic stays Arabic, English stays English, etc).
+
+3. SAFETY & AGE-APPROPRIATENESS:
+   - ALL content MUST be family-friendly for {grade_level}
+   - NO nudity, violence, drugs, alcohol, or inappropriate themes
+   - Characters must be fully clothed
+   - Educational and positive tone
+
+4. STORY STRUCTURE:
+   - Hook students with relatable characters
+   - Use conversational tone
+   - Include interactive elements/choices
+   - Build toward satisfying conclusion
+   - Generate 6-10 scenes (more for complex topics)
+
+5. IMAGE DESCRIPTIONS (MOST CRITICAL FOR QUALITY):
+   - Each scene MUST have detailed, specific image_description (3-4 sentences)
+   - Image description MUST directly match the scene's narrative
+   - Include SPECIFIC visual elements: objects, characters, actions, colors, settings
+   - Be CONCRETE, not abstract or generic
+   - Examples of GOOD descriptions:
+     * "A bright yellow school bus with 'SCHOOL' written on the side, children waving from windows, stop sign visible, sunny day with blue sky"
+     * "A chef in white chef hat and apron stirring a large pot on a stove, steam rising, kitchen with shelves of ingredients visible"
+     * "A cross-section diagram of a plant showing brown roots underground, green stem and leaves above soil, water droplets on leaves, sunshine from top"
+   - Examples of BAD descriptions (too vague):
+     * "A school scene"
+     * "A cooking scene"
+     * "A plant"
+
+6. QUIZ (MINIMUM 10 QUESTIONS):
+   - Questions MUST test understanding of the extracted learning objectives
+   - Include ALL exercise/test questions from document if present
+   - For simple topics: 10-12 questions
+   - For moderate topics: 12-15 questions
+   - For complex topics: 15-20+ questions
+   - Always add extra practice questions beyond document exercises
+   - Match {grade_level} difficulty and vocabulary
+   - Provide clear explanations
+   - One correct answer per question with 3-4 plausible options
+   - For {grade_level}:
+     * KG-Grade 2: Simple yes/no, basic recall, picture-based thinking
+     * Grade 3-4: Concepts, cause-effect, vocabulary in context
+     * Grade 5-7: Analysis, "why", compare/contrast, application
+   - Question vocabulary must match {grade_level} reading level
+
+7. TONE: Warm, encouraging, enthusiastic teacher voice that celebrates learning!
+
+Transform the document into JSON format with this exact structure:
 """
 
             def _generate_story():
@@ -131,7 +143,8 @@ Please transform the attached document into this interactive educational story f
                     model=self.text_model,
                     contents=[
                         types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
-                        teacher_prompt
+                        teacher_prompt,
+                        "Also include document analysis context in your story design"
                     ],
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -149,12 +162,23 @@ Please transform the attached document into this interactive educational story f
             return None
 
     def generate_image(self, prompt: str, scene_text: str = "") -> Optional[bytes]:
-        """Image generation via RunPod SDXL-turbo (fast, high-quality, seed-capable, optimized for educational content)."""
-        # Enhance prompt with scene context and strict safety constraints
-        safety_constraints = "[SAFETY] Family-friendly, age-appropriate, no nudity, violence, drugs, alcohol, or disturbing content. All characters fully clothed. Educational cartoon style."
-        # Include scene context to improve visual alignment with narrative
-        context = f"Scene narrative context: {scene_text}" if scene_text else ""
-        educational_prompt = f"{safety_constraints} {context} Educational cartoon illustration for children: {prompt}"
+        """Image generation via RunPod SDXL-turbo with enhanced quality prompting."""
+        # Build comprehensive, high-quality prompt for better image generation
+        quality_keywords = "high quality, sharp focus, detailed, clean art, clear, vibrant colors, professional illustration, educational cartoon style"
+        safety_constraints = "[SAFETY] Family-friendly, age-appropriate, no nudity, violence, drugs, alcohol. All characters fully clothed. Educational cartoon/illustration style."
+        
+        # Enhance prompt with quality guidance and scene context
+        enhanced_prompt = f"{quality_keywords}. {safety_constraints}. "
+        
+        if scene_text:
+            enhanced_prompt += f"Scene description: {scene_text}. "
+        
+        enhanced_prompt += f"Educational illustration: {prompt}"
+        
+        # Remove any potential problematic terms and standardize
+        enhanced_prompt = enhanced_prompt.replace("distorted", "clear")
+        enhanced_prompt = enhanced_prompt.replace("blurry", "sharp")
+        enhanced_prompt = enhanced_prompt.replace("ugly", "beautiful")
 
         # Use SDXL-turbo endpoint for fast, quality image generation
         endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID_A1111")
@@ -196,9 +220,11 @@ Please transform the attached document into this interactive educational story f
             return None
 
         seed_env = os.getenv("RUNPOD_SEED")
-        # SDXL-turbo minimal payload (your endpoint has strict validation)
+        # SDXL-turbo minimal payload with quality parameters
         payload_input: dict[str, Any] = {
-            "prompt": educational_prompt,
+            "prompt": enhanced_prompt,
+            "num_inference_steps": 4,  # SDXL-turbo is optimized for 4 steps
+            "guidance_scale": 7.5,  # Good balance for quality
         }
         if seed_env:
             try:
