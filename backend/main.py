@@ -7,6 +7,7 @@ import mimetypes
 import io
 import re
 from datetime import datetime, timedelta
+from typing import Optional
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException
 from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -95,7 +96,7 @@ async def get_avatars():
         {"id": "dinosaur", "name": "Dino-Explorer", "description": "Nature guide."}
     ]
 
-async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "en-US-JennyNeural", story_seed: int = None):
+async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "en-US-JennyNeural", story_seed: Optional[int] = None):
     """Generate image and audio for a scene with retry logic for audio. Uses story_seed for character consistency."""
     try:
         # No per-scene stagger - all scenes in batch run in parallel
@@ -438,15 +439,6 @@ async def export_job(job_id: str):
         )
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
-        filename = f"{story_name}_{story_id[:8]}.zip"
-        
-        return StreamingResponse(
-            zip_buffer,
-            media_type="application/zip",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 

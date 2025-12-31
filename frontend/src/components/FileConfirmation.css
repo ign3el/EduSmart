@@ -1,115 +1,106 @@
 .file-confirmation {
   width: 100%;
-  max-width: 700px;
+  max-width: 780px;
   margin: 0 auto;
-  padding: clamp(1rem, 5vw, 2rem);
+  display: grid;
+  gap: 1.4rem;
 }
 
 .file-confirmation h2 {
-  font-size: clamp(1.5rem, 5vw, 2.2rem);
-  margin-bottom: 0.5rem;
-  text-align: center;
+  text-align: left;
+  font-size: clamp(1.4rem, 3vw, 1.8rem);
+  letter-spacing: -0.01em;
 }
 
 .file-confirmation .subtitle {
-  color: var(--text-secondary);
-  text-align: center;
-  margin-bottom: 2rem;
-  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  color: var(--ink-2);
+  margin-top: -0.25rem;
 }
 
 .confirmation-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--border-radius);
-  padding: clamp(1rem, 4vw, 1.5rem);
-  margin-bottom: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.file-info, .grade-info {
-  display: flex;
-  align-items: center;
+  background: linear-gradient(150deg, rgba(12, 21, 40, 0.7), rgba(12, 21, 40, 0.55));
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: grid;
   gap: 1rem;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
-  margin-bottom: 1rem;
-}
-.grade-info:last-child {
-  margin-bottom: 0;
+  box-shadow: var(--shadow-soft);
 }
 
-.file-icon, .info-icon {
-  font-size: 1.8rem;
-  color: var(--primary-color);
+.file-info,
+.grade-info {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.9rem;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--edge);
 }
 
-.file-details h3, .grade-details h3 {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.25rem;
-  font-weight: 500;
+.file-icon,
+.info-icon {
+  font-size: 1.6rem;
+  color: var(--accent-1);
 }
-.file-details p, .grade-details p {
-  font-size: 1.1rem;
-  color: var(--text-primary);
+
+.file-details h3,
+.grade-details h3 {
+  color: var(--ink-2);
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
+}
+
+.file-details p,
+.grade-details p {
   margin: 0;
+  color: var(--ink-1);
+  font-weight: 700;
 }
 
 .edit-btn {
-  margin-left: auto;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--text-primary);
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
+  justify-self: end;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  background: rgba(109, 228, 255, 0.12);
+  color: var(--ink-1);
+  font-weight: 700;
+  transition: transform var(--transition), box-shadow var(--transition);
 }
+
 .edit-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
 }
 
 .confirmation-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
 }
 
-.confirm-btn, .back-btn {
-  padding: 1rem 2rem;
+.confirm-btn,
+.back-btn {
+  padding: 0.85rem 1.2rem;
   border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  width: 100%;
+  font-weight: 700;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink-1);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
 
 .confirm-btn {
-  background: var(--primary-color);
-  color: white;
-}
-.confirm-btn:hover {
-  background: var(--secondary-color);
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #04101f;
+  border: none;
+  box-shadow: var(--shadow-soft);
 }
 
-.back-btn {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-}
+.confirm-btn:hover,
 .back-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-
-@media (min-width: 640px) {
-  .confirmation-actions {
-    flex-direction: row-reverse;
-  }
-  .confirm-btn, .back-btn {
-    width: auto;
-  }
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
 }

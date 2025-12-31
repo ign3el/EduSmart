@@ -238,49 +238,62 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>📚 EduSmart</h1>
-        <p>Transform learning into an adventure!</p>
+        <div className="app-header-content">
+          <h1>EduSmart — AI Storymaker</h1>
+          <p>Transform your PDFs or DOCX files into animated, voice-guided adventures tailored for every grade.</p>
+        </div>
       </header>
 
       <main className="app-main">
-        {error && (
-          <div className="error-message">
-            <p>⚠️ {error}</p>
-            <button onClick={() => setError(null)}>Try Again</button>
-          </div>
-        )}
-        
-        <AnimatePresence mode="wait">
-          {step === 'home' && (
-            <motion.div key="home" className="home-container">
-              <div className="home-buttons">
-                <motion.button 
-                  className="home-btn create-btn"
-                  onClick={() => setStep('upload')}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  ✨ Create New Story
-                </motion.button>
-                <motion.button 
-                  className="home-btn load-btn"
-                  onClick={() => setStep('load')}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  📚 Load Online Story
-                </motion.button>
-                <motion.button 
-                  className="home-btn offline-btn"
-                  onClick={() => setStep('offline')}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  📱 Offline Manager
-                </motion.button>
-              </div>
-            </motion.div>
+        <div className="content-shell">
+          {error && (
+            <div className="error-message">
+              <p>⚠️ {error}</p>
+              <button onClick={() => setError(null)}>Try Again</button>
+            </div>
           )}
+          
+          <AnimatePresence mode="wait">
+            {step === 'home' && (
+              <motion.div key="home" className="home-container">
+                <div className="home-topline">
+                  <h2>Choose how you want to begin</h2>
+                  <span className="pill">Smart, fast, and offline-ready</span>
+                </div>
+                <div className="home-buttons">
+                  <motion.button 
+                    className="home-btn create-btn"
+                    onClick={() => setStep('upload')}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <div className="emoji">✨</div>
+                    <strong>Create New Story</strong>
+                    <span>Upload a lesson file and let AI turn it into a story</span>
+                  </motion.button>
+                  <motion.button 
+                    className="home-btn load-btn"
+                    onClick={() => setStep('load')}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <div className="emoji">📚</div>
+                    <strong>Load Online Story</strong>
+                    <span>Pull down a saved adventure from the cloud</span>
+                  </motion.button>
+                  <motion.button 
+                    className="home-btn offline-btn"
+                    onClick={() => setStep('offline')}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <div className="emoji">📱</div>
+                    <strong>Offline Manager</strong>
+                    <span>Manage locally stored stories without an internet connection</span>
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
 
           {step === 'upload' && (
             <motion.div key="upload" className="step-container">
@@ -375,37 +388,38 @@ function App() {
           )}
         </AnimatePresence>
 
-        {showSaveModal && (
-          <SaveStoryModal 
-            jobId={currentJobId}
-            onSave={handleSaveComplete}
-            onCancel={() => setShowSaveModal(false)}
-          />
-        )}
+          {showSaveModal && (
+            <SaveStoryModal 
+              jobId={currentJobId}
+              onSave={handleSaveComplete}
+              onCancel={() => setShowSaveModal(false)}
+            />
+          )}
 
-        {showReuploadModal && (
-          <ReuploadConfirmModal
-            onConfirm={handleReuploadConfirm}
-            onCancel={() => setShowReuploadModal(false)}
-          />
-        )}
+          {showReuploadModal && (
+            <ReuploadConfirmModal
+              onConfirm={handleReuploadConfirm}
+              onCancel={() => setShowReuploadModal(false)}
+            />
+          )}
 
-        {showUploadProgress && (
-          <UploadProgressOverlay
-            progress={uploadProgress}
-            fileName={uploadFileName}
-            isVisible={showUploadProgress}
-          />
-        )}
+          {showUploadProgress && (
+            <UploadProgressOverlay
+              progress={uploadProgress}
+              fileName={uploadFileName}
+              isVisible={showUploadProgress}
+            />
+          )}
 
-        {/* Hidden file input for re-upload */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.docx,.doc"
-          onChange={handleFileInputChange}
-          style={{ display: 'none' }}
-        />
+          {/* Hidden file input for re-upload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.doc"
+            onChange={handleFileInputChange}
+            style={{ display: 'none' }}
+          />
+        </div>
       </main>
     </div>
   )
