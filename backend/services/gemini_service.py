@@ -252,6 +252,9 @@ Please transform the attached document into this interactive educational story f
                     except Exception:
                         return None
                 return None
+            
+            # Debug: Log the actual output structure
+            print(f"DEBUG: Output type: {type(output)}, sample: {str(output)[:200]}")
 
             if isinstance(output, str):
                 image_bytes = decode_b64(output)
@@ -328,23 +331,29 @@ Please transform the attached document into this interactive educational story f
                 # Use absolute temp file path to avoid Docker path issues
                 import tempfile
                 temp_dir = tempfile.gettempdir()
-                temp_file = os.path.join(temp_dir, f"temp_audio_{os.getpid()}_{int(time.time())}.mp3")
+                temp_file = os.path.join(temp_dir, f"temp_audio_{os.getpid()}_{int(time.time() * 1000)}.mp3")
                 
                 # Save audio to temp file
                 await communicate.save(temp_file)
                 
-                # Wait briefly to ensure file is fully written
-                await asyncio.sleep(0.1)
+                # Retry with exponential backoff if file not ready
+                audio_bytes = None
+                for attempt in range(5):
+                    try:
+                        await asyncio.sleep(0.05 * (attempt + 1))  # 50ms, 100ms, 150ms, 200ms, 250ms
+                        if os.path.exists(temp_file):
+                            with open(temp_file, 'rb') as f:
+                                audio_bytes = f.read()
+                            break
+                    except Exception as read_error:
+                        if attempt == 4:
+                            raise read_error
+                        continue
                 
-                # Verify file exists before reading
-                if not os.path.exists(temp_file):
-                    raise FileNotFoundError(f"Temp audio file not created: {temp_file}")
+                if not audio_bytes:
+                    raise FileNotFoundError(f"Failed to read temp audio file after retries: {temp_file}")
                 
-                # Read audio as bytes
-                with open(temp_file, 'rb') as f:
-                    audio_bytes = f.read()
-                
-                # Clean up temp file
+                # Clean up temp file safely
                 try:
                     if os.path.exists(temp_file):
                         os.remove(temp_file)
