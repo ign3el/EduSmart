@@ -50,7 +50,7 @@ class GeminiService:
 
             # Concise, optimized teacher prompt for faster generation
             teacher_prompt = f"""
-Transform this document into a {grade_level} animated storybook (8-10 scenes).
+Transform this document into a {grade_level} animated dynamic storybook with interactive options(Generate as many scenes as required based on the uploaded file).
 
 LANGUAGE: Keep the original document language throughout (Arabic stays Arabic, English stays English, etc).
 
@@ -64,7 +64,16 @@ LANGUAGE: Keep the original document language throughout (Arabic stays Arabic, E
 
 STORY:
 - Hook, relatable characters, conversational tone, interactive elements, satisfying ending
-- Vivid cartoon-style visual descriptions per scene (bright, colorful, age-appropriate)
+- CRITICAL IMAGE DESCRIPTIONS:
+  * Each scene MUST have a detailed, concrete image_description (2-3 sentences minimum)
+  * Image description MUST directly match and reflect the scene's narrative content
+  * Include SPECIFIC visual elements: objects, characters, actions, colors, settings
+  * Example (WRONG): "A school scene" → Example (CORRECT): "Children sitting at colorful desks in a bright classroom, with a teacher pointing at a whiteboard showing math problems"
+  * If scene mentions pizza, image MUST explicitly include pizza visuals
+  * If scene mentions a house, image MUST show the house as the main element
+  * Avoid generic/abstract descriptions—be concrete and detailed
+  * Include specific colors, objects, and actions that match the story exactly
+  * Make descriptions vivid enough for AI to generate accurate matching visuals
 - Age-appropriate for {grade_level}
 
 QUIZ (10+ questions):
@@ -139,11 +148,13 @@ Please transform the attached document into this interactive educational story f
             print(f"STORY ERROR: {e}")
             return None
 
-    def generate_image(self, prompt: str) -> Optional[bytes]:
+    def generate_image(self, prompt: str, scene_text: str = "") -> Optional[bytes]:
         """Image generation via RunPod (seed-capable). HF/Gemini fallbacks removed."""
-        # Add strict safety constraints to ensure family-friendly output
+        # Enhance prompt with scene context and strict safety constraints
         safety_constraints = "[SAFETY] Family-friendly, age-appropriate, no nudity, violence, drugs, alcohol, or disturbing content. All characters fully clothed. Educational cartoon style."
-        educational_prompt = f"{safety_constraints} Educational cartoon illustration for children: {prompt}"
+        # Include scene context to improve visual alignment with narrative
+        context = f"Scene narrative context: {scene_text}" if scene_text else ""
+        educational_prompt = f"{safety_constraints} {context} Educational cartoon illustration for children: {prompt}"
 
         endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID")
         api_key = os.getenv("RUNPOD_KEY")
