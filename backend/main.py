@@ -393,6 +393,53 @@ async def export_story(story_id: str):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+@app.get("/api/export-job/{job_id}")
+async def export_job(job_id: str):
+    """Export a newly generated story (unsaved) as a downloadable ZIP file."""
+    try:
+        import json
+        import zipfile
+        
+        # Check if job exists and is completed
+        if job_id not in jobs:
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        job = jobs[job_id]
+        if job["status"] != "completed" or not job.get("result"):
+            raise HTTPException(status_code=400, detail="Job not completed yet")
+        
+        result = job["result"]
+        story_title = result.get("title", "Story").replace(" ", "_").replace("/", "_")
+        filename = f"{story_title}_{job_id[:8]}.zip"
+        
+        # Create ZIP file in memory
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # Add story metadata/data as JSON
+            zip_file.writestr("story_data.json", json.dumps(result, indent=2))
+            
+            # Add all generated media files from outputs folder
+            outputs_dir = "outputs"
+            if os.path.exists(outputs_dir):
+                for filename_in_outputs in os.listdir(outputs_dir):
+                    if filename_in_outputs.startswith(job_id):
+                        file_path = os.path.join(outputs_dir, filename_in_outputs)
+                        if os.path.isfile(file_path):
+                            # Add with basename only (relative to outputs)
+                            arcname = os.path.basename(file_path).replace(f"{job_id}_", "")
+                            zip_file.write(file_path, arcname=arcname)
+        
+        zip_buffer.seek(0)
+        return StreamingResponse(
+            iter([zip_buffer.getvalue()]),
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
         filename = f"{story_name}_{story_id[:8]}.zip"
         
         return StreamingResponse(

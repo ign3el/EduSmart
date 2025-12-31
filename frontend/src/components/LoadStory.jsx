@@ -30,7 +30,7 @@ function LoadStory({ onLoad, onBack }) {
       const response = await fetch(`/api/load-story/${storyId}`)
       if (!response.ok) throw new Error('Failed to load story')
       const data = await response.json()
-      onLoad(data.story_data, data.name)
+      onLoad(data.story_data, data.name, storyId)
     } catch (error) {
       alert('Failed to load story: ' + error.message)
     }

@@ -6,11 +6,13 @@ import Quiz from './Quiz';
 
 const API_DOMAIN = "https://edusmart.ign3el.com";
 
-function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false }) {
+function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null }) {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadMessage, setDownloadMessage] = useState('');
   const audioRef = useRef(null);
 
   const scenes = storyData?.scenes || [];
@@ -90,6 +92,70 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
 
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
+  };
+
+  const handleOfflineDownload = async () => {
+    // Determine which ID to use for export
+    const exportId = savedStoryId || currentJobId;
+    const isJobExport = !savedStoryId && currentJobId;
+
+    if (!exportId) {
+      // Fallback: local save for truly offline generated stories
+      const storyName = prompt('Enter story name for offline save:', storyData.title || 'My Story');
+      if (storyName?.trim()) {
+        const storyId = `local_${Date.now()}`;
+        const localStory = {
+          id: storyId,
+          name: storyName.trim(),
+          storyData: storyData,
+          savedAt: Date.now(),
+          isOffline: true
+        };
+        try {
+          localStorage.setItem(`edusmart_story_${storyId}`, JSON.stringify(localStory));
+          alert(`✅ Story "${storyName}" saved locally for offline viewing!\n\nYou can access it anytime from the Offline Manager, even without internet.`);
+        } catch (error) {
+          alert('Failed to save locally: ' + error.message);
+        }
+      }
+      return;
+    }
+
+    setIsDownloading(true);
+    setDownloadMessage('Zipping file...');
+
+    try {
+      const endpoint = isJobExport ? `/api/export-job/${exportId}` : `/api/export-story/${exportId}`;
+      const response = await fetch(endpoint);
+      if (!response.ok) throw new Error('Failed to download story');
+
+      setDownloadMessage('Downloading...');
+      const blob = await response.blob();
+
+      setDownloadMessage('Saving file...');
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeName = (storyData.title || 'My Story').replace(/\s+/g, '_');
+      link.href = url;
+      link.download = `${safeName}_${exportId.substring(0, 8)}.zip`;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setDownloadMessage('Complete! ✓');
+      setTimeout(() => {
+        setDownloadMessage('');
+        setIsDownloading(false);
+      }, 2000);
+    } catch (error) {
+      setDownloadMessage(`Error: ${error.message}`);
+      setTimeout(() => {
+        setDownloadMessage('');
+        setIsDownloading(false);
+      }, 3000);
+    }
   };
 
   if (showQuiz && storyData?.quiz) {
@@ -206,35 +272,63 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
         {!isOffline && (
           <button 
             className="save-offline-btn" 
-            onClick={() => {
-              const storyName = prompt('Enter story name for offline save:', storyData.title || 'My Story')
-              if (storyName?.trim()) {
-                // Save to localStorage
-                const storyId = `local_${Date.now()}`
-                const localStory = {
-                  id: storyId,
-                  name: storyName.trim(),
-                  storyData: storyData,
-                  savedAt: Date.now(),
-                  isOffline: true
-                }
-                
-                try {
-                  localStorage.setItem(`edusmart_story_${storyId}`, JSON.stringify(localStory))
-                  alert(`✅ Story "${storyName}" saved locally for offline viewing!\n\nYou can access it anytime from the Offline Manager, even without internet.`)
-                } catch (error) {
-                  alert('Failed to save locally: ' + error.message)
-                }
-              }
-            }}
+            onClick={handleOfflineDownload}
+            disabled={isDownloading}
           >
-            📥 Download for Offline
+            {isDownloading ? '⏳ Downloading...' : '📥 Download for Offline'}
           </button>
         )}
         <button className="restart-btn" onClick={onRestart}>
           <FiRotateCw /> {isSaved || isOffline ? 'Back to Home' : 'Start New Story'}
         </button>
       </div>
+
+      {downloadMessage && (
+        <motion.div 
+          className="download-popup"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+        >
+          <div className="download-popup-content">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {downloadMessage !== 'Complete! ✓' && !downloadMessage.startsWith('Error') ? <div className="spinner"></div> : <span style={{ fontSize: '1.2rem' }}>✓</span>}
+              <p style={{ margin: 0 }}>{downloadMessage}</p>
+            </div>
+            
+            <div className="progress-bar-container">
+              <div 
+                className="progress-bar"
+                style={{
+                  width: downloadMessage === 'Zipping file...' ? '25%' : 
+                         downloadMessage === 'Downloading...' ? '60%' : 
+                         downloadMessage === 'Saving file...' ? '85%' : '100%',
+                  transition: 'width 0.4s ease'
+                }}
+              ></div>
+            </div>
+            
+            <div className="progress-steps">
+              <div className={`progress-step ${downloadMessage === 'Zipping file...' ? 'active' : downloadMessage === 'Downloading...' || downloadMessage === 'Saving file...' || downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                <div className="step-dot">1</div>
+                <span>Zip</span>
+              </div>
+              <div className={`progress-step ${downloadMessage === 'Downloading...' ? 'active' : downloadMessage === 'Saving file...' || downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                <div className="step-dot">2</div>
+                <span>Download</span>
+              </div>
+              <div className={`progress-step ${downloadMessage === 'Saving file...' ? 'active' : downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                <div className="step-dot">3</div>
+                <span>Save</span>
+              </div>
+              <div className={`progress-step ${downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                <div className="step-dot">✓</div>
+                <span>Done</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

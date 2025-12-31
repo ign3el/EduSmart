@@ -23,6 +23,7 @@ function App() {
   const [currentJobId, setCurrentJobId] = useState(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [savedStoryId, setSavedStoryId] = useState(null)
   const [isOfflineMode, setIsOfflineMode] = useState(false)
   const [showReuploadModal, setShowReuploadModal] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -191,6 +192,7 @@ function App() {
     setProgress(0)
     setCurrentJobId(null)
     setIsSaved(false)
+    setSavedStoryId(null)
     setIsOfflineMode(false)
   }
 
@@ -201,6 +203,7 @@ function App() {
   const handleSaveComplete = async (storyId, storyName) => {
     setShowSaveModal(false)
     setIsSaved(true)
+    setSavedStoryId(storyId)
     alert(`✅ Story "${storyName}" saved successfully!`)
   }
 
@@ -317,10 +320,11 @@ function App() {
           {step === 'load' && (
             <motion.div key="load" className="step-container">
               <LoadStory 
-                onLoad={(storyData, storyName) => {
+                onLoad={(storyData, storyName, storyId) => {
                   setStoryData(storyData)
                   setSelectedAvatar({ id: 'loaded', name: 'Saved Story' })
                   setIsSaved(true)
+                  setSavedStoryId(storyId)
                   setStep('playing')
                 }}
                 onBack={() => setStep('home')}
@@ -364,6 +368,8 @@ function App() {
                 onSave={handleSaveStory}
                 isSaved={isSaved}
                 isOffline={isOfflineMode}
+                savedStoryId={savedStoryId}
+                currentJobId={currentJobId}
               />
             </motion.div>
           )}
