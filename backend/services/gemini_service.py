@@ -54,9 +54,17 @@ Transform this document into a {grade_level} animated storybook (8-10 scenes).
 
 LANGUAGE: Keep the original document language throughout (Arabic stays Arabic, English stays English, etc).
 
+⚠️ STRICT SAFETY REQUIREMENTS:
+- ALL content MUST be family-friendly and age-appropriate for {grade_level}
+- NO nudity, violence, drugs, alcohol, or inappropriate themes
+- NO sexual content, profanity, or disturbing imagery
+- Characters must be fully clothed at all times
+- All visuals must be suitable for educational children's content
+- Educational and positive tone throughout
+
 STORY:
 - Hook, relatable characters, conversational tone, interactive elements, satisfying ending
-- Vivid cartoon-style visual descriptions per scene
+- Vivid cartoon-style visual descriptions per scene (bright, colorful, age-appropriate)
 - Age-appropriate for {grade_level}
 
 QUIZ (10+ questions):
@@ -133,7 +141,9 @@ Please transform the attached document into this interactive educational story f
 
     def generate_image(self, prompt: str) -> Optional[bytes]:
         """Image generation via RunPod (seed-capable). HF/Gemini fallbacks removed."""
-        educational_prompt = f"Educational cartoon illustration for children: {prompt}"
+        # Add strict safety constraints to ensure family-friendly output
+        safety_constraints = "[SAFETY] Family-friendly, age-appropriate, no nudity, violence, drugs, alcohol, or disturbing content. All characters fully clothed. Educational cartoon style."
+        educational_prompt = f"{safety_constraints} Educational cartoon illustration for children: {prompt}"
 
         endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID")
         api_key = os.getenv("RUNPOD_KEY")
