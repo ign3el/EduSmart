@@ -87,6 +87,9 @@ CRITICAL REQUIREMENTS:
    - Include specific facts, numbers, or details from the document
    - Focus on the exact topic - don't go off-topic
    - Make connections between story narrative and real-world learning
+   - AVOID REPETITION: Each scene should introduce NEW information or perspective
+   - Vary sentence structures and narration style across scenes
+   - Progress logically from introduction → exploration → understanding → application → conclusion
 
 2. LANGUAGE: Keep the original document language throughout (Arabic stays Arabic, English stays English, etc).
 
@@ -98,24 +101,30 @@ CRITICAL REQUIREMENTS:
 
 4. STORY STRUCTURE:
    - Hook students with relatable characters
-   - Use conversational tone
+   - Use conversational tone with natural dialogue
    - Include interactive elements/choices
    - Build toward satisfying conclusion
    - Generate 6-10 scenes (more for complex topics)
+   - Each scene advances the plot AND teaches something new
+   - NO repetitive phrases or recycled descriptions
 
-5. IMAGE DESCRIPTIONS (MOST CRITICAL FOR QUALITY):
-   - Each scene MUST have detailed, specific image_description (3-4 sentences)
-   - Image description MUST directly match the scene's narrative
-   - Include SPECIFIC visual elements: objects, characters, actions, colors, settings
-   - Be CONCRETE, not abstract or generic
+5. IMAGE DESCRIPTIONS (MOST CRITICAL - MUST MATCH NARRATION EXACTLY):
+   - Each scene MUST have detailed, specific image_description (4-5 sentences minimum)
+   - Image description MUST EXACTLY MATCH what happens in scene "text" field
+   - If text says "Sarah picked up a red apple", image MUST show "young girl named Sarah holding a bright red apple in her hand"
+   - Include ALL key visual elements mentioned in the scene text
+   - Specify character names, actions, objects, colors, settings, expressions
+   - REQUIREMENT: Image description should be like a detailed painting instruction
    - Examples of GOOD descriptions:
-     * "A bright yellow school bus with 'SCHOOL' written on the side, children waving from windows, stop sign visible, sunny day with blue sky"
-     * "A chef in white chef hat and apron stirring a large pot on a stove, steam rising, kitchen with shelves of ingredients visible"
-     * "A cross-section diagram of a plant showing brown roots underground, green stem and leaves above soil, water droplets on leaves, sunshine from top"
+     * "Wide shot of a yellow school bus with large black letters 'SCHOOL BUS' on side, five children with backpacks waving from open windows, red octagonal stop sign extended from driver side, bright sunny day with puffy white clouds and blue sky, green trees in background"
+     * "Medium shot of smiling chef named Marco wearing tall white chef hat and white apron with 'CHEF' written on it, stirring large silver pot on gas stove with wooden spoon, white steam rising, modern kitchen with wooden shelves full of glass jars containing colorful spices and ingredients"
+     * "Scientific illustration showing cross-section of green plant: brown root system spreading underground in dark soil, thick green stem rising up, broad green leaves with visible veins, small water droplets glistening on leaf surface, bright yellow sun rays coming from top right corner"
    - Examples of BAD descriptions (too vague):
      * "A school scene"
-     * "A cooking scene"
+     * "A cooking scene"  
      * "A plant"
+   - BAD EXAMPLE: Text says "three friends exploring forest" but image says "children playing"
+   - GOOD EXAMPLE: Text says "three friends exploring forest" and image says "three children aged 8-10 wearing backpacks and holding flashlights, walking between tall pine trees with brown bark, sunlight filtering through green leaves, forest floor covered with brown pine needles"
 
 6. QUIZ (MINIMUM 10 QUESTIONS):
    - Questions MUST test understanding of the extracted learning objectives
@@ -165,16 +174,20 @@ Transform the document into JSON format with this exact structure:
         """Image generation via RunPod SDXL-turbo with enhanced quality prompting. Uses story_seed for character consistency."""
         # Build comprehensive, high-quality prompt for better image generation
         quality_keywords = "masterpiece, best quality, high resolution, sharp focus, detailed faces, clean linework, professional digital art, vibrant colors, clear features, well-proportioned anatomy"
-        style_guide = "children's book illustration style, Disney/Pixar quality, educational cartoon"
+        style_guide = "children's book illustration style, Disney/Pixar quality, educational cartoon, storybook art"
         safety_constraints = "[SAFETY] Family-friendly, age-appropriate, fully clothed characters, wholesome educational content"
         
-        # Build enhanced prompt with better structure
-        enhanced_prompt = f"{quality_keywords}, {style_guide}. {safety_constraints}. "
+        # Combine image description with scene narrative for better alignment
+        # The prompt (image_description) should already be detailed, but we ensure it matches the scene
+        combined_description = prompt
         
-        if scene_text:
-            enhanced_prompt += f"Scene context: {scene_text}. "
+        # If scene_text is provided and prompt seems too short/vague, enhance it
+        if scene_text and len(prompt.split()) < 15:
+            print(f"⚠ Warning: Short image description detected. Enhancing with scene context.")
+            combined_description = f"{prompt}. Story context: {scene_text[:200]}"
         
-        enhanced_prompt += f"Main subject: {prompt}"
+        # Build enhanced prompt with clear priority hierarchy
+        enhanced_prompt = f"{quality_keywords}. {style_guide}. {safety_constraints}. MAIN VISUAL: {combined_description}"
         
         # Remove problematic terms
         enhanced_prompt = enhanced_prompt.replace("distorted", "clear")
