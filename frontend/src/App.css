@@ -212,6 +212,9 @@ body {
 
 /* Desktop */
 @media (min-width: 1024px) {
+  .home-container {
+    max-width: 1000px;
+  }
   .home-buttons {
     grid-template-columns: repeat(3, 1fr);
   }
