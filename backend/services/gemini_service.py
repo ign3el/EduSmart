@@ -17,7 +17,7 @@ class GeminiService:
     def __init__(self) -> None:
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         # Recommended models for cost efficiency and high-volume usage
-        self.text_model = "gemini-1.5-flash"  # Higher rate limit: 2000 RPD free tier
+        self.text_model = "gemini-2.5-flash"  # Available model with higher rate limits than lite version
         self.image_model = "gemini-2.5-flash-image"  # Best balance for mass users
         self.audio_model = "gemini-2.5-flash-preview-tts"  # Optimized TTS
         # Exponential backoff configuration
