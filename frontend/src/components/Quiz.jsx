@@ -25,19 +25,24 @@ const Quiz = ({ questions, onComplete }) => {
     if (selectedOption !== null) return; // Prevent double clicking
 
     setSelectedOption(option);
-    const correct = option === questions[currentQuestion].answer;
+    const currentQ = questions[currentQuestion];
+    const correctAnswer = currentQ.answer;
+    const correct = option === correctAnswer;
     setIsCorrect(correct);
 
-    // Track user answer
-    setUserAnswers([...userAnswers, {
-      question: questions[currentQuestion].question,
+    // Track user answer with proper state update
+    const newAnswer = {
+      question: currentQ.question,
       selected: option,
-      correct: questions[currentQuestion].answer,
-      explanation: questions[currentQuestion].explanation || "No explanation available.",
+      correct: correctAnswer,
+      explanation: currentQ.explanation || "No explanation provided.",
       isCorrect: correct
-    }]);
-
-    if (correct) setScore(score + 1);
+    };
+    
+    setUserAnswers(prev => [...prev, newAnswer]);
+    if (correct) {
+      setScore(prev => prev + 1);
+    }
 
     setTimeout(() => {
       if (currentQuestion + 1 < questions.length) {

@@ -165,9 +165,11 @@
   width: 100%;
   background: white;
   overflow-y: auto;
-  max-height: 85vh;
+  max-height: calc(100vh - 4rem);
   padding: 1.5rem;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .review-mode h2 {
@@ -183,7 +185,9 @@
   flex-direction: column;
   gap: 1.5rem;
   padding-bottom: 2rem;
-  overflow-y: visible;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .review-item {
@@ -323,10 +327,11 @@
   }
 
   .review-mode {
-    max-height: 100vh;
+    max-height: calc(100vh - 2rem);
     padding: 1rem;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    height: 100%;
   }
 
   .review-list {

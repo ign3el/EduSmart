@@ -52,6 +52,15 @@ class GeminiService:
             teacher_prompt = f"""
 As a professional {grade_level} educational teacher, I need you to transform this educational content into an engaging, interactive animated storybook for my students.
 
+⚠️ CRITICAL LANGUAGE REQUIREMENT:
+• DETECT the original language of the uploaded document
+• PRESERVE that exact language throughout the entire story, narration, quiz questions, and explanations
+• If the document is in Arabic, generate EVERYTHING in Arabic
+• If the document is in English, generate EVERYTHING in English
+• If the document is in any other language, maintain that language
+• DO NOT translate or change the language under any circumstances
+• The story's purpose is to make the content more engaging, NOT to change its language
+
 TEACHING OBJECTIVES:
 • Make complex concepts accessible and fun for {grade_level} learners
 • Use age-appropriate language, examples, and storytelling techniques
