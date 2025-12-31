@@ -196,10 +196,10 @@ Transform the document into JSON format with this exact structure:
 
         # Use ComfyUI FLUX endpoint for high-quality image generation
         endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID_FLUX")
-        api_key = os.getenv("COMFY_API_KEY") or os.getenv("RUNPOD_KEY")
+        api_key = os.getenv("RUNPOD_KEY")
 
         if not endpoint_id or not api_key:
-            print("RUNPOD_ENDPOINT_ID_FLUX or COMFY_API_KEY not set; cannot generate image")
+            print("RUNPOD_ENDPOINT_ID_FLUX or RUNPOD_KEY not set; cannot generate image")
             return None
 
         # Simple spend guard (estimates). Reset monthly and block when over cap.
