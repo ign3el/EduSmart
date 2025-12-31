@@ -30,6 +30,18 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
     console.log('Scene data:', scene);
     console.log('Image URL:', fullImageUrl);
     console.log('Image loaded:', imageLoaded, 'Error:', imageError);
+    
+    // Test if image endpoint is accessible
+    if (fullImageUrl) {
+      fetch(fullImageUrl, { method: 'HEAD' })
+        .then(res => {
+          console.log('HEAD request status:', res.status);
+          if (!res.ok) {
+            console.warn('Image endpoint returned:', res.status, res.statusText);
+          }
+        })
+        .catch(err => console.error('HEAD request failed:', err));
+    }
   }, [currentScene, fullImageUrl, imageLoaded, imageError]);
 
   // Handle Play/Pause Toggle
@@ -226,15 +238,19 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
                 <img 
                   src={fullImageUrl} 
                   alt={`Scene ${currentScene + 1}`}
-                  onLoad={() => setImageLoaded(true)}
+                  onLoad={() => {
+                    console.log('✅ Image loaded successfully:', fullImageUrl);
+                    setImageLoaded(true);
+                  }}
                   onError={(e) => {
-                    console.error('Image load error:', fullImageUrl);
+                    console.error('❌ Image load error:', fullImageUrl);
+                    console.error('Error details:', e);
                     setImageError(true);
                   }}
                 />
               ) : (
                 <div className="placeholder-image">
-                  <p>{imageError ? 'Image unavailable' : (scene?.image_description || "Loading image...")}</p>
+                  <p>{imageError ? 'Image unavailable - check console' : (scene?.image_description || "Loading image...")}</p>
                 </div>
               )}
             </div>
