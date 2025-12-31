@@ -149,19 +149,19 @@ Please transform the attached document into this interactive educational story f
             return None
 
     def generate_image(self, prompt: str, scene_text: str = "") -> Optional[bytes]:
-        """Image generation via RunPod FLUX.1-dev (high-quality, seed-capable, optimized for educational content)."""
+        """Image generation via RunPod SDXL-turbo (fast, high-quality, seed-capable, optimized for educational content)."""
         # Enhance prompt with scene context and strict safety constraints
         safety_constraints = "[SAFETY] Family-friendly, age-appropriate, no nudity, violence, drugs, alcohol, or disturbing content. All characters fully clothed. Educational cartoon style."
         # Include scene context to improve visual alignment with narrative
         context = f"Scene narrative context: {scene_text}" if scene_text else ""
         educational_prompt = f"{safety_constraints} {context} Educational cartoon illustration for children: {prompt}"
 
-        # Use FLUX.1-dev endpoint for superior quality and detail
-        endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID_FLUX")
+        # Use SDXL-turbo endpoint for fast, quality image generation
+        endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID_A1111")
         api_key = os.getenv("RUNPOD_KEY")
 
         if not endpoint_id or not api_key:
-            print("RUNPOD_ENDPOINT_ID_FLUX or RUNPOD_KEY not set; cannot generate image")
+            print("RUNPOD_ENDPOINT_ID_A1111 or RUNPOD_KEY not set; cannot generate image")
             return None
 
         # Simple spend guard (estimates). Reset monthly and block when over cap.
@@ -196,13 +196,15 @@ Please transform the attached document into this interactive educational story f
             return None
 
         seed_env = os.getenv("RUNPOD_SEED")
-        # FLUX.1-dev optimized payload with quality parameters
+        # SDXL-turbo optimized payload for speed and quality
         payload_input: dict[str, Any] = {
             "prompt": educational_prompt,
-            "width": 1024,  # FLUX optimal resolution
-            "height": 1024,
-            "num_inference_steps": 28,  # FLUX sweet spot for quality/speed
-            "guidance_scale": 3.5,  # FLUX optimal guidance
+            "negative_prompt": "nsfw, nude, inappropriate, scary, violent, dark, blurry, low quality",
+            "steps": 4,  # SDXL-turbo optimal (1-4 steps for fast generation)
+            "cfg_scale": 1.0,  # Low guidance for turbo model
+            "width": 768,
+            "height": 768,
+            "sampler_name": "DPM++ SDE Karras",  # Best sampler for SDXL-turbo
         }
         if seed_env:
             try:
@@ -217,9 +219,9 @@ Please transform the attached document into this interactive educational story f
         }
 
         try:
-            resp = requests.post(url, headers=headers, json={"input": payload_input}, timeout=120)  # Extended timeout for FLUX quality
+            resp = requests.post(url, headers=headers, json={"input": payload_input}, timeout=60)  # SDXL-turbo is fast (5-10s)
             if resp.status_code != 200:
-                print(f"RunPod FLUX returned {resp.status_code}: {resp.text[:120]}")
+                print(f"RunPod SDXL-turbo returned {resp.status_code}: {resp.text[:120]}")
                 return None
 
             data = resp.json()
@@ -231,7 +233,7 @@ Please transform the attached document into this interactive educational story f
                 request_id = data["id"]
                 status_url = f"https://api.runpod.ai/v2/{endpoint_id}/status/{request_id}"
                 output = None
-                for _ in range(45):  # FLUX may need up to ~90s for high quality
+                for _ in range(20):  # SDXL-turbo is fast (~5-10s)
                     time.sleep(2)
                     status_resp = requests.get(status_url, headers=headers, timeout=20)
                     if status_resp.status_code != 200:
@@ -292,13 +294,13 @@ Please transform the attached document into this interactive educational story f
             if image_bytes:
                 usage["images"] = usage.get("images", 0) + 1
                 save_usage(usage)
-                print("✓ Image generated via RunPod FLUX.1-dev (high quality)")
+                print("✓ Image generated via RunPod SDXL-turbo (fast & quality)")
                 return image_bytes
 
-            print("RunPod FLUX output could not be parsed")
+            print("RunPod SDXL-turbo output could not be parsed")
             return None
         except Exception as e:
-            print(f"RunPod FLUX error: {str(e)[:120]}")
+            print(f"RunPod SDXL-turbo error: {str(e)[:120]}")
             return None
 
     def _detect_language_and_voice(self, text: str, default_voice: str) -> str:
@@ -329,8 +331,10 @@ Please transform the attached document into this interactive educational story f
                     volume="+0%"
                 )
                 
-                # Generate unique temp file to avoid conflicts
-                temp_file = f"temp_audio_{os.getpid()}_{int(time.time())}.mp3"
+                # Use absolute temp file path to avoid Docker path issues
+                import tempfile
+                temp_dir = tempfile.gettempdir()
+                temp_file = os.path.join(temp_dir, f"temp_audio_{os.getpid()}_{int(time.time())}.mp3")
                 await communicate.save(temp_file)
                 
                 # Read audio as bytes
