@@ -246,13 +246,72 @@ Transform the document into JSON format with this exact structure:
         # Negative prompt to avoid common AI image issues
         negative_prompt = "blurry, distorted, ugly, bad anatomy, bad proportions, extra limbs, malformed hands, duplicate faces, low quality, worst quality, deformed, mutated, disfigured, poorly drawn, bad art, amateur"
         
-        # FLUX.1-dev payload for ComfyUI
-        payload_input: dict[str, Any] = {
-            "prompt": enhanced_prompt,
-            "negative_prompt": negative_prompt,
+        # ComfyUI workflow for FLUX.1-dev
+        # This is a standard text-to-image workflow structure for FLUX
+        workflow = {
+            "6": {
+                "inputs": {
+                    "text": enhanced_prompt,
+                    "clip": ["30", 0]
+                },
+                "class_type": "CLIPTextEncode"
+            },
+            "8": {
+                "inputs": {
+                    "samples": ["31", 0],
+                    "vae": ["30", 2]
+                },
+                "class_type": "VAEDecode"
+            },
+            "9": {
+                "inputs": {
+                    "filename_prefix": "flux_output",
+                    "images": ["8", 0]
+                },
+                "class_type": "SaveImage"
+            },
+            "27": {
+                "inputs": {
+                    "width": 1024,
+                    "height": 1024,
+                    "batch_size": 1
+                },
+                "class_type": "EmptyLatentImage"
+            },
+            "30": {
+                "inputs": {
+                    "ckpt_name": "flux1-dev-fp8.safetensors"
+                },
+                "class_type": "CheckpointLoaderSimple"
+            },
+            "31": {
+                "inputs": {
+                    "seed": seed_value if seed_value else 42,
+                    "steps": 20,
+                    "cfg": 1.0,
+                    "sampler_name": "euler",
+                    "scheduler": "simple",
+                    "denoise": 1.0,
+                    "model": ["30", 0],
+                    "positive": ["6", 0],
+                    "negative": ["33", 0],
+                    "latent_image": ["27", 0]
+                },
+                "class_type": "KSampler"
+            },
+            "33": {
+                "inputs": {
+                    "text": negative_prompt,
+                    "clip": ["30", 0]
+                },
+                "class_type": "CLIPTextEncode"
+            }
         }
-        if seed_value:
-            payload_input["seed"] = seed_value
+        
+        # FLUX.1-dev payload for ComfyUI with workflow
+        payload_input: dict[str, Any] = {
+            "workflow": workflow
+        }
 
         url = f"https://api.runpod.ai/v2/{endpoint_id}/run"
         headers = {
