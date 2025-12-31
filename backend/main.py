@@ -95,12 +95,12 @@ async def get_avatars():
         {"id": "dinosaur", "name": "Dino-Explorer", "description": "Nature guide."}
     ]
 
-async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "en-US-JennyNeural"):
-    """Generate image and audio for a scene with retry logic for audio."""
+async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "en-US-JennyNeural", story_seed: int = None):
+    """Generate image and audio for a scene with retry logic for audio. Uses story_seed for character consistency."""
     try:
         # No per-scene stagger - all scenes in batch run in parallel
-        # Parallel image + audio generation
-        img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
+        # Parallel image + audio generation with story seed for consistent characters
+        img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"], scene.get("text", ""), story_seed)
         aud_task = asyncio.to_thread(gemini.generate_voiceover, scene["text"], voice)
         
         image_bytes, audio_bytes = await asyncio.gather(img_task, aud_task, return_exceptions=False)
@@ -144,6 +144,10 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str, voice: 
 
         jobs[job_id]["progress"] = 30
 
+        # Generate a unique seed for this story to keep characters consistent across all scenes
+        import hashlib
+        story_seed = int(hashlib.md5(job_id.encode()).hexdigest()[:8], 16) % 2147483647
+
         scenes = story_data.get("scenes", [])
         total_scenes = len(scenes) if scenes else 1
 
@@ -156,7 +160,7 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str, voice: 
             
             batch_end = min(batch_start + batch_size, total_scenes)
             batch = [
-                generate_scene_media(job_id, i, scenes[i], voice)
+                generate_scene_media(job_id, i, scenes[i], voice, story_seed)
                 for i in range(batch_start, batch_end)
             ]
             
@@ -166,7 +170,7 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str, voice: 
             # Update progress
             scene_progress = 30 + int(((batch_end) / total_scenes) * 65)
             jobs[job_id]["progress"] = scene_progress
-            print(f"✓ Batch {batch_start // batch_size + 1} complete: {batch_end}/{total_scenes} scenes")
+            print(f"✓ Batch {batch_start // batch_size + 1} complete: {batch_end}/{total_scenes} scenes (story_seed={story_seed})")
 
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"

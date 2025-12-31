@@ -161,8 +161,8 @@ Transform the document into JSON format with this exact structure:
             print(f"STORY ERROR: {e}")
             return None
 
-    def generate_image(self, prompt: str, scene_text: str = "") -> Optional[bytes]:
-        """Image generation via RunPod SDXL-turbo with enhanced quality prompting."""
+    def generate_image(self, prompt: str, scene_text: str = "", story_seed: int = None) -> Optional[bytes]:
+        """Image generation via RunPod SDXL-turbo with enhanced quality prompting. Uses story_seed for character consistency."""
         # Build comprehensive, high-quality prompt for better image generation
         quality_keywords = "high quality, sharp focus, detailed, clean art, clear, vibrant colors, professional illustration, educational cartoon style"
         safety_constraints = "[SAFETY] Family-friendly, age-appropriate, no nudity, violence, drugs, alcohol. All characters fully clothed. Educational cartoon/illustration style."
@@ -219,16 +219,22 @@ Transform the document into JSON format with this exact structure:
             print(f"RunPod cap reached (~{projected_cost:.2f} AED > {cap_aed} AED); skipping image")
             return None
 
-        seed_env = os.getenv("RUNPOD_SEED")
+        # Use story-specific seed for character consistency, fall back to environment variable
+        seed_value = story_seed
+        if not seed_value:
+            seed_env = os.getenv("RUNPOD_SEED")
+            if seed_env:
+                try:
+                    seed_value = int(seed_env)
+                except ValueError:
+                    pass
+        
         # SDXL-turbo minimal payload - endpoint has strict validation
         payload_input: dict[str, Any] = {
             "prompt": enhanced_prompt,
         }
-        if seed_env:
-            try:
-                payload_input["seed"] = int(seed_env)
-            except ValueError:
-                pass
+        if seed_value:
+            payload_input["seed"] = seed_value
 
         url = f"https://api.runpod.ai/v2/{endpoint_id}/run"
         headers = {
