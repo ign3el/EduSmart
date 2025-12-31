@@ -66,6 +66,21 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
     setProgress(0);
     setImageLoaded(false);
     setImageError(false);
+    
+    // Pre-load image to ensure onLoad fires
+    if (fullImageUrl) {
+      const img = new Image();
+      img.onload = () => {
+        console.log('✅ Image pre-loaded:', fullImageUrl);
+        setImageLoaded(true);
+      };
+      img.onerror = () => {
+        console.error('❌ Image pre-load error:', fullImageUrl);
+        setImageError(true);
+      };
+      img.src = fullImageUrl;
+    }
+    
     if (audioRef.current) {
       audioRef.current.src = fullAudioUrl;
       audioRef.current.load(); // Force the browser to load the new scene's audio
@@ -77,7 +92,7 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
         }
       }
     }
-  }, [currentScene, fullAudioUrl]);
+  }, [currentScene, fullAudioUrl, fullImageUrl]);
 
   const goToNextScene = () => {
     if (currentScene < scenes.length - 1) {
@@ -238,15 +253,6 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
                 <img 
                   src={fullImageUrl} 
                   alt={`Scene ${currentScene + 1}`}
-                  onLoad={() => {
-                    console.log('✅ Image loaded successfully:', fullImageUrl);
-                    setImageLoaded(true);
-                  }}
-                  onError={(e) => {
-                    console.error('❌ Image load error:', fullImageUrl);
-                    console.error('Error details:', e);
-                    setImageError(true);
-                  }}
                 />
               ) : (
                 <div className="placeholder-image">
