@@ -349,7 +349,7 @@ async def cleanup_job(job_id: str):
 
 @app.get("/api/export-story/{story_id}")
 async def export_story(story_id: str):
-    """Export a saved story as a downloadable ZIP file."""
+    """Export a saved story as a downloadable ZIP file (streamed for speed)."""
     story_dir = os.path.join("saved_stories", story_id)
     metadata_path = os.path.join(story_dir, "metadata.json")
     
@@ -364,20 +364,40 @@ async def export_story(story_id: str):
         with open(metadata_path, "r") as f:
             metadata = json.load(f)
         
-        # Create ZIP file in memory
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            # Add metadata
-            zip_file.writestr("metadata.json", json.dumps(metadata, indent=2))
-            
-            # Add all media files
-            for filename in os.listdir(story_dir):
-                if filename != "metadata.json":
-                    file_path = os.path.join(story_dir, filename)
-                    zip_file.write(file_path, filename)
-        
-        zip_buffer.seek(0)
         story_name = metadata["name"].replace(" ", "_").replace("/", "_")
+        filename = f"{story_name}_{story_id[:8]}.zip"
+        
+        # Generate ZIP with streaming
+        async def generate_zip():
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_STORED) as zip_file:
+                # Add metadata first (small, no compression needed)
+                zip_file.writestr("metadata.json", json.dumps(metadata, indent=2))
+                
+                # Add all media files
+                for filename_item in os.listdir(story_dir):
+                    if filename_item != "metadata.json":
+                        file_path = os.path.join(story_dir, filename_item)
+                        # Only add files, skip directories
+                        if os.path.isfile(file_path):
+                            # Use arcname to put files in root of ZIP
+                            zip_file.write(file_path, arcname=filename_item)
+            
+            zip_buffer.seek(0)
+            # Stream the ZIP in chunks
+            while True:
+                chunk = zip_buffer.read(8192)  # 8KB chunks
+                if not chunk:
+                    break
+                yield chunk
+        
+        return StreamingResponse(
+            generate_zip(),
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
         filename = f"{story_name}_{story_id[:8]}.zip"
         
         return StreamingResponse(

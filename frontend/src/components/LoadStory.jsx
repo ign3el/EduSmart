@@ -53,33 +53,35 @@ function LoadStory({ onLoad, onBack }) {
 
   const handleDownload = async (storyId, storyName) => {
     setDownloading(storyId)
-    setDownloadMessage('Preparing download...')
+    setDownloadMessage('Starting download...')
     
     try {
-      setDownloadMessage('Fetching story files...')
+      // Start download immediately with streaming
       const response = await fetch(`/api/export-story/${storyId}`)
       
       if (!response.ok) throw new Error('Failed to download story')
       
-      setDownloadMessage('Creating ZIP file...')
+      setDownloadMessage('Receiving files...')
       const blob = await response.blob()
       
-      setDownloadMessage('Starting download...')
+      // Trigger download immediately
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       link.download = `${storyName.replace(/\s+/g, '_')}_${storyId.substring(0, 8)}.zip`
       
-      // Use setTimeout to allow UI to update
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      setDownloadMessage('Download complete!')
+      
+      // Clear message after short delay
       setTimeout(() => {
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-        
         setDownloadMessage('')
         setDownloading(null)
-      }, 100)
+      }, 1500)
     } catch (error) {
       setDownloadMessage(`Error: ${error.message}`)
       setTimeout(() => {
