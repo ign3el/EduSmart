@@ -1,104 +1,95 @@
+/* Save Story Modal - Mobile-First & Themed */
+
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(15, 23, 42, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
+  padding: 1rem;
 }
 
 .modal-content {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: clamp(1.5rem, 5vw, 2.5rem);
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: var(--surface);
+  padding: clamp(1.5rem, 5vw, 2rem);
+  border-radius: var(--border-radius);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   max-width: 500px;
-  width: 90%;
-  color: white;
+  width: 100%;
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modal-content h2 {
   margin: 0 0 1.5rem 0;
-  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-size: clamp(1.5rem, 5vw, 2rem);
   text-align: center;
 }
 
 .modal-content input {
   width: 100%;
-  padding: clamp(0.75rem, 2vw, 1rem);
-  font-size: clamp(0.95rem, 3vw, 1.1rem);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 1rem;
+  font-size: clamp(1rem, 3vw, 1.1rem);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  margin-bottom: 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  margin-bottom: 2rem;
   outline: none;
-  transition: all 0.3s;
+  transition: all 0.2s ease-in-out;
 }
 
 .modal-content input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
 }
 
 .modal-content input:focus {
-  border-color: white;
-  background: rgba(255, 255, 255, 0.25);
+  border-color: var(--primary-color);
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
 }
 
 .modal-buttons {
-  display: flex;
-  gap: clamp(0.5rem, 2vw, 1rem);
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
 
 .modal-buttons button {
-  padding: clamp(0.6rem, 2vw, 0.8rem) clamp(1.2rem, 3vw, 2rem);
-  font-size: clamp(0.85rem, 3vw, 1rem);
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  transition: all 0.3s;
-  font-weight: bold;
-  min-width: 44px;
-  min-height: 44px;
-}
-
-@media (max-width: 480px) {
-  .modal-buttons {
-    flex-direction: column;
-  }
-  
-  .modal-buttons button {
-    width: 100%;
-  }
+  transition: all 0.2s;
+  font-weight: 600;
 }
 
 .modal-buttons .save-btn {
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  background: var(--primary-color);
   color: white;
 }
 
-.modal-buttons .save-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(17, 153, 142, 0.4);
+.modal-buttons .save-btn:hover:not(:disabled) {
+  background: var(--secondary-color);
 }
 
 .modal-buttons .save-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .modal-buttons .cancel-btn {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
 }
 
-.modal-buttons .cancel-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+.modal-buttons .cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
 }

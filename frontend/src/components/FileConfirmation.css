@@ -2,10 +2,11 @@
   width: 100%;
   max-width: 700px;
   margin: 0 auto;
+  padding: clamp(1rem, 5vw, 2rem);
 }
 
 .file-confirmation h2 {
-  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
   margin-bottom: 0.5rem;
   text-align: center;
 }
@@ -14,12 +15,13 @@
   color: var(--text-secondary);
   text-align: center;
   margin-bottom: 2rem;
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
 }
 
 .confirmation-card {
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--border-radius);
-  padding: 1.5rem;
+  padding: clamp(1rem, 4vw, 1.5rem);
   margin-bottom: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -32,242 +34,82 @@
   background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
   margin-bottom: 1rem;
-  position: relative;
 }
-
 .grade-info:last-child {
   margin-bottom: 0;
 }
 
-.edit-icon-btn {
+.file-icon, .info-icon {
+  font-size: 1.8rem;
+  color: var(--primary-color);
+}
+
+.file-details h3, .grade-details h3 {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+.file-details p, .grade-details p {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.edit-btn {
   margin-left: auto;
-  background: rgba(102, 126, 234, 0.2);
-  border: 1px solid rgba(102, 126, 234, 0.5);
-  color: var(--primary-color);
-  padding: 0.6rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.edit-icon-btn:hover {
-  background: rgba(102, 126, 234, 0.4);
-  border-color: var(--primary-color);
-  transform: scale(1.1);
-}
-
-.grade-selector-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 1rem;
-  background: var(--bg-dark);
-  border: 1px solid rgba(102, 126, 234, 0.5);
-  border-radius: 8px;
-  padding: 0.5rem;
-  margin-top: 0.5rem;
-  z-index: 100;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  min-width: 200px;
-}
-
-.grade-option {
-  display: block;
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
   cursor: pointer;
-  text-align: left;
   transition: all 0.2s;
-  border-radius: 6px;
-  font-size: 0.95rem;
 }
-
-.grade-option:hover {
-  background: rgba(102, 126, 234, 0.2);
-}
-
-.grade-option.selected {
-  background: rgba(102, 126, 234, 0.4);
-  color: var(--primary-color);
-  font-weight: 600;
-}
-
-.file-icon {
-  font-size: 2rem;
-  color: var(--primary-color);
-  flex-shrink: 0;
-}
-
-.info-icon {
-  font-size: 2rem;
-  flex-shrink: 0;
-}
-
-.file-info h3, .grade-info h3 {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.25rem;
-}
-
-.filename {
-  font-size: 1.1rem;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.filesize {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 0.25rem 0 0 0;
-}
-
-.grade-info p {
-  font-size: 1.1rem;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.voice-selection {
-  margin-bottom: 2rem;
-}
-
-.voice-selection h3 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.voice-description {
-  color: var(--text-secondary);
-  margin-bottom: 1.5rem;
-}
-
-.voice-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.voice-option {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid transparent;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.voice-option:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(99, 102, 241, 0.3);
-}
-
-.voice-option.selected {
-  background: rgba(99, 102, 241, 0.1);
+.edit-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
   border-color: var(--primary-color);
-}
-
-.voice-radio {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--text-secondary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.3s ease;
-}
-
-.voice-option.selected .voice-radio {
-  border-color: var(--primary-color);
-  background: var(--primary-color);
-  color: white;
-}
-
-.voice-details h4 {
-  font-size: 1.1rem;
-  margin-bottom: 0.25rem;
-  color: var(--text-primary);
-}
-
-.voice-details p {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 0;
 }
 
 .confirmation-actions {
   display: flex;
+  flex-direction: column;
   gap: 1rem;
-  justify-content: flex-start;
 }
 
-.back-btn, .confirm-btn {
+.confirm-btn, .back-btn {
   padding: 1rem 2rem;
   border-radius: 12px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   border: none;
+  width: 100%;
+}
+
+.confirm-btn {
+  background: var(--primary-color);
+  color: white;
+}
+.confirm-btn:hover {
+  background: var(--secondary-color);
 }
 
 .back-btn {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
-
 .back-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.confirm-btn {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  color: white;
-}
 
-.secondary-btn {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.confirm-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
-}
-
-@media (max-width: 768px) {
+@media (min-width: 640px) {
   .confirmation-actions {
-    flex-direction: column;
+    flex-direction: row-reverse;
   }
-
-  .action-left {
-    flex-direction: column;
-  }
-  
-  .voice-option {
-    padding: 0.75rem;
-  }
-  
-  .voice-details h4 {
-    font-size: 1rem;
-  }
-  
-  .voice-details p {
-    font-size: 0.85rem;
+  .confirm-btn, .back-btn {
+    width: auto;
   }
 }

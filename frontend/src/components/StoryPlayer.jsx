@@ -25,27 +25,19 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   const fullImageUrl = scene?.image_url ? `${API_DOMAIN}${scene.image_url}` : '';
   const uploadUrl = storyData?.upload_url ? `${API_DOMAIN}${storyData.upload_url}` : '';
 
-  // Debug logging
   useEffect(() => {
-    console.log('Scene data:', scene);
-    console.log('Image URL:', fullImageUrl);
-    console.log('Image loaded:', imageLoaded, 'Error:', imageError);
     
     // Test if image endpoint is accessible
     if (fullImageUrl) {
       fetch(fullImageUrl, { method: 'HEAD' })
         .then(res => {
-          console.log('HEAD request status:', res.status);
           if (!res.ok) {
-            console.warn('Image endpoint returned:', res.status, res.statusText);
           }
         })
         .catch(err => console.error('HEAD request failed:', err));
       
       // Try to load the image directly to see any errors
       const testImg = new Image();
-      testImg.onload = () => console.log('🖼️ Direct image test loaded');
-      testImg.onerror = () => console.error('🖼️ Direct image test FAILED');
       testImg.src = fullImageUrl;
     }
   }, [currentScene, fullImageUrl, imageLoaded, imageError]);
@@ -77,11 +69,9 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
     if (fullImageUrl) {
       const img = new Image();
       img.onload = () => {
-        console.log('✅ Image pre-loaded:', fullImageUrl);
         setImageLoaded(true);
       };
       img.onerror = () => {
-        console.error('❌ Image pre-load error:', fullImageUrl);
         setImageError(true);
       };
       img.src = fullImageUrl;
@@ -257,16 +247,13 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
             <div className="scene-image">
               {fullImageUrl && !imageError && imageLoaded ? (
                 <>
-                  {console.log('✨ Rendering IMG tag, condition:', fullImageUrl && !imageError && imageLoaded)}
                   <img 
                     src={fullImageUrl} 
                     alt={`Scene ${currentScene + 1}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                   />
                 </>
               ) : (
                 <>
-                  {console.log('✨ Rendering PLACEHOLDER, loaded:', imageLoaded, 'error:', imageError, 'url:', !!fullImageUrl)}
                   <div className="placeholder-image">
                     <p>{imageError ? 'Image unavailable - check console' : (scene?.image_description || "Loading image...")}</p>
                   </div>

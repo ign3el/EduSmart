@@ -1,7 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&display=swap');
-
 .file-upload {
   text-align: center;
+  padding: clamp(1rem, 5vw, 2rem);
 }
 
 .file-upload h2 {
@@ -13,69 +12,56 @@
 .subtitle {
   color: var(--text-secondary);
   margin-bottom: 2rem;
-  font-size: clamp(0.85rem, 3vw, 1rem);
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
 }
 
 .grade-selector {
   margin-bottom: 2rem;
   text-align: left;
-  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
 }
 
 .grade-selector label {
   display: block;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
   color: var(--text-primary);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  font-size: clamp(0.9rem, 2.8vw, 1.05rem);
+  font-weight: 500;
+  font-size: clamp(0.9rem, 2.8vw, 1rem);
 }
 
 .grade-selector select {
   width: 100%;
-  padding: clamp(0.7rem, 2.2vw, 0.9rem) 1rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  padding: 0.8rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   color: var(--text-primary);
-  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
-  font-weight: 600;
-  font-size: clamp(0.95rem, 3vw, 1.1rem);
-  letter-spacing: 0.01em;
+  font-size: clamp(1rem, 3vw, 1.1rem);
   cursor: pointer;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
   appearance: none;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--primary-color) 50%),
-    linear-gradient(135deg, var(--primary-color) 50%, transparent 50%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-  background-position:
-    calc(100% - 22px) center,
-    calc(100% - 16px) center,
-    left top;
-  background-size: 8px 8px, 8px 8px, 100% 100%;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236366F1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
   background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 0.8em;
 }
 
 .grade-selector select:focus,
 .grade-selector select:hover {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 16px 46px rgba(99, 102, 241, 0.25);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
 }
 
 .grade-selector option {
-  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
-  font-weight: 600;
-  color: #0f172a;
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .dropzone {
-  border: 3px dashed rgba(99, 102, 241, 0.3);
+  border: 2px dashed rgba(99, 102, 241, 0.4);
   border-radius: var(--border-radius);
-  padding: clamp(1.5rem, 5vw, 3rem) clamp(1rem, 4vw, 2rem);
+  padding: clamp(2rem, 8vw, 4rem) 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
   background: rgba(99, 102, 241, 0.05);
@@ -85,29 +71,24 @@
 .dropzone.active {
   border-color: var(--primary-color);
   background: rgba(99, 102, 241, 0.1);
-  transform: scale(1.02);
+  transform: translateY(-2px);
 }
 
 .upload-icon {
-  font-size: clamp(2rem, 8vw, 4rem);
+  font-size: clamp(3rem, 10vw, 4rem);
   color: var(--primary-color);
   margin-bottom: 1rem;
 }
 
 .dropzone p {
   font-size: clamp(0.9rem, 4vw, 1.1rem);
-  color: var(--text-primary);
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
 
 .file-types {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  background: rgba(99, 102, 241, 0.2);
-  border-radius: 20px;
-  color: var(--primary-color);
   font-size: 0.9rem;
-  margin-top: 1rem;
+  color: var(--text-secondary);
 }
 
 .file-preview {
@@ -117,16 +98,18 @@
   margin-top: 1.5rem;
   padding: 1rem;
   background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-left: 4px solid var(--success-color);
   border-radius: 8px;
-  color: var(--success-color);
+  color: var(--text-primary);
 }
 
 .file-preview svg {
   font-size: 1.5rem;
+  color: var(--success-color);
 }
 
 .file-size {
   color: var(--text-secondary);
   font-size: 0.9rem;
+  margin-left: auto;
 }
