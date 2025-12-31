@@ -148,8 +148,9 @@
 @media (min-width: 900px) {
   .home-buttons {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 340px));
-    justify-content: center;
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 1080px;
+    gap: 1.5rem;
   }
 }
 
@@ -174,12 +175,6 @@
   box-shadow: 0 15px 40px rgba(168, 85, 247, 0.15);
   transition: all var(--transition);
   backdrop-filter: blur(10px);
-}
-
-@media (min-width: 900px) {
-  .home-btn {
-    max-width: 100%;
-  }
 }
 
 .home-btn span {

@@ -152,26 +152,17 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str, voice: 
         scenes = story_data.get("scenes", [])
         total_scenes = len(scenes) if scenes else 1
 
-        # Process scenes in aggressive parallel batches of 5 (max safe concurrency)
-        batch_size = 5
-        for batch_start in range(0, total_scenes, batch_size):
-            # Small delay between batches to prevent API throttling
-            if batch_start > 0:
-                await asyncio.sleep(0.5)
-            
-            batch_end = min(batch_start + batch_size, total_scenes)
-            batch = [
-                generate_scene_media(job_id, i, scenes[i], voice, story_seed)
-                for i in range(batch_start, batch_end)
-            ]
-            
-            # Wait for entire batch to complete (all 5 scenes in parallel)
-            await asyncio.gather(*batch)
-            
-            # Update progress
-            scene_progress = 30 + int(((batch_end) / total_scenes) * 65)
-            jobs[job_id]["progress"] = scene_progress
-            print(f"✓ Batch {batch_start // batch_size + 1} complete: {batch_end}/{total_scenes} scenes (story_seed={story_seed})")
+        # Process ALL scenes in parallel for maximum speed
+        print(f"🚀 Starting parallel generation for {total_scenes} scenes...")
+        batch = [
+            generate_scene_media(job_id, i, scenes[i], voice, story_seed)
+            for i in range(total_scenes)
+        ]
+        
+        # Wait for all scenes to complete in parallel
+        await asyncio.gather(*batch)
+        
+        print(f"✓ All {total_scenes} scenes complete (story_seed={story_seed})")
 
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"

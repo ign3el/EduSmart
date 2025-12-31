@@ -9,9 +9,16 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onE
   const voices = [
     { id: 'en-US-JennyNeural', name: 'Jenny (Female)', description: 'Natural, expressive storytelling' },
     { id: 'en-US-AriaNeural', name: 'Aria (Female)', description: 'Warm, clear, friendly tone' },
+    { id: 'en-US-SaraNeural', name: 'Sara (Female)', description: 'Professional, engaging narrator' },
+    { id: 'en-US-MichelleNeural', name: 'Michelle (Female)', description: 'Energetic, youthful storyteller' },
     { id: 'en-US-GuyNeural', name: 'Guy (Male)', description: 'Friendly, clear male voice' },
     { id: 'en-US-AndrewNeural', name: 'Andrew (Male)', description: 'Strong storytelling voice' },
+    { id: 'en-US-BrianNeural', name: 'Brian (Male)', description: 'Deep, confident narrator' },
+    { id: 'en-US-ChristopherNeural', name: 'Christopher (Male)', description: 'Smooth, professional voice' },
     { id: 'en-GB-SoniaNeural', name: 'Sonia (British Female)', description: 'Clear British accent' },
+    { id: 'en-GB-RyanNeural', name: 'Ryan (British Male)', description: 'Distinguished British narrator' },
+    { id: 'en-AU-NatashaNeural', name: 'Natasha (Australian)', description: 'Friendly Australian accent' },
+    { id: 'en-IN-NeerjaNeural', name: 'Neerja (Indian Female)', description: 'Clear Indian English accent' },
   ]
 
   const gradeLabels = {
