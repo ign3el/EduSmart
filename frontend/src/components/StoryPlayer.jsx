@@ -250,14 +250,20 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
           >
             <div className="scene-image">
               {fullImageUrl && !imageError && imageLoaded ? (
-                <img 
-                  src={fullImageUrl} 
-                  alt={`Scene ${currentScene + 1}`}
-                />
+                <>
+                  {console.log('✨ Rendering IMG tag, condition:', fullImageUrl && !imageError && imageLoaded)}
+                  <img 
+                    src={fullImageUrl} 
+                    alt={`Scene ${currentScene + 1}`}
+                  />
+                </>
               ) : (
-                <div className="placeholder-image">
-                  <p>{imageError ? 'Image unavailable - check console' : (scene?.image_description || "Loading image...")}</p>
-                </div>
+                <>
+                  {console.log('✨ Rendering PLACEHOLDER, loaded:', imageLoaded, 'error:', imageError, 'url:', !!fullImageUrl)}
+                  <div className="placeholder-image">
+                    <p>{imageError ? 'Image unavailable - check console' : (scene?.image_description || "Loading image...")}</p>
+                  </div>
+                </>
               )}
             </div>
             <div className="scene-narration">
