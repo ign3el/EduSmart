@@ -211,50 +211,6 @@ function OfflineManager({ onLoadOffline, onBack }) {
         </div>
       </div>
 
-      <div className="stories-section">
-        <h3>📚 Your Stories</h3>
-        
-        {localStories.length === 0 ? (
-          <div className="no-stories">
-            <p>🎭 No local stories yet!</p>
-            <p>Save stories locally to access them offline.</p>
-          </div>
-        ) : (
-          <div className="stories-grid">
-            {localStories.map((story) => (
-              <motion.div
-                key={story.id}
-                className="story-card local-card"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <h4>{story.name}</h4>
-                <div className="story-meta">
-                  <span className="story-type">💻 Local</span>
-                  <span className="story-date">
-                    📅 {formatDate(story.savedAt)}
-                  </span>
-                </div>
-                <div className="story-actions">
-                  <button 
-                    className="load-btn"
-                    onClick={() => loadFromLocal(story.id)}
-                  >
-                    Load Offline
-                  </button>
-                  <button 
-                    className="delete-btn"
-                    onClick={() => deleteLocal(story.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
-
       <div className="offline-footer">
         <button className="back-btn" onClick={onBack}>
           ← Back to Home

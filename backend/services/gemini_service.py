@@ -48,15 +48,34 @@ class GeminiService:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # STEP 1: Extract Learning Objectives & Key Concepts
-            analysis_prompt = f"""Analyze this educational document and extract:
-1. Main learning objectives (what should students learn?)
-2. Key concepts/topics to focus on
-3. Important facts or skills to teach
-4. Real-world applications or examples
-5. Any specific vocabulary that must be included
+            # PHASE 1: Deep Analysis - Extract Learning Objectives & Key Concepts
+            analysis_prompt = f"""You are an Expert Instructional Designer analyzing this educational document for {grade_level} students.
 
-Be concise and specific. The output will be used to create an accurate educational story."""
+PHASE 1: DEEP ANALYSIS
+Perform a thorough reading and extract:
+
+1. LEARNING OBJECTIVES (LOs):
+   - What are the core concepts students must understand?
+   - What skills should they develop?
+
+2. EXPECTED LEARNING OUTCOMES (ELOs):
+   - What should students be able to DO after this lesson?
+   - What real-world applications connect to these concepts?
+
+3. KEY FACTS & DATA POINTS:
+   - List every specific fact, number, formula, or critical detail
+   - Note any vocabulary terms that MUST be included
+
+4. CONCEPT HIERARCHY:
+   - Which concepts are foundational (must teach first)?
+   - Which concepts build upon others?
+   - What is the logical teaching progression?
+
+5. LANGUAGE & TONE:
+   - Identify the document's original language
+   - Note any cultural context or examples
+
+Be exhaustive and specific. Your analysis will guide the story creation to ensure NO key content is missed."""
 
             def _analyze_document():
                 return self.client.models.generate_content(
@@ -70,13 +89,76 @@ Be concise and specific. The output will be used to create an accurate education
             analysis_response = self._call_with_exponential_backoff(_analyze_document)
             learning_objectives = analysis_response.text if analysis_response else ""
 
-            # STEP 2: Generate Story Using Extracted Learning Objectives
-            teacher_prompt = f"""You are an expert educational content creator for {grade_level} students.
+            # PHASE 2 & 3: Story Architecture + Multi-Media Integration
+            teacher_prompt = f"""ROLE: You are an Expert Instructional Designer and Creative Storyteller specializing in {grade_level} education.
 
-DOCUMENT ANALYSIS (must use to create story):
+TASK: Transform the uploaded document into a high-engagement interactive learning story following this strict 3-phase workflow:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 1 RESULTS (Your Analysis - USE THIS AS YOUR BLUEPRINT):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {learning_objectives}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-NOW, transform the document into an engaging educational animated storybook using ONLY the concepts, facts, and learning objectives extracted above. 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 2: STORY ARCHITECTURE (Follow This Structure)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. NARRATIVE STRUCTURE:
+   Follow this logical arc:
+   • Introduction (Set the Scene) - Introduce characters and context
+   • Exploration (Present Concepts) - Begin teaching foundational ideas
+   • Understanding (Deep Dive) - Explain complex relationships
+   • Application (Real-world Connection) - Show practical use
+   • Conclusion (Reinforcement) - Summarize and celebrate learning
+
+2. ACCURACY REQUIREMENT:
+   • Every story event MUST be a direct metaphor or application of a key concept from Phase 1
+   • Use the SPECIFIC facts, numbers, and vocabulary extracted above
+   • Each scene introduces NEW information—never repeat without adding new perspective
+
+3. VARIETY REQUIREMENT:
+   • Vary sentence structures and narration styles
+   • Each scene must advance BOTH plot AND pedagogy
+   • Use conversational, age-appropriate dialogue
+   • Include interactive elements (questions, choices, discoveries)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 3: INTERACTIVE MULTI-MEDIA INTEGRATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For EACH scene, provide:
+
+A) NARRATIVE TEXT:
+   • Engaging, {grade_level}-appropriate story prose
+   • Must directly teach a Learning Objective from Phase 1
+   • Natural dialogue and relatable characters
+
+B) INTERACTIVE IMAGE PROMPT (CRITICAL - READ CAREFULLY):
+   • Detailed description for AI image generator (Flux/SDXL)
+   • MUST visually reinforce the concept taught in this scene
+   • Images MUST be consistent in style throughout story
+   • Required style: "3D Pixar-style children's book illustration"
+   • Each description must include:
+     * Character names, ages, clothing, expressions
+     * Specific actions happening in the scene
+     * Objects with colors, sizes, textures
+     * Setting details (location, time of day, weather)
+     * Educational elements being visualized
+
+C) CHECK FOR UNDERSTANDING:
+   • Brief question or prompt to ensure comprehension
+   • Must align with the scene's Learning Objective
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GUIDELINES & CONSTRAINTS (Strict Adherence Required)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ NO OFF-TOPIC CONTENT: Every plot point must serve a Learning Objective
+✓ PRESERVE LANGUAGE: Output must match the source document's language exactly
+✓ REAL-WORLD LINK: Every abstract concept must connect to real-world scenarios
+✓ SAFETY FIRST: Content must be family-friendly and age-appropriate for {grade_level}
+✓ NO REPETITION: Each scene teaches something NEW or adds depth
 
 CRITICAL REQUIREMENTS:
 
