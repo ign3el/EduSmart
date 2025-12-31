@@ -25,6 +25,13 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   const fullImageUrl = scene?.image_url ? `${API_DOMAIN}${scene.image_url}` : '';
   const uploadUrl = storyData?.upload_url ? `${API_DOMAIN}${storyData.upload_url}` : '';
 
+  // Debug logging
+  useEffect(() => {
+    console.log('Scene data:', scene);
+    console.log('Image URL:', fullImageUrl);
+    console.log('Image loaded:', imageLoaded, 'Error:', imageError);
+  }, [currentScene, fullImageUrl, imageLoaded, imageError]);
+
   // Handle Play/Pause Toggle
   useEffect(() => {
     if (audioRef.current) {
