@@ -252,7 +252,7 @@ Transform the document into JSON format with this exact structure:
             "6": {
                 "inputs": {
                     "text": enhanced_prompt,
-                    "clip": ["30", 0]
+                    "clip": ["30", 1]  # Clip output from checkpoint loader
                 },
                 "class_type": "CLIPTextEncode"
             },
@@ -302,7 +302,7 @@ Transform the document into JSON format with this exact structure:
             "33": {
                 "inputs": {
                     "text": negative_prompt,
-                    "clip": ["30", 0]
+                    "clip": ["30", 1]  # Clip output from checkpoint loader
                 },
                 "class_type": "CLIPTextEncode"
             }
