@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import './OfflineManager.css'
 
 function OfflineManager({ onLoadOffline, onBack }) {
@@ -151,6 +151,9 @@ function OfflineManager({ onLoadOffline, onBack }) {
     const file = event.target.files[0]
     if (!file) return
     
+    // Reset file input
+    event.target.value = null
+    
     if (!isOnline) {
       alert('Import requires internet connection')
       return
@@ -170,17 +173,36 @@ function OfflineManager({ onLoadOffline, onBack }) {
       
       if (!response.ok) throw new Error('Import failed')
       
-      setDownloadMessage('Processing...')
+      setDownloadMessage('Downloading...')
       const result = await response.json()
+      
+      // Load the story data from the backend
+      setDownloadMessage('Saving file...')
+      const storyResponse = await fetch(`/api/load-story/${result.story_id}`)
+      if (!storyResponse.ok) throw new Error('Failed to load imported story')
+      
+      const storyData = await storyResponse.json()
+      
+      // Save to localStorage
+      const localStoryId = `local_${Date.now()}`
+      const localStory = {
+        id: localStoryId,
+        name: result.name,
+        storyData: storyData.story_data,
+        savedAt: Date.now(),
+        isOffline: true
+      }
+      
+      localStorage.setItem(`edusmart_story_${localStoryId}`, JSON.stringify(localStory))
       
       setDownloadMessage('Complete! ✓')
       
+      // Navigate to story player after brief delay
       setTimeout(() => {
         setDownloadMessage('')
         setDownloading(null)
-        // Refresh the online stories list
-        window.location.reload()
-      }, 1500)
+        onLoadOffline(storyData.story_data, result.name)
+      }, 1000)
     } catch (error) {
       setDownloadMessage(`Error: ${error.message}`)
       setTimeout(() => {
@@ -291,12 +313,56 @@ function OfflineManager({ onLoadOffline, onBack }) {
         </button>
       </div>
 
-      {downloadMessage && (
-        <div className="loading-overlay">
-          <div className="loading-spinner"></div>
-          <p>{downloadMessage}</p>
-        </div>
-      )}
+      <AnimatePresence>
+        {downloadMessage && (
+          <motion.div 
+            className="download-popup"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+          >
+            <div className="download-popup-content">
+              <div>
+                <div className="spinner"></div>
+              </div>
+              <p>{downloadMessage}</p>
+              
+              {/* Progress Bar */}
+              <div className="progress-bar-container">
+                <div 
+                  className="progress-bar"
+                  style={{
+                    width: downloadMessage.includes('Uploading') || downloadMessage.includes('Zipping') ? '25%' : 
+                           downloadMessage === 'Downloading...' ? '60%' : 
+                           downloadMessage === 'Saving file...' ? '85%' : '100%',
+                    transition: 'width 0.4s ease'
+                  }}
+                ></div>
+              </div>
+              
+              {/* Step Indicators */}
+              <div className="progress-steps">
+                <div className={`progress-step ${(downloadMessage.includes('Uploading') || downloadMessage.includes('Zipping')) ? 'active' : (downloadMessage === 'Downloading...' || downloadMessage === 'Saving file...' || downloadMessage === 'Complete! ✓') ? 'completed' : ''}`}>
+                  <div className="step-dot">1</div>
+                  <span>{downloadMessage.includes('Uploading') ? 'Upload' : 'Zip'}</span>
+                </div>
+                <div className={`progress-step ${downloadMessage === 'Downloading...' ? 'active' : (downloadMessage === 'Saving file...' || downloadMessage === 'Complete! ✓') ? 'completed' : ''}`}>
+                  <div className="step-dot">2</div>
+                  <span>Download</span>
+                </div>
+                <div className={`progress-step ${downloadMessage === 'Saving file...' ? 'active' : downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                  <div className="step-dot">3</div>
+                  <span>Save</span>
+                </div>
+                <div className={`progress-step ${downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                  <div className="step-dot">✓</div>
+                  <span>Done</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
