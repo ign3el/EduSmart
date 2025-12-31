@@ -61,6 +61,7 @@ function App() {
   }, [step])
 
   const handleFileUpload = (file) => {
+    setUploadedFile(file)
     setUploadFileName(file.name)
     setShowUploadProgress(true)
     setUploadProgress(0)
@@ -81,7 +82,6 @@ function App() {
       // Proceed after completion
       setTimeout(() => {
         setShowUploadProgress(false)
-        setUploadedFile(file)
         setStep('confirm')
         setError(null) 
         setIsSaved(false)
