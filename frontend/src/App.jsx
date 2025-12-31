@@ -101,6 +101,13 @@ function App() {
     setStep('upload')
   }
 
+  const handleConfirmFile = (voice) => {
+    if (voice) {
+      setSelectedVoice(voice)
+    }
+    setStep('avatar')
+  }
+
   const handleAvatarSelect = async (avatar) => {
     setSelectedAvatar(avatar)
     await generateStory(avatar)
