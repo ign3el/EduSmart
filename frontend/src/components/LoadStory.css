@@ -154,12 +154,14 @@
   padding: 1.4rem;
   box-shadow: var(--shadow-strong);
   z-index: 1000;
-  width: min(420px, 95vw);
+  width: min(420px, 90vw);
+  max-width: 90vw;
 }
 
 .download-popup-content {
   display: grid;
   gap: 0.9rem;
+  text-align: center;
 }
 
 .download-popup-content > div:first-child {

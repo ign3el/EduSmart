@@ -6,7 +6,8 @@ function OfflineManager({ onLoadOffline, onBack }) {
   const [onlineStories, setOnlineStories] = useState([])
   const [localStories, setLocalStories] = useState([])
   const [isOnline, setIsOnline] = useState(navigator.onLine)
-  const [loading, setLoading] = useState(false)
+  const [downloading, setDownloading] = useState(null)
+  const [downloadMessage, setDownloadMessage] = useState('')
 
   const loadLocalStories = () => {
     const stories = []
@@ -100,30 +101,49 @@ function OfflineManager({ onLoadOffline, onBack }) {
     }
   }
 
-  const exportStory = async (storyId) => {
+  const exportStory = async (storyId, storyName) => {
     if (!isOnline) {
       alert('Export requires internet connection')
       return
     }
     
+    setDownloading(storyId)
+    setDownloadMessage('Zipping file...')
+    
     try {
-      setLoading(true)
+      // Step 1: Request ZIP creation
       const response = await fetch(`/api/export-story/${storyId}`)
       if (!response.ok) throw new Error('Export failed')
       
+      // Step 2: Download
+      setDownloadMessage('Downloading...')
       const blob = await response.blob()
+      
+      // Step 3: Save
+      setDownloadMessage('Saving file...')
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `story_${storyId}.zip`
+      a.download = `${storyName.replace(/\s+/g, '_')}_${storyId.substring(0, 8)}.zip`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
+      
+      // Step 4: Complete
+      setDownloadMessage('Complete! ✓')
+      
+      // Clear message after delay
+      setTimeout(() => {
+        setDownloadMessage('')
+        setDownloading(null)
+      }, 2000)
     } catch (error) {
-      alert('Export failed: ' + error.message)
-    } finally {
-      setLoading(false)
+      setDownloadMessage(`Error: ${error.message}`)
+      setTimeout(() => {
+        setDownloadMessage('')
+        setDownloading(null)
+      }, 3000)
     }
   }
 
@@ -136,8 +156,10 @@ function OfflineManager({ onLoadOffline, onBack }) {
       return
     }
     
+    setDownloading('import')
+    setDownloadMessage('Uploading story...')
+    
     try {
-      setLoading(true)
       const formData = new FormData()
       formData.append('file', file)
       
@@ -148,15 +170,23 @@ function OfflineManager({ onLoadOffline, onBack }) {
       
       if (!response.ok) throw new Error('Import failed')
       
+      setDownloadMessage('Processing...')
       const result = await response.json()
-      alert(`Story "${result.name}" imported successfully!`)
       
-      // Refresh the online stories list (you might want to call a parent function here)
-      window.location.reload()
+      setDownloadMessage('Complete! ✓')
+      
+      setTimeout(() => {
+        setDownloadMessage('')
+        setDownloading(null)
+        // Refresh the online stories list
+        window.location.reload()
+      }, 1500)
     } catch (error) {
-      alert('Import failed: ' + error.message)
-    } finally {
-      setLoading(false)
+      setDownloadMessage(`Error: ${error.message}`)
+      setTimeout(() => {
+        setDownloadMessage('')
+        setDownloading(null)
+      }, 3000)
     }
   }
 
@@ -189,10 +219,10 @@ function OfflineManager({ onLoadOffline, onBack }) {
                   <span>{story.name}</span>
                   <button 
                     className="export-btn"
-                    onClick={() => exportStory(story.id)}
-                    disabled={loading}
+                    onClick={() => exportStory(story.id, story.name)}
+                    disabled={downloading !== null}
                   >
-                    📥 Export
+                    {downloading === story.id ? '⏳ Downloading...' : '📥 Export'}
                   </button>
                 </div>
               ))}
@@ -261,10 +291,10 @@ function OfflineManager({ onLoadOffline, onBack }) {
         </button>
       </div>
 
-      {loading && (
+      {downloadMessage && (
         <div className="loading-overlay">
           <div className="loading-spinner"></div>
-          <p>Processing...</p>
+          <p>{downloadMessage}</p>
         </div>
       )}
     </motion.div>
