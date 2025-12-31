@@ -13,11 +13,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: clamp(0.5rem, 2vw, 1.5rem) clamp(0.75rem, 3vw, 2rem);
+  padding: 0.5rem 1rem;
   background: rgba(0, 0, 0, 0.2);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  gap: 0.5rem;
-  min-height: 50px;
+  gap: 0.75rem;
+  min-height: 40px;
 }
 
 .upload-link {
@@ -32,10 +32,10 @@
 }
 
 .player-header h2 {
-  font-size: clamp(0.9rem, 3.5vw, 1.5rem);
+  font-size: clamp(0.85rem, 3vw, 1.2rem);
   color: var(--text-primary);
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.1;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -45,16 +45,17 @@
 .restart-btn {
   display: flex;
   align-items: center;
-  gap: clamp(0.3rem, 1vw, 0.5rem);
-  padding: clamp(0.4rem, 2vw, 0.75rem) clamp(0.8rem, 3vw, 1.5rem);
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
   background: rgba(99, 102, 241, 0.2);
   border: 1px solid var(--primary-color);
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--primary-color);
-  font-size: clamp(0.75rem, 2.5vw, 1rem);
+  font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.3s ease;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .restart-btn:hover {
@@ -74,10 +75,10 @@
 
 /* Base layout (mobile/tablet) */
 .scene-content {
-  padding: clamp(1rem, 4vw, 2rem);
+  padding: clamp(0.75rem, 3vw, 1.5rem);
   display: flex;
   flex-direction: column;
-  gap: clamp(1rem, 4vw, 2rem);
+  gap: clamp(0.75rem, 3vw, 1.5rem);
   width: 100%;
   align-items: stretch;
 }
@@ -149,7 +150,7 @@
 .scene-narration {
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--border-radius);
-  padding: 2rem;
+  padding: 1.25rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
 }
@@ -171,10 +172,10 @@
 }
 
 .narration-text {
-  font-size: clamp(1rem, 4vw, 1.4rem);
-  line-height: 1.6;
+  font-size: clamp(0.95rem, 3.5vw, 1.25rem);
+  line-height: 1.5;
   color: var(--text-primary);
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .learning-point {
@@ -206,44 +207,41 @@
 }
 
 .player-controls {
-  padding: clamp(1rem, 3vw, 2rem);
+  padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   align-items: center;
   width: 100%;
-    flex-shrink: 0;
-}
-  flex-direction: column;
-  gap: 1.5rem;
-  align-items: center;
+  flex-shrink: 0;
 }
 
 .scene-counter {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .control-buttons {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   align-items: center;
   justify-content: center;
   width: 100%;
 }
 
 .control-btn {
-  width: 50px;
-  height: 50px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.08);
   color: var(--text-primary);
-  font-size: 1.2rem;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -252,10 +250,10 @@
 }
 
 .control-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(99, 102, 241, 0.2);
   border-color: var(--primary-color);
   color: var(--primary-color);
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
 
 .control-btn:disabled {
@@ -264,21 +262,23 @@
 }
 
 .play-btn {
-  width: 60px;
-  height: 60px;
-  background: var(--primary-color);
+  width: 46px;
+  height: 46px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   border-color: var(--primary-color);
+  font-weight: 600;
 }
 
 .play-btn:hover {
-  background: var(--secondary-color);
+  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
   border-color: var(--secondary-color);
   color: white;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
 .scene-dots {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -313,10 +313,10 @@
 .action-buttons {
   display: flex;
   flex-direction: column;
-  gap: clamp(0.5rem, 2vw, 1rem);
-  padding: clamp(1rem, 3vw, 1.5rem);
-  background: rgba(0, 0, 0, 0.2);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
 
@@ -338,14 +338,15 @@
 .save-story-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 2rem;
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   color: white;
-  font-size: 1rem;
-  font-weight: bold;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -353,22 +354,23 @@
 .save-offline-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 2rem;
-  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-  border: 2px solid #38ef7d;
-  border-radius: 10px;
-  color: #38ef7d;
-  font-size: 1rem;
-  font-weight: bold;
+  padding: 0.6rem 1.5rem;
+  background: rgba(99, 102, 241, 0.15);
+  border: 2px solid rgba(99, 102, 241, 0.4);
+  border-radius: 8px;
+  color: #a5f3fc;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .save-offline-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(56, 239, 125, 0.3);
-  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.6);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {
@@ -380,17 +382,17 @@
   }
 
   .player-header {
-    padding: 1rem 1rem;
+    padding: 0.5rem 1rem;
     gap: 0.75rem;
   }
 
   .player-header h2 {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
 
   .restart-btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
   }
 
   .scene-display {
@@ -400,115 +402,115 @@
   }
 
   .scene-content {
-    padding: 1rem;
-    gap: 1rem;
+    padding: 0.75rem;
+    gap: 0.75rem;
     height: 100%;
     justify-content: flex-start;
   }
 
   .scene-image {
     width: 100%;
-    height: 45vw;
-    max-height: 280px;
-    border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    height: 42vw;
+    max-height: 260px;
+    border-radius: 10px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.2) 100%);
     border: 2px solid rgba(255, 255, 255, 0.1);
   }
 
   .scene-narration {
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 1rem;
+    border-radius: 10px;
+    padding: 0.9rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    min-height: 120px;
+    min-height: 100px;
     overflow-y: auto;
   }
 
   .narration-text {
-    font-size: 1rem;
-    line-height: 1.6;
+    font-size: 0.95rem;
+    line-height: 1.5;
     margin-bottom: 0.5rem;
   }
 
   .control-buttons {
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.4rem;
     justify-content: center;
   }
 
   .control-btn {
-    width: 44px;
-    height: 44px;
-    font-size: 1rem;
-    background: rgba(99, 102, 241, 0.15);
-    border: 2px solid rgba(99, 102, 241, 0.3);
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+    background: rgba(99, 102, 241, 0.12);
+    border: 2px solid rgba(99, 102, 241, 0.25);
     transition: all 0.3s ease;
   }
 
   .control-btn:hover:not(:disabled) {
-    background: rgba(99, 102, 241, 0.3);
-    transform: scale(1.1);
+    background: rgba(99, 102, 241, 0.2);
+    transform: scale(1.05);
   }
 
   .play-btn {
-    width: 54px;
-    height: 54px;
+    width: 44px;
+    height: 44px;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     border: none;
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 3px 10px rgba(99, 102, 241, 0.35);
   }
 
   .play-btn:hover {
     background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+    box-shadow: 0 5px 15px rgba(99, 102, 241, 0.5);
   }
 
   .scene-counter {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
   }
 
   .scene-dots {
-    gap: 0.4rem;
-    margin: 0.5rem 0;
+    gap: 0.35rem;
+    margin: 0.4rem 0;
   }
 
   .dot {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
   }
 
   .action-buttons {
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 1rem;
-    background: rgba(0, 0, 0, 0.3);
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.2);
   }
 
   .save-story-btn,
   .save-offline-btn,
   .restart-btn {
     width: 100%;
-    padding: 0.75rem 1.5rem;
-    font-size: 0.95rem;
-    border-radius: 10px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
     font-weight: 600;
   }
 
   .save-story-btn {
     background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25);
   }
 
   .save-offline-btn {
-    background: rgba(99, 102, 241, 0.2);
-    border: 2px solid #6366f1;
-    color: #93c5fd;
+    background: rgba(99, 102, 241, 0.15);
+    border: 2px solid rgba(99, 102, 241, 0.35);
+    color: #a5f3fc;
   }
 
   .progress-bar {
-    height: 3px;
+    height: 2px;
   }
 }
 
@@ -520,17 +522,17 @@
   }
 
   .player-header {
-    padding: 0.75rem 1rem;
-    min-height: 45px;
+    padding: 0.4rem 0.8rem;
+    min-height: 38px;
   }
 
   .player-header h2 {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .restart-btn {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
   }
 
   .scene-display {
@@ -541,8 +543,8 @@
   }
 
   .scene-content {
-    padding: 0.75rem;
-    gap: 0.75rem;
+    padding: 0.6rem;
+    gap: 0.6rem;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -551,20 +553,20 @@
 
   .scene-image {
     width: 100%;
-    height: 40vw;
-    max-height: 240px;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 100%);
-    border: 2px solid rgba(99, 102, 241, 0.2);
+    height: 38vw;
+    max-height: 220px;
+    border-radius: 10px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.2) 100%);
+    border: 2px solid rgba(99, 102, 241, 0.15);
     flex-shrink: 0;
   }
 
   .scene-narration {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 0.75rem;
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 9px;
+    padding: 0.7rem;
+    border: 1px solid rgba(99, 102, 241, 0.15);
     backdrop-filter: blur(10px);
     flex: 1;
     min-height: 80px;
@@ -572,9 +574,9 @@
   }
 
   .narration-text {
-    font-size: 0.95rem;
-    line-height: 1.5;
-    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    margin-bottom: 0.4rem;
     color: rgba(255, 255, 255, 0.95);
   }
 
@@ -583,45 +585,50 @@
   }
 
   .player-controls {
-    padding: 0.75rem;
-    gap: 0.75rem;
-    background: rgba(0, 0, 0, 0.4);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.6rem 0.75rem;
+    gap: 0.6rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .scene-counter {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.45);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
   }
 
   .control-buttons {
-    gap: 0.6rem;
+    gap: 0.4rem;
     justify-content: center;
   }
 
   .control-btn {
-    width: 40px;
-    height: 40px;
-    font-size: 0.9rem;
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
     background: rgba(99, 102, 241, 0.1);
     border: 2px solid rgba(99, 102, 241, 0.2);
     transition: all 0.3s ease;
   }
 
   .control-btn:hover:not(:disabled) {
-    background: rgba(99, 102, 241, 0.25);
-    border-color: rgba(99, 102, 241, 0.5);
-    transform: scale(1.08);
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+    transform: scale(1.05);
   }
 
   .play-btn {
-    width: 50px;
-    height: 50px;
+    width: 42px;
+    height: 42px;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     border: none;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+    box-shadow: 0 3px 10px rgba(99, 102, 241, 0.4);
+  }
+
+  .play-btn:hover {
+    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    box-shadow: 0 5px 12px rgba(99, 102, 241, 0.5);
   }
 
   .scene-dots {
@@ -638,9 +645,9 @@
 
   .action-buttons {
     flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.75rem;
-    background: rgba(0, 0, 0, 0.3);
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    background: rgba(0, 0, 0, 0.25);
     flex-shrink: 0;
   }
 
@@ -648,9 +655,9 @@
   .save-offline-btn,
   .restart-btn {
     width: 100%;
-    padding: 0.65rem 1.2rem;
-    font-size: 0.9rem;
-    border-radius: 9px;
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
+    border-radius: 8px;
     font-weight: 600;
     transition: all 0.3s ease;
   }
@@ -659,26 +666,26 @@
     background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
     border: none;
     color: white;
-    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
   }
 
   .save-story-btn:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
 
   .save-offline-btn {
-    background: rgba(99, 102, 241, 0.15);
-    border: 2px solid rgba(99, 102, 241, 0.4);
+    background: rgba(99, 102, 241, 0.12);
+    border: 2px solid rgba(99, 102, 241, 0.3);
     color: #a5f3fc;
   }
 
   .save-offline-btn:active {
-    background: rgba(99, 102, 241, 0.25);
-    transform: scale(0.98);
+    background: rgba(99, 102, 241, 0.2);
+    transform: scale(0.97);
   }
 
   .restart-btn {
-    padding: 0.65rem 1rem;
-    font-size: 0.9rem;
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
   }
 }
