@@ -5,6 +5,8 @@ import './LoadStory.css'
 function LoadStory({ onLoad, onBack }) {
   const [stories, setStories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [downloading, setDownloading] = useState(null)
+  const [downloadMessage, setDownloadMessage] = useState('')
 
   useEffect(() => {
     fetchStories()
@@ -50,21 +52,40 @@ function LoadStory({ onLoad, onBack }) {
   }
 
   const handleDownload = async (storyId, storyName) => {
+    setDownloading(storyId)
+    setDownloadMessage('Preparing download...')
+    
     try {
+      setDownloadMessage('Fetching story files...')
       const response = await fetch(`/api/export-story/${storyId}`)
+      
       if (!response.ok) throw new Error('Failed to download story')
       
+      setDownloadMessage('Creating ZIP file...')
       const blob = await response.blob()
+      
+      setDownloadMessage('Starting download...')
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       link.download = `${storyName.replace(/\s+/g, '_')}_${storyId.substring(0, 8)}.zip`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      
+      // Use setTimeout to allow UI to update
+      setTimeout(() => {
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        
+        setDownloadMessage('')
+        setDownloading(null)
+      }, 100)
     } catch (error) {
-      alert('Failed to download story: ' + error.message)
+      setDownloadMessage(`Error: ${error.message}`)
+      setTimeout(() => {
+        setDownloadMessage('')
+        setDownloading(null)
+      }, 3000)
     }
   }
 
@@ -114,9 +135,10 @@ function LoadStory({ onLoad, onBack }) {
                     e.stopPropagation()
                     handleDownload(story.id, story.name)
                   }}
+                  disabled={downloading !== null}
                   title="Download as ZIP file"
                 >
-                  ⬇️ Download
+                  {downloading === story.id ? '⏳ Downloading...' : '⬇️ Download'}
                 </button>
                 <button 
                   className="delete-btn"
@@ -136,6 +158,21 @@ function LoadStory({ onLoad, onBack }) {
       <button className="back-button" onClick={onBack}>
         ← Back to Home
       </button>
+
+      {/* Download Status Popup */}
+      {downloadMessage && (
+        <motion.div 
+          className="download-popup"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+        >
+          <div className="download-popup-content">
+            <div className="spinner"></div>
+            <p>{downloadMessage}</p>
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   )
 }
