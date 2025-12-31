@@ -252,17 +252,21 @@ Please transform the attached document into this interactive educational story f
                     except Exception:
                         return None
                 return None
-            
-            # Debug: Log the actual output structure
-            print(f"DEBUG: Output type: {type(output)}, sample: {str(output)[:200]}")
 
             if isinstance(output, str):
                 image_bytes = decode_b64(output)
 
             elif isinstance(output, dict):
-                # Common patterns: {"images": [b64...]}, {"image": b64}, {"image_base64": b64}, {"output": b64 or [b64]}, nested under output
+                # Common patterns: {"images": [{"image": b64}]}, {"image": b64}, {"image_base64": b64}, {"output": b64 or [b64]}
                 if "images" in output and isinstance(output.get("images"), list) and output["images"]:
-                    image_bytes = decode_b64(output["images"][0])
+                    first_image = output["images"][0]
+                    if isinstance(first_image, dict):
+                        # Handle {"images": [{"image": "base64..."}]}
+                        b64 = first_image.get("image") or first_image.get("image_base64")
+                        image_bytes = decode_b64(b64)
+                    else:
+                        # Handle {"images": ["base64..."]}
+                        image_bytes = decode_b64(first_image)
                 if not image_bytes:
                     b64 = output.get("image") or output.get("image_base64")
                     image_bytes = decode_b64(b64)
@@ -271,11 +275,20 @@ Please transform the attached document into this interactive educational story f
                     if isinstance(inner_output, str):
                         image_bytes = decode_b64(inner_output)
                     elif isinstance(inner_output, list) and inner_output:
-                        image_bytes = decode_b64(inner_output[0])
+                        first = inner_output[0]
+                        if isinstance(first, dict):
+                            b64 = first.get("image") or first.get("image_base64")
+                            image_bytes = decode_b64(b64)
+                        else:
+                            image_bytes = decode_b64(first)
                     elif isinstance(inner_output, dict):
                         b64 = inner_output.get("image") or inner_output.get("image_base64")
                         if not b64 and isinstance(inner_output.get("images"), list) and inner_output["images"]:
-                            b64 = inner_output["images"][0]
+                            first = inner_output["images"][0]
+                            if isinstance(first, dict):
+                                b64 = first.get("image") or first.get("image_base64")
+                            else:
+                                b64 = first
                         image_bytes = decode_b64(b64)
 
             elif isinstance(output, list) and output:
