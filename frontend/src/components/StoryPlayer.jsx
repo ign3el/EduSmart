@@ -222,7 +222,7 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
             className="scene-content"
           >
             <div className="scene-image">
-              {fullImageUrl && !imageError ? (
+              {fullImageUrl && !imageError && imageLoaded ? (
                 <img 
                   src={fullImageUrl} 
                   alt={`Scene ${currentScene + 1}`}
@@ -231,10 +231,8 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
                     console.error('Image load error:', fullImageUrl);
                     setImageError(true);
                   }}
-                  style={{ display: imageLoaded ? 'block' : 'none' }}
                 />
-              ) : null}
-              {(!fullImageUrl || imageError || !imageLoaded) && (
+              ) : (
                 <div className="placeholder-image">
                   <p>{imageError ? 'Image unavailable' : (scene?.image_description || "Loading image...")}</p>
                 </div>
