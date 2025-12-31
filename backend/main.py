@@ -308,6 +308,23 @@ async def load_story(story_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load story: {str(e)}")
 
+@app.delete("/api/delete-story/{story_id}")
+async def delete_story(story_id: str):
+    """Delete a saved story."""
+    story_dir = os.path.join("saved_stories", story_id)
+    metadata_path = os.path.join(story_dir, "metadata.json")
+    
+    if not os.path.exists(metadata_path):
+        raise HTTPException(status_code=404, detail="Story not found")
+    
+    try:
+        import shutil
+        shutil.rmtree(story_dir)
+        return {"message": "Story deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete story: {str(e)}")
+
+
 @app.delete("/api/cleanup/{job_id}")
 async def cleanup_job(job_id: str):
     """Delete all files associated with an unsaved job."""

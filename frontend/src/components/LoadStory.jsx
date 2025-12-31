@@ -49,6 +49,25 @@ function LoadStory({ onLoad, onBack }) {
     }
   }
 
+  const handleDownload = async (storyId, storyName) => {
+    try {
+      const response = await fetch(`/api/export-story/${storyId}`)
+      if (!response.ok) throw new Error('Failed to download story')
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${storyName.replace(/\s+/g, '_')}_${storyId.substring(0, 8)}.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      alert('Failed to download story: ' + error.message)
+    }
+  }
+
   const formatDate = (timestamp) => {
     const date = new Date(parseInt(timestamp) / 10000 - 12219292800000)
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
@@ -88,6 +107,16 @@ function LoadStory({ onLoad, onBack }) {
                   onClick={() => handleLoad(story.id)}
                 >
                   Load Story
+                </button>
+                <button 
+                  className="download-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDownload(story.id, story.name)
+                  }}
+                  title="Download as ZIP file"
+                >
+                  ⬇️ Download
                 </button>
                 <button 
                   className="delete-btn"

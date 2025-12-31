@@ -50,7 +50,7 @@ class GeminiService:
 
             # Concise, optimized teacher prompt for faster generation
             teacher_prompt = f"""
-Transform this document into a {grade_level} animated dynamic storybook with interactive options(Generate as many scenes as required based on the uploaded file).
+Transform this document into a {grade_level} educational animated dynamic storybook with interactive options(Generate as many scenes as required based on the uploaded file). Keep the original intent and concept of 
 
 LANGUAGE: Keep the original document language throughout (Arabic stays Arabic, English stays English, etc).
 
