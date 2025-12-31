@@ -6,6 +6,12 @@
   color: var(--ink-1);
   display: grid;
   gap: 1.5rem;
+  background: radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.1), transparent 50%),
+              radial-gradient(circle at 80% 0%, rgba(236, 72, 153, 0.08), transparent 45%),
+              linear-gradient(135deg, rgba(15, 22, 66, 0.85), rgba(18, 31, 77, 0.9));
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(168, 85, 247, 0.15);
 }
 
 .load-story-container h2 {
@@ -21,20 +27,22 @@
 }
 
 .story-card {
-  background: linear-gradient(145deg, rgba(12, 21, 40, 0.8), rgba(12, 21, 40, 0.65));
-  border: 1px solid var(--edge);
-  border-radius: var(--radius-lg);
-  padding: 1.1rem;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.08));
+  border: 1.5px solid rgba(168, 85, 247, 0.3);
+  border-radius: var(--radius-md);
+  padding: 1.3rem;
   display: grid;
-  gap: 0.75rem;
-  box-shadow: var(--shadow-soft);
-  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+  gap: 0.85rem;
+  box-shadow: 0 15px 40px rgba(168, 85, 247, 0.15);
+  transition: all var(--transition);
+  backdrop-filter: blur(10px);
 }
 
 .story-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(109, 228, 255, 0.4);
-  box-shadow: var(--shadow-strong);
+  transform: translateY(-6px);
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 25px 60px rgba(168, 85, 247, 0.25);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(59, 130, 246, 0.12));
 }
 
 .story-card h3 {
@@ -70,14 +78,26 @@
 
 .load-btn {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-  color: #04101f;
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  color: #ffffff;
   border: none;
+  box-shadow: 0 12px 30px rgba(168, 85, 247, 0.25);
+}
+
+.load-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 45px rgba(168, 85, 247, 0.35);
 }
 
 .download-btn {
-  border-color: rgba(122, 246, 194, 0.35);
-  color: var(--accent-3);
+  border-color: rgba(236, 72, 153, 0.4);
+  color: var(--accent-2);
+  background: rgba(236, 72, 153, 0.1);
+}
+
+.download-btn:hover {
+  border-color: rgba(236, 72, 153, 0.7);
+  box-shadow: 0 12px 30px rgba(236, 72, 153, 0.2);
 }
 
 .download-btn:disabled {
@@ -86,8 +106,14 @@
 }
 
 .delete-btn {
-  border-color: rgba(255, 107, 107, 0.35);
-  color: #ff7b7b;
+  border-color: rgba(244, 63, 94, 0.4);
+  color: var(--danger);
+  background: rgba(244, 63, 94, 0.08);
+}
+
+.delete-btn:hover {
+  border-color: rgba(244, 63, 94, 0.7);
+  box-shadow: 0 12px 30px rgba(244, 63, 94, 0.2);
 }
 
 .no-stories,
@@ -95,9 +121,10 @@
   text-align: center;
   padding: 2.5rem 1.5rem;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--edge);
-  border-radius: var(--radius-lg);
+  border: 1.5px solid rgba(168, 85, 247, 0.2);
+  border-radius: var(--radius-md);
   color: var(--ink-2);
+}
 }
 
 .back-button {

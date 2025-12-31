@@ -148,6 +148,12 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
         };
         try {
           localStorage.setItem(`edusmart_story_${storyId}`, JSON.stringify(localStory));
+          // Trigger storage event for OfflineManager to refresh
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: `edusmart_story_${storyId}`,
+            newValue: JSON.stringify(localStory),
+            storageArea: localStorage
+          }));
           alert(`✅ Story "${storyName}" saved locally for offline viewing!\n\nYou can access it anytime from the Offline Manager, even without internet.`);
         } catch (error) {
           alert('Failed to save locally: ' + error.message);
@@ -260,8 +266,44 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
                 </>
               )}
             </div>
-            <div className="scene-narration">
-              <p className="narration-text">{scene.text}</p>
+            <div className="scene-right">
+              <div className="scene-narration">
+                <p className="narration-text">{scene.text}</p>
+              </div>
+
+              <div className="player-controls inline-controls">
+                <div className="scene-counter">
+                  Scene {currentScene + 1} of {scenes.length}
+                </div>
+                
+                <div className="control-buttons">
+                  <button 
+                    onClick={goToPrevScene} 
+                    disabled={currentScene === 0} 
+                    className="control-btn"
+                  >
+                    <FiSkipBack />
+                  </button>
+                  
+                  <button onClick={togglePlay} className="control-btn play-btn">
+                    {isPlaying ? <FiPause /> : <FiPlay />}
+                  </button>
+                  
+                  <button onClick={goToNextScene} className="control-btn next-btn">
+                    {currentScene === scenes.length - 1 ? "📝 Quiz" : <FiSkipForward />}
+                  </button>
+                </div>
+
+                <div className="scene-dots">
+                  {scenes.map((_, index) => (
+                    <button
+                      key={`dot-${index}`}
+                      className={`dot ${index === currentScene ? 'active' : ''} ${index < currentScene ? 'completed' : ''}`}
+                      onClick={() => handleDotClick(index)}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </motion.div>
         </AnimatePresence>
@@ -269,40 +311,6 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
 
       <div className="progress-bar">
         <div className="progress-fill" style={{ width: `${progress}%` }} />
-      </div>
-
-      <div className="player-controls">
-        <div className="scene-counter">
-          Scene {currentScene + 1} of {scenes.length}
-        </div>
-        
-        <div className="control-buttons">
-          <button 
-            onClick={goToPrevScene} 
-            disabled={currentScene === 0} 
-            className="control-btn"
-          >
-            <FiSkipBack />
-          </button>
-          
-          <button onClick={togglePlay} className="control-btn play-btn">
-            {isPlaying ? <FiPause /> : <FiPlay />}
-          </button>
-          
-          <button onClick={goToNextScene} className="control-btn next-btn">
-            {currentScene === scenes.length - 1 ? "📝 Quiz" : <FiSkipForward />}
-          </button>
-        </div>
-
-        <div className="scene-dots">
-          {scenes.map((_, index) => (
-            <button
-              key={`dot-${index}`}
-              className={`dot ${index === currentScene ? 'active' : ''} ${index < currentScene ? 'completed' : ''}`}
-              onClick={() => handleDotClick(index)}
-            />
-          ))}
-        </div>
       </div>
 
       <div className="action-buttons-overlay">

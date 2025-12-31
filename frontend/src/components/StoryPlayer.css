@@ -60,13 +60,18 @@
   width: 100%;
   display: grid;
   gap: 1rem;
-  grid-template-rows: 1fr auto;
+  grid-template-columns: 1fr;
   background: linear-gradient(145deg, rgba(12, 21, 40, 0.65), rgba(12, 21, 40, 0.45));
   border: 1px solid var(--edge);
   border-radius: var(--radius-lg);
   padding: clamp(1rem, 2vw, 1.4rem);
   box-shadow: var(--shadow-soft);
   min-height: 60vh;
+}
+
+.scene-right {
+  display: grid;
+  gap: 0.8rem;
 }
 
 .scene-image {
@@ -127,12 +132,18 @@
 }
 
 .player-controls {
-  padding: 1.1rem 1.5rem;
+  padding: 1.1rem 1.3rem;
   display: grid;
-  gap: 0.75rem;
-  justify-items: center;
+  gap: 0.65rem;
+  justify-items: flex-start;
   background: rgba(12, 21, 40, 0.9);
-  border-top: 1px solid var(--edge);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+}
+
+.inline-controls {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--edge);
 }
 
 .scene-counter {
@@ -183,7 +194,7 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .dot {
@@ -257,6 +268,33 @@
 
 .action-icon {
   font-size: 1.1rem;
+}
+
+@media (min-width: 900px) {
+  .scene-content {
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+    align-items: stretch;
+  }
+
+  .scene-image {
+    min-height: 420px;
+  }
+
+  .scene-right {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    align-content: start;
+  }
+
+  .scene-narration {
+    max-height: none;
+    height: 100%;
+  }
+
+  .inline-controls {
+    padding: 0.9rem 1rem;
+    background: rgba(12, 21, 40, 0.75);
+  }
 }
 
 .download-popup {
