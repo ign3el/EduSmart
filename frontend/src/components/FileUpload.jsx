@@ -1,9 +1,11 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { FiUploadCloud, FiFile } from 'react-icons/fi'
 import './FileUpload.css'
 
-function FileUpload({ onUpload, gradeLevel, onGradeLevelChange }) {
+function FileUpload({ onUpload, gradeLevel, onGradeLevelChange, isReuploading }) {
+  const fileInputRef = useRef(null)
+
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
       onUpload(acceptedFiles[0])

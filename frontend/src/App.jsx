@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react' // <--- MUST include useEffect
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import FileUpload from './components/FileUpload'
 import FileConfirmation from './components/FileConfirmation'
@@ -7,6 +7,8 @@ import StoryPlayer from './components/StoryPlayer'
 import SaveStoryModal from './components/SaveStoryModal'
 import LoadStory from './components/LoadStory'
 import OfflineManager from './components/OfflineManager'
+import ReuploadConfirmModal from './components/ReuploadConfirmModal'
+import UploadProgressOverlay from './components/UploadProgressOverlay'
 import './App.css'
 
 function App() {
@@ -15,13 +17,17 @@ function App() {
   const [selectedAvatar, setSelectedAvatar] = useState(null)
   const [selectedVoice, setSelectedVoice] = useState('en-US-JennyNeural')
   const [storyData, setStoryData] = useState(null)
-  const [progress, setProgress] = useState(0) // <--- Check if this exists
+  const [progress, setProgress] = useState(0)
   const [error, setError] = useState(null)
   const [gradeLevel, setGradeLevel] = useState(3)
   const [currentJobId, setCurrentJobId] = useState(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
   const [isOfflineMode, setIsOfflineMode] = useState(false)
+  const [showReuploadModal, setShowReuploadModal] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadFileName, setUploadFileName] = useState('')
+  const [showUploadProgress, setShowUploadProgress] = useState(false)
 
   const previousStep = (current) => {
     switch (current) {
@@ -55,18 +61,40 @@ function App() {
   }, [step])
 
   const handleFileUpload = (file) => {
-    setUploadedFile(file)
-    setStep('confirm')  // Go to confirmation instead of avatar
-    setError(null) 
-    setIsSaved(false)
+    setUploadFileName(file.name)
+    setShowUploadProgress(true)
+    setUploadProgress(0)
+    
+    // Simulate upload progress
+    let progress = 0
+    const interval = setInterval(() => {
+      progress += Math.random() * 30
+      if (progress >= 90) progress = 90
+      setUploadProgress(Math.round(progress))
+    }, 300)
+    
+    // Complete upload
+    setTimeout(() => {
+      clearInterval(interval)
+      setUploadProgress(100)
+      
+      // Proceed after completion
+      setTimeout(() => {
+        setShowUploadProgress(false)
+        setUploadedFile(file)
+        setStep('confirm')
+        setError(null) 
+        setIsSaved(false)
+      }, 800)
+    }, 2000)
   }
 
-  const handleConfirmFile = (voice) => {
-    setSelectedVoice(voice)
-    setStep('avatar')
+  const handleReuploadClick = () => {
+    setShowReuploadModal(true)
   }
 
-  const handleReupload = () => {
+  const handleReuploadConfirm = () => {
+    setShowReuploadModal(false)
     setUploadedFile(null)
     setSelectedAvatar(null)
     setStoryData(null)
@@ -256,7 +284,7 @@ function App() {
                 gradeLevel={gradeLevel}
                 onConfirm={handleConfirmFile}
                 onBack={() => setStep('upload')}
-                onReupload={handleReupload}
+                onReupload={handleReuploadClick}
                 onEditGrade={(newGrade) => setGradeLevel(newGrade)}
               />
             </motion.div>
@@ -331,6 +359,21 @@ function App() {
             jobId={currentJobId}
             onSave={handleSaveComplete}
             onCancel={() => setShowSaveModal(false)}
+          />
+        )}
+
+        {showReuploadModal && (
+          <ReuploadConfirmModal
+            onConfirm={handleReuploadConfirm}
+            onCancel={() => setShowReuploadModal(false)}
+          />
+        )}
+
+        {showUploadProgress && (
+          <UploadProgressOverlay
+            progress={uploadProgress}
+            fileName={uploadFileName}
+            isVisible={showUploadProgress}
           />
         )}
       </main>
