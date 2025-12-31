@@ -360,6 +360,34 @@ Transform the document into JSON format with this exact structure:
                         return None
                 return None
 
+            def find_b64_in_obj(obj: Any) -> Optional[bytes]:
+                """Recursively search for the first plausible base64 string in nested dict/list structures."""
+                if isinstance(obj, str):
+                    if len(obj) > 100:  # heuristic: images are long strings
+                        decoded = decode_b64(obj)
+                        if decoded:
+                            return decoded
+                    return None
+                if isinstance(obj, list):
+                    for item in obj:
+                        found = find_b64_in_obj(item)
+                        if found:
+                            return found
+                    return None
+                if isinstance(obj, dict):
+                    # common keys first
+                    for key in ["image", "image_base64", "images", "output", "data", "result"]:
+                        if key in obj:
+                            found = find_b64_in_obj(obj[key])
+                            if found:
+                                return found
+                    # fallback: scan all values
+                    for val in obj.values():
+                        found = find_b64_in_obj(val)
+                        if found:
+                            return found
+                return None
+
             if isinstance(output, str):
                 image_bytes = decode_b64(output)
 
@@ -408,16 +436,20 @@ Transform the document into JSON format with this exact structure:
                         b64 = first["images"][0]
                     image_bytes = decode_b64(b64)
 
+            # Final fallback: search recursively for any base64 string in the output
+            if not image_bytes:
+                image_bytes = find_b64_in_obj(output)
+
             if image_bytes:
                 usage["images"] = usage.get("images", 0) + 1
                 save_usage(usage)
-                print("✓ Image generated via RunPod SDXL-turbo (fast & quality)")
+                print("✓ Image generated via RunPod FLUX/ComfyUI")
                 return image_bytes
 
-            print("RunPod SDXL-turbo output could not be parsed")
+            print("RunPod FLUX/ComfyUI output could not be parsed")
             return None
         except Exception as e:
-            print(f"RunPod SDXL-turbo error: {str(e)[:120]}")
+            print(f"RunPod FLUX/ComfyUI error: {str(e)[:120]}")
             return None
 
     def _detect_language_and_voice(self, text: str, default_voice: str) -> str:
