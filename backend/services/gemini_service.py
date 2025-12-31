@@ -170,7 +170,7 @@ Transform the document into JSON format with this exact structure:
             print(f"STORY ERROR: {e}")
             return None
 
-    def generate_image(self, prompt: str, scene_text: str = "", story_seed: int = None) -> Optional[bytes]:
+    def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None) -> Optional[bytes]:
         """Image generation via RunPod SDXL-turbo with enhanced quality prompting. Uses story_seed for character consistency."""
         # Build comprehensive, high-quality prompt for better image generation
         quality_keywords = "masterpiece, best quality, high resolution, sharp focus, detailed faces, clean linework, professional digital art, vibrant colors, clear features, well-proportioned anatomy"
