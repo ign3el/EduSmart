@@ -164,18 +164,19 @@ Transform the document into JSON format with this exact structure:
     def generate_image(self, prompt: str, scene_text: str = "", story_seed: int = None) -> Optional[bytes]:
         """Image generation via RunPod SDXL-turbo with enhanced quality prompting. Uses story_seed for character consistency."""
         # Build comprehensive, high-quality prompt for better image generation
-        quality_keywords = "high quality, sharp focus, detailed, clean art, clear, vibrant colors, professional illustration, educational cartoon style"
-        safety_constraints = "[SAFETY] Family-friendly, age-appropriate, no nudity, violence, drugs, alcohol. All characters fully clothed. Educational cartoon/illustration style."
+        quality_keywords = "masterpiece, best quality, high resolution, sharp focus, detailed faces, clean linework, professional digital art, vibrant colors, clear features, well-proportioned anatomy"
+        style_guide = "children's book illustration style, Disney/Pixar quality, educational cartoon"
+        safety_constraints = "[SAFETY] Family-friendly, age-appropriate, fully clothed characters, wholesome educational content"
         
-        # Enhance prompt with quality guidance and scene context
-        enhanced_prompt = f"{quality_keywords}. {safety_constraints}. "
+        # Build enhanced prompt with better structure
+        enhanced_prompt = f"{quality_keywords}, {style_guide}. {safety_constraints}. "
         
         if scene_text:
-            enhanced_prompt += f"Scene description: {scene_text}. "
+            enhanced_prompt += f"Scene context: {scene_text}. "
         
-        enhanced_prompt += f"Educational illustration: {prompt}"
+        enhanced_prompt += f"Main subject: {prompt}"
         
-        # Remove any potential problematic terms and standardize
+        # Remove problematic terms
         enhanced_prompt = enhanced_prompt.replace("distorted", "clear")
         enhanced_prompt = enhanced_prompt.replace("blurry", "sharp")
         enhanced_prompt = enhanced_prompt.replace("ugly", "beautiful")
@@ -229,9 +230,13 @@ Transform the document into JSON format with this exact structure:
                 except ValueError:
                     pass
         
-        # SDXL-turbo minimal payload - endpoint has strict validation
+        # Negative prompt to avoid common AI image issues
+        negative_prompt = "blurry, distorted, ugly, bad anatomy, bad proportions, extra limbs, malformed hands, duplicate faces, low quality, worst quality, deformed, mutated, disfigured, poorly drawn, bad art, amateur"
+        
+        # SDXL-turbo payload - try negative prompt (will fail gracefully if not supported)
         payload_input: dict[str, Any] = {
             "prompt": enhanced_prompt,
+            "negative_prompt": negative_prompt,
         }
         if seed_value:
             payload_input["seed"] = seed_value
