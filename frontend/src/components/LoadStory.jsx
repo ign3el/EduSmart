@@ -53,18 +53,20 @@ function LoadStory({ onLoad, onBack }) {
 
   const handleDownload = async (storyId, storyName) => {
     setDownloading(storyId)
-    setDownloadMessage('Starting download...')
+    setDownloadMessage('Zipping file...')
     
     try {
-      // Start download immediately with streaming
+      // Step 1: Request ZIP creation
       const response = await fetch(`/api/export-story/${storyId}`)
       
       if (!response.ok) throw new Error('Failed to download story')
       
-      setDownloadMessage('Receiving files...')
+      // Step 2: Download
+      setDownloadMessage('Downloading...')
       const blob = await response.blob()
       
-      // Trigger download immediately
+      // Step 3: Save
+      setDownloadMessage('Saving file...')
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -75,13 +77,14 @@ function LoadStory({ onLoad, onBack }) {
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       
-      setDownloadMessage('Download complete!')
+      // Step 4: Complete
+      setDownloadMessage('Complete! ✓')
       
-      // Clear message after short delay
+      // Clear message after delay
       setTimeout(() => {
         setDownloadMessage('')
         setDownloading(null)
-      }, 1500)
+      }, 2000)
     } catch (error) {
       setDownloadMessage(`Error: ${error.message}`)
       setTimeout(() => {
@@ -170,8 +173,43 @@ function LoadStory({ onLoad, onBack }) {
           exit={{ opacity: 0, y: 20 }}
         >
           <div className="download-popup-content">
-            <div className="spinner"></div>
-            <p>{downloadMessage}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {downloadMessage !== 'Complete! ✓' ? <div className="spinner"></div> : <span style={{ fontSize: '1.2rem' }}>✓</span>}
+              <p style={{ margin: 0 }}>{downloadMessage}</p>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="progress-bar-container">
+              <div 
+                className="progress-bar"
+                style={{
+                  width: downloadMessage === 'Zipping file...' ? '25%' : 
+                         downloadMessage === 'Downloading...' ? '60%' : 
+                         downloadMessage === 'Saving file...' ? '85%' : '100%',
+                  transition: 'width 0.4s ease'
+                }}
+              ></div>
+            </div>
+            
+            {/* Step Indicators */}
+            <div className="progress-steps">
+              <div className={`progress-step ${downloadMessage === 'Zipping file...' ? 'active' : downloadMessage === 'Downloading...' || downloadMessage === 'Saving file...' || downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                <div className="step-dot">1</div>
+                <span>Zip</span>
+              </div>
+              <div className={`progress-step ${downloadMessage === 'Downloading...' ? 'active' : downloadMessage === 'Saving file...' || downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                <div className="step-dot">2</div>
+                <span>Download</span>
+              </div>
+              <div className={`progress-step ${downloadMessage === 'Saving file...' ? 'active' : downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                <div className="step-dot">3</div>
+                <span>Save</span>
+              </div>
+              <div className={`progress-step ${downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                <div className="step-dot">✓</div>
+                <span>Done</span>
+              </div>
+            </div>
           </div>
         </motion.div>
       )}
