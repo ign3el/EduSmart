@@ -48,46 +48,23 @@ class GeminiService:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # Professional teacher-led prompt (same as before)
+            # Concise, optimized teacher prompt for faster generation
             teacher_prompt = f"""
-As a professional {grade_level} educational teacher, I need you to transform this educational content into an engaging, interactive animated storybook for my students.
+Transform this document into a {grade_level} animated storybook (8-10 scenes).
 
-⚠️ CRITICAL LANGUAGE REQUIREMENT:
-• DETECT the original language of the uploaded document
-• PRESERVE that exact language throughout the entire story, narration, quiz questions, and explanations
-• If the document is in Arabic, generate EVERYTHING in Arabic
-• If the document is in English, generate EVERYTHING in English
-• If the document is in any other language, maintain that language
-• DO NOT translate or change the language under any circumstances
-• The story's purpose is to make the content more engaging, NOT to change its language
+LANGUAGE: Keep the original document language throughout (Arabic stays Arabic, English stays English, etc).
 
-TEACHING OBJECTIVES:
-• Make complex concepts accessible and fun for {grade_level} learners
-• Use age-appropriate language, examples, and storytelling techniques
-• Create memorable characters and scenarios that students can relate to
-• Ensure the content aligns with {grade_level} curriculum standards
+STORY:
+- Hook, relatable characters, conversational tone, interactive elements, satisfying ending
+- Vivid cartoon-style visual descriptions per scene
+- Age-appropriate for {grade_level}
 
-STORY REQUIREMENTS:
-1. DYNAMIC LENGTH: Analyze the content complexity and create the OPTIMAL number of scenes (typically 5-10 scenes). More complex topics need more scenes; simpler topics need fewer.
-
-2. ENGAGING NARRATIVE:
-   - Start with a captivating hook that grabs student attention
-   - Introduce relatable characters (children, animals, friendly guides)
-   - Use conversational, encouraging tone like a storytelling teacher
-   - Include interactive elements (questions, discoveries, challenges)
-   - Build excitement and curiosity throughout
-   - End with a satisfying conclusion that reinforces learning
-
-3. VISUAL DESCRIPTIONS:
-   - Each scene needs vivid, colorful imagery perfect for cartoon illustrations
-   - Describe settings, characters, and actions clearly for visual artists
-   - Use bright, cheerful, educational cartoon style
-   - Make it visually diverse to maintain engagement
-
-4. COMPREHENSION QUIZ (CRITICAL - Must match {grade_level} difficulty):
-   - FIRST PRIORITY: Check if the document contains an Exercise, Test, Quiz, Assessment, or Review Questions section
-   - If exercise/test questions are found in the document:
-     * Include ALL of those questions COMPULSORY in the quiz
+QUIZ (10+ questions):
+- Include ALL exercise/test questions from document if present
+- Add practice questions to reach at least 10 total
+- Match {grade_level} difficulty and vocabulary
+- Provide clear explanations
+- One correct answer per question, plausible options
      * Convert them to multiple-choice format if they aren't already
      * Preserve the original question intent and difficulty
      * Add 3-4 plausible wrong answer options if not provided
@@ -295,15 +272,30 @@ Please transform the attached document into this interactive educational story f
             print(f"RunPod error: {str(e)[:120]}")
             return None
 
+    def _detect_language_and_voice(self, text: str, default_voice: str) -> str:
+        """Detect text language and return appropriate TTS voice."""
+        # Check if text contains Arabic characters
+        arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF' or '\u0750' <= c <= '\u077F')
+        total_chars = sum(1 for c in text if c.isalpha())
+        
+        if total_chars > 0 and arabic_chars / total_chars > 0.3:
+            # Arabic text detected - use Arabic voice
+            return "ar-SA-HamedNeural"  # Saudi Arabic male voice, clear for kids
+        
+        # For other languages, use the provided voice (usually English)
+        return default_voice
+
     def generate_voiceover(self, text: str, voice: str = "en-US-JennyNeural") -> Optional[bytes]:
         """Generate TTS audio using Microsoft Edge-TTS (free, unlimited, ARM-compatible)."""
         async def _generate_edge_tts():
             try:
+                # Auto-detect language and select appropriate voice
+                selected_voice = self._detect_language_and_voice(text, voice)
+                
                 # Use Microsoft Edge TTS with natural voice optimized for kids
-                # Voice options: JennyNeural (most natural), AriaNeural (warm), GuyNeural (male)
                 communicate = edge_tts.Communicate(
                     text, 
-                    voice=voice,  # User-selected voice
+                    voice=selected_voice,
                     rate="-10%",  # Slightly slower for clarity with kids
                     volume="+0%"
                 )

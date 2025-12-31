@@ -96,14 +96,14 @@ async def get_avatars():
     ]
 
 async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "en-US-JennyNeural"):
-    # Stagger requests by 5 seconds to stay under RPM limits
-    await asyncio.sleep(i * 5.0) 
-    
+    """Generate image and audio for a scene with retry logic for audio."""
     try:
+        # No per-scene stagger - all scenes in batch run in parallel
+        # Parallel image + audio generation
         img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"])
         aud_task = asyncio.to_thread(gemini.generate_voiceover, scene["text"], voice)
         
-        image_bytes, audio_bytes = await asyncio.gather(img_task, aud_task)
+        image_bytes, audio_bytes = await asyncio.gather(img_task, aud_task, return_exceptions=False)
 
         if image_bytes:
             img_name = f"{job_id}_scene_{i}.png"
@@ -111,17 +111,25 @@ async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "e
                 f.write(image_bytes)
             scene["image_url"] = f"/api/outputs/{img_name}"
 
+        # Retry audio generation if failed (Edge-TTS can be flaky)
+        if not audio_bytes:
+            print(f"⚠ Audio retry for scene {i}...")
+            await asyncio.sleep(2)
+            audio_bytes = await asyncio.to_thread(gemini.generate_voiceover, scene["text"], voice)
+        
         if audio_bytes:
-            aud_name = f"{job_id}_scene_{i}.mp3"  # Edge-TTS returns MP3 format
+            aud_name = f"{job_id}_scene_{i}.mp3"
             aud_path = os.path.join("outputs", aud_name)
             
             with open(aud_path, "wb") as f:
                 f.write(audio_bytes)
             
             file_size = os.path.getsize(aud_path)
-            print(f"✓ Audio saved for scene {i}: {file_size} bytes (MP3)")
+            print(f"✓ Scene {i}: {file_size} bytes audio")
             
             scene["audio_url"] = f"/api/outputs/{aud_name}"
+        else:
+            print(f"⚠ Scene {i}: Audio generation failed (continuing with placeholder)")
             
     except Exception as e:
         print(f"FAILED: Media for Scene {i}: {e}")
@@ -139,12 +147,26 @@ async def run_ai_workflow(job_id: str, file_path: str, grade_level: str, voice: 
         scenes = story_data.get("scenes", [])
         total_scenes = len(scenes) if scenes else 1
 
-        # Generate scenes sequentially to provide consistent progress updates
-        for i, scene in enumerate(scenes):
-            await generate_scene_media(job_id, i, scene, voice)
-            # Progress from 30 -> 95 as scenes complete
-            scene_progress = 30 + int(((i + 1) / total_scenes) * 65)
+        # Process scenes in aggressive parallel batches of 5 (max safe concurrency)
+        batch_size = 5
+        for batch_start in range(0, total_scenes, batch_size):
+            # Small delay between batches to prevent API throttling
+            if batch_start > 0:
+                await asyncio.sleep(0.5)
+            
+            batch_end = min(batch_start + batch_size, total_scenes)
+            batch = [
+                generate_scene_media(job_id, i, scenes[i], voice)
+                for i in range(batch_start, batch_end)
+            ]
+            
+            # Wait for entire batch to complete (all 5 scenes in parallel)
+            await asyncio.gather(*batch)
+            
+            # Update progress
+            scene_progress = 30 + int(((batch_end) / total_scenes) * 65)
             jobs[job_id]["progress"] = scene_progress
+            print(f"✓ Batch {batch_start // batch_size + 1} complete: {batch_end}/{total_scenes} scenes")
 
         jobs[job_id]["progress"] = 100
         jobs[job_id]["status"] = "completed"
