@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import FileUpload from './components/FileUpload'
 import FileConfirmation from './components/FileConfirmation'
@@ -28,6 +28,7 @@ function App() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadFileName, setUploadFileName] = useState('')
   const [showUploadProgress, setShowUploadProgress] = useState(false)
+  const fileInputRef = useRef(null)
 
   const previousStep = (current) => {
     switch (current) {
@@ -95,10 +96,17 @@ function App() {
 
   const handleReuploadConfirm = () => {
     setShowReuploadModal(false)
-    setUploadedFile(null)
-    setSelectedAvatar(null)
-    setStoryData(null)
-    setStep('upload')
+    // Trigger hidden file input instead of navigating
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
+
+  const handleFileInputChange = (e) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      handleFileUpload(files[0])
+    }
   }
 
   const handleConfirmFile = (voice) => {
@@ -383,6 +391,15 @@ function App() {
             isVisible={showUploadProgress}
           />
         )}
+
+        {/* Hidden file input for re-upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx,.doc"
+          onChange={handleFileInputChange}
+          style={{ display: 'none' }}
+        />
       </main>
     </div>
   )
