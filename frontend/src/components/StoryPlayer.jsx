@@ -14,6 +14,8 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadMessage, setDownloadMessage] = useState('');
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const audioRef = useRef(null);
 
   const scenes = storyData?.scenes || [];
@@ -43,6 +45,8 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   // Handle Scene Change and Source Loading
   useEffect(() => {
     setProgress(0);
+    setImageLoaded(false);
+    setImageError(false);
     if (audioRef.current) {
       audioRef.current.src = fullAudioUrl;
       audioRef.current.load(); // Force the browser to load the new scene's audio
@@ -211,11 +215,21 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
             className="scene-content"
           >
             <div className="scene-image">
-              {fullImageUrl ? (
-                <img src={fullImageUrl} alt={`Scene ${currentScene + 1}`} />
-              ) : (
+              {fullImageUrl && !imageError ? (
+                <img 
+                  src={fullImageUrl} 
+                  alt={`Scene ${currentScene + 1}`}
+                  onLoad={() => setImageLoaded(true)}
+                  onError={(e) => {
+                    console.error('Image load error:', fullImageUrl);
+                    setImageError(true);
+                  }}
+                  style={{ display: imageLoaded ? 'block' : 'none' }}
+                />
+              ) : null}
+              {(!fullImageUrl || imageError || !imageLoaded) && (
                 <div className="placeholder-image">
-                  <p>{scene.image_description || "Creating your illustration..."}</p>
+                  <p>{imageError ? 'Image unavailable' : (scene?.image_description || "Loading image...")}</p>
                 </div>
               )}
             </div>
