@@ -41,6 +41,12 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
           }
         })
         .catch(err => console.error('HEAD request failed:', err));
+      
+      // Try to load the image directly to see any errors
+      const testImg = new Image();
+      testImg.onload = () => console.log('🖼️ Direct image test loaded');
+      testImg.onerror = () => console.error('🖼️ Direct image test FAILED');
+      testImg.src = fullImageUrl;
     }
   }, [currentScene, fullImageUrl, imageLoaded, imageError]);
 
@@ -255,6 +261,7 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
                   <img 
                     src={fullImageUrl} 
                     alt={`Scene ${currentScene + 1}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                   />
                 </>
               ) : (
