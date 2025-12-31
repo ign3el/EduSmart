@@ -171,7 +171,7 @@ Transform the document into JSON format with this exact structure:
             return None
 
     def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None) -> Optional[bytes]:
-        """Image generation via RunPod SDXL-turbo with enhanced quality prompting. Uses story_seed for character consistency."""
+        """Image generation via RunPod ComfyUI FLUX.1-dev with enhanced quality prompting. Uses story_seed for character consistency."""
         # Build comprehensive, high-quality prompt for better image generation
         quality_keywords = "masterpiece, best quality, high resolution, sharp focus, detailed faces, clean linework, professional digital art, vibrant colors, clear features, well-proportioned anatomy"
         style_guide = "children's book illustration style, Disney/Pixar quality, educational cartoon, storybook art"
@@ -194,17 +194,17 @@ Transform the document into JSON format with this exact structure:
         enhanced_prompt = enhanced_prompt.replace("blurry", "sharp")
         enhanced_prompt = enhanced_prompt.replace("ugly", "beautiful")
 
-        # Use SDXL-turbo endpoint for fast, quality image generation
-        endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID_A1111")
-        api_key = os.getenv("RUNPOD_KEY")
+        # Use ComfyUI FLUX endpoint for high-quality image generation
+        endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID_FLUX")
+        api_key = os.getenv("COMFY_API_KEY") or os.getenv("RUNPOD_KEY")
 
         if not endpoint_id or not api_key:
-            print("RUNPOD_ENDPOINT_ID_A1111 or RUNPOD_KEY not set; cannot generate image")
+            print("RUNPOD_ENDPOINT_ID_FLUX or COMFY_API_KEY not set; cannot generate image")
             return None
 
         # Simple spend guard (estimates). Reset monthly and block when over cap.
         cap_aed = float(os.getenv("RUNPOD_MONTHLY_CAP_AED", "25"))
-        est_cost_per_image = float(os.getenv("RUNPOD_COST_AED_PER_IMAGE", "0.015"))
+        est_cost_per_image = float(os.getenv("RUNPOD_COST_AED_PER_IMAGE", "0.02"))  # FLUX is slightly more expensive
         usage_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runpod_usage.json")
         month_key = time.strftime("%Y-%m")
 
@@ -246,7 +246,7 @@ Transform the document into JSON format with this exact structure:
         # Negative prompt to avoid common AI image issues
         negative_prompt = "blurry, distorted, ugly, bad anatomy, bad proportions, extra limbs, malformed hands, duplicate faces, low quality, worst quality, deformed, mutated, disfigured, poorly drawn, bad art, amateur"
         
-        # SDXL-turbo payload - try negative prompt (will fail gracefully if not supported)
+        # FLUX.1-dev payload for ComfyUI
         payload_input: dict[str, Any] = {
             "prompt": enhanced_prompt,
             "negative_prompt": negative_prompt,
@@ -261,9 +261,9 @@ Transform the document into JSON format with this exact structure:
         }
 
         try:
-            resp = requests.post(url, headers=headers, json={"input": payload_input}, timeout=60)  # SDXL-turbo is fast (5-10s)
+            resp = requests.post(url, headers=headers, json={"input": payload_input}, timeout=120)  # FLUX takes longer (~30-60s)
             if resp.status_code != 200:
-                print(f"RunPod SDXL-turbo returned {resp.status_code}: {resp.text[:120]}")
+                print(f"RunPod FLUX returned {resp.status_code}: {resp.text[:120]}")
                 return None
 
             data = resp.json()
@@ -275,7 +275,7 @@ Transform the document into JSON format with this exact structure:
                 request_id = data["id"]
                 status_url = f"https://api.runpod.ai/v2/{endpoint_id}/status/{request_id}"
                 output = None
-                for _ in range(20):  # SDXL-turbo is fast (~5-10s)
+                for _ in range(40):  # FLUX takes longer (~30-60s), poll for up to 80 seconds
                     time.sleep(2)
                     status_resp = requests.get(status_url, headers=headers, timeout=20)
                     if status_resp.status_code != 200:
