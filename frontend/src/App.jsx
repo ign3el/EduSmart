@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from './context/AuthContext'
+import Login from './components/Login'
+import Signup from './components/Signup'
 import FileUpload from './components/FileUpload'
 import FileConfirmation from './components/FileConfirmation'
 import AvatarSelector from './components/AvatarSelector'
@@ -12,6 +15,8 @@ import UploadProgressOverlay from './components/UploadProgressOverlay'
 import './App.css'
 
 function App() {
+  const { isLoggedIn, isLoading, logout } = useAuth()
+  const [authStep, setAuthStep] = useState('login') // 'login' or 'signup'
   const [step, setStep] = useState('home') 
   const [uploadedFile, setUploadedFile] = useState(null)
   const [selectedAvatar, setSelectedAvatar] = useState(null)
@@ -30,6 +35,37 @@ function App() {
   const [uploadFileName, setUploadFileName] = useState('')
   const [showUploadProgress, setShowUploadProgress] = useState(false)
   const fileInputRef = useRef(null)
+
+  // If not logged in and not loading, show auth screen
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+        <div style={{ color: 'white', fontSize: '20px' }}>Loading...</div>
+      </div>
+    )
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <>
+        <AnimatePresence mode="wait">
+          {authStep === 'login' ? (
+            <Login
+              key="login"
+              onSwitchToSignup={() => setAuthStep('signup')}
+              onSuccess={() => setStep('home')}
+            />
+          ) : (
+            <Signup
+              key="signup"
+              onSwitchToLogin={() => setAuthStep('login')}
+              onSuccess={() => setAuthStep('login')}
+            />
+          )}
+        </AnimatePresence>
+      </>
+    )
+  }
 
   const previousStep = (current) => {
     switch (current) {
@@ -242,6 +278,9 @@ function App() {
           <h1>EduSmart — AI Storymaker</h1>
           <p>Transform your PDFs or DOCX files into animated, voice-guided adventures tailored for every grade.</p>
         </div>
+        {isLoggedIn && (
+          <button className="logout-btn" onClick={logout}>Logout</button>
+        )}
       </header>
 
       <main className="app-main">

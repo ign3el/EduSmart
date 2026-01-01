@@ -58,17 +58,37 @@
   background: rgba(10, 14, 39, 0.8);
   border-bottom: 1px solid rgba(168, 85, 247, 0.2);
   box-shadow: 0 10px 30px rgba(168, 85, 247, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
 }
 
 .app-header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.25rem 1.5rem;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   align-items: center;
   text-align: center;
+}
+
+.logout-btn {
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(168, 85, 247, 0.4);
 }
 
 .app-header h1 {

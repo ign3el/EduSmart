@@ -6,6 +6,8 @@ import time
 import mimetypes
 import io
 import re
+import json
+import zipfile
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException
@@ -13,8 +15,16 @@ from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBearer
+from pydantic import BaseModel, EmailStr
 from services.gemini_service import GeminiService
 from models import StoryResponse
+from database import init_database, get_db_cursor
+from auth import create_access_token, verify_token, get_password_hash, verify_password, generate_verification_token
+
+# Import UserOperations and StoryOperations - note these are defined in models.py
+import sys
+sys.path.insert(0, os.path.dirname(__file__))
 
 # Fix for NotSupportedError in browsers
 load_dotenv()  # current working directory
@@ -24,6 +34,127 @@ mimetypes.add_type('image/png', '.png')
 
 app = FastAPI()
 gemini = GeminiService()
+
+# Initialize database
+init_database()
+
+# -------- Pydantic Models for Auth --------
+class SignupRequest(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    token: str
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: dict
+
+# -------- Security --------
+security = HTTPBearer()
+
+async def get_current_user_from_token(credentials: HTTPAuthCredentials = Depends(security)):
+    """Verify JWT token and return user email."""
+    try:
+        token = credentials.credentials
+        payload = verify_token(token)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return email
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+# -------- Authentication Endpoints --------
+@app.post("/api/auth/signup")
+async def signup(request: SignupRequest):
+    """Sign up a new user."""
+    try:
+        user = UserOperations.create_user(request.username, request.email, request.password)
+        # Generate verification token
+        verification_token = generate_verification_token()
+        # TODO: Send email with verification link (implement email sending)
+        return {
+            "message": "User created. Check your email to verify.",
+            "email": request.email,
+            "verification_token": verification_token
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
+
+@app.post("/api/auth/login")
+async def login(request: LoginRequest):
+    """Log in a user."""
+    try:
+        user = UserOperations.authenticate_user(request.email, request.password)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Check if email is verified
+        if not user.get("is_verified"):
+            raise HTTPException(status_code=403, detail="Please verify your email first")
+        
+        # Create JWT token
+        access_token = create_access_token({"sub": request.email})
+        return AuthResponse(
+            access_token=access_token,
+            user={
+                "email": user["email"],
+                "username": user["username"],
+                "is_premium": user.get("is_premium", False)
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
+
+@app.post("/api/auth/verify-email")
+async def verify_email(request: VerifyEmailRequest):
+    """Verify user email with token."""
+    try:
+        result = UserOperations.verify_email_token(request.email, request.token)
+        if result:
+            return {"message": "Email verified successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
+
+@app.get("/api/auth/me")
+async def get_current_user_info(current_user: str = Depends(get_current_user_from_token)):
+    """Get current user information."""
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT email, username, is_premium FROM users WHERE email = %s", (current_user,))
+            user = cursor.fetchone()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            return {
+                "email": user[0],
+                "username": user[1],
+                "is_premium": user[2]
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch user: {str(e)}")
+
+@app.post("/api/auth/logout")
+async def logout():
+    """Logout endpoint (client handles token removal)."""
+    return {"message": "Logged out successfully"}
 
 @app.on_event("startup")
 async def start_cleanup_task():
