@@ -81,7 +81,22 @@ async def get_current_user_from_token(credentials = Depends(security)):
 async def signup(request: SignupRequest):
     """Sign up a new user."""
     try:
+        # Validate email format
+        if not request.email or '@' not in request.email:
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        
+        # Validate username
+        if not request.username or len(request.username) < 3:
+            raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+        
+        # Validate password
+        if not request.password or len(request.password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+        
         user = UserOperations.create_user(request.username, request.email, request.password)
+        if not user:
+            raise HTTPException(status_code=400, detail="Email or username already exists")
+        
         # Generate verification token
         verification_token = generate_verification_token()
         # TODO: Send email with verification link (implement email sending)
@@ -90,9 +105,13 @@ async def signup(request: SignupRequest):
             "email": request.email,
             "verification_token": verification_token
         }
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        print(f"Signup error: {e}")
+        raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
 
 @app.post("/api/auth/login")
