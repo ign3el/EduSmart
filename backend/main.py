@@ -21,10 +21,7 @@ from services.gemini_service import GeminiService
 from models import StoryResponse
 from database import init_database, get_db_cursor
 from auth import create_access_token, verify_token, get_password_hash, verify_password, generate_verification_token
-
-# Import UserOperations and StoryOperations - note these are defined in models.py
-import sys
-sys.path.insert(0, os.path.dirname(__file__))
+from database_models import UserOperations, StoryOperations
 
 # Fix for NotSupportedError in browsers
 load_dotenv()  # current working directory
@@ -60,7 +57,7 @@ class AuthResponse(BaseModel):
 # -------- Security --------
 security = HTTPBearer()
 
-async def get_current_user_from_token(credentials: HTTPAuthCredentials = Depends(security)):
+async def get_current_user_from_token(credentials = Depends(security)):
     """Verify JWT token and return user email."""
     try:
         token = credentials.credentials
@@ -71,6 +68,8 @@ async def get_current_user_from_token(credentials: HTTPAuthCredentials = Depends
         if not email:
             raise HTTPException(status_code=401, detail="Invalid token")
         return email
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
@@ -124,8 +123,8 @@ async def login(request: LoginRequest):
 async def verify_email(request: VerifyEmailRequest):
     """Verify user email with token."""
     try:
-        result = UserOperations.verify_email_token(request.email, request.token)
-        if result:
+        user_id = UserOperations.verify_email_token(request.token)
+        if user_id:
             return {"message": "Email verified successfully"}
         else:
             raise HTTPException(status_code=400, detail="Invalid or expired verification token")
