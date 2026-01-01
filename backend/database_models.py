@@ -12,18 +12,26 @@ class UserOperations:
     @staticmethod
     def create_user(email: str, username: str, password: str) -> Optional[int]:
         """Create a new user"""
+        print("[DB] Attempting to create user...")
         try:
             password_hash = get_password_hash(password)
+            print(f"[DB] Password hashed for user {username}")
             with get_db_cursor() as cursor:
+                print(f"[DB] DB cursor acquired for user {username}")
                 cursor.execute(
                     """INSERT INTO users (email, username, password_hash) 
                        VALUES (%s, %s, %s)""",
                     (email.lower(), username, password_hash)
                 )
-                print(f"User {username} with email {email} created successfully.")
+                print(f"[DB] INSERT executed for {username}. Last row ID: {cursor.lastrowid}")
                 return cursor.lastrowid
         except mysql.connector.IntegrityError:
+            print(f"[DB_FAIL] IntegrityError for user {username} or email {email}. They may already exist.")
             return None  # User already exists
+        except Exception as e:
+            print(f"[DB_FAIL] Unexpected error creating user {username}: {e}")
+            print(f"[DB_FAIL] Error type: {type(e)}")
+            raise
     
     @staticmethod
     def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
