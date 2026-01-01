@@ -17,6 +17,20 @@ services:
       - RUNPOD_SEED=${RUNPOD_SEED:-20240601}
       - RUNPOD_MONTHLY_CAP_AED=${RUNPOD_MONTHLY_CAP_AED:-25}
       - RUNPOD_COST_AED_PER_IMAGE=${RUNPOD_COST_AED_PER_IMAGE:-0.02}
+      # Database Configuration
+      - MYSQL_HOST=${MYSQL_HOST:-10.0.0.147}
+      - MYSQL_PORT=${MYSQL_PORT:-3306}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-edusmart_db}
+      # JWT Configuration
+      - JWT_SECRET=${JWT_SECRET}
+      # Email Configuration
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_SERVER=${MAIL_SERVER:-smtp.gmail.com}
     volumes:
       - ./backend:/app
       - ./backend/outputs:/app/outputs
