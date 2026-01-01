@@ -78,20 +78,34 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
     }
     
     if (audioRef.current) {
+      // Stop current audio immediately to prevent overlap
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      
+      // Update to new scene's audio
       audioRef.current.src = fullAudioUrl;
       audioRef.current.load(); // Force the browser to load the new scene's audio
       
+      // Only auto-play if isPlaying state is true
       if (isPlaying) {
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
-          playPromise.catch(err => console.error("Audio interrupted on scene change:", err));
+          playPromise.catch(err => {
+            console.error("Audio interrupted on scene change:", err);
+            setIsPlaying(false);
+          });
         }
       }
     }
-  }, [currentScene, fullAudioUrl, fullImageUrl]);
+  }, [currentScene, fullAudioUrl, fullImageUrl, isPlaying]);
 
   const goToNextScene = () => {
     if (currentScene < scenes.length - 1) {
+      // Stop current audio before changing scene
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       setCurrentScene(currentScene + 1);
     } else {
       setIsPlaying(false);
@@ -101,6 +115,11 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
 
   const goToPrevScene = () => {
     if (currentScene > 0) {
+      // Stop current audio before changing scene
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       setCurrentScene(currentScene - 1);
     }
   };
@@ -113,15 +132,24 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   };
   
   const handleAudioEnded = () => {
-    // Optional: Auto-advance to next scene when audio ends
-    if (currentScene < scenes.length - 1) {
+    // Only auto-advance if we're still on the same scene that finished playing
+    // This prevents issues when user manually changes scenes while audio is playing
+    if (audioRef.current && audioRef.current.currentTime > 0) {
+      if (currentScene < scenes.length - 1) {
         goToNextScene();
-    } else {
+      } else {
         setIsPlaying(false);
+        setShowQuiz(true);
+      }
     }
   };
 
   const handleDotClick = (index) => {
+    // Stop current audio before changing scene
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     setCurrentScene(index);
   };
 

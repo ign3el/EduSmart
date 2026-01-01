@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import JSZip from 'jszip'
 import './OfflineManager.css'
 
 function OfflineManager({ onLoadOffline, onBack }) {
@@ -154,41 +155,78 @@ function OfflineManager({ onLoadOffline, onBack }) {
     // Reset file input
     event.target.value = null
     
-    if (!isOnline) {
-      alert('Import requires internet connection')
-      return
-    }
-    
     setDownloading('import')
-    setDownloadMessage('Uploading story...')
+    setDownloadMessage('Extracting ZIP file...')
     
     try {
-      const formData = new FormData()
-      formData.append('file', file)
+      // Load ZIP file
+      const zip = new JSZip()
+      const zipData = await zip.loadAsync(file)
       
-      const response = await fetch('/api/import-story', {
-        method: 'POST',
-        body: formData
-      })
+      // Read metadata.json
+      const metadataFile = zipData.file('metadata.json')
+      if (!metadataFile) {
+        throw new Error('Invalid story package: missing metadata.json')
+      }
       
-      if (!response.ok) throw new Error('Import failed')
+      setDownloadMessage('Reading story data...')
+      const metadataText = await metadataFile.async('string')
+      const metadata = JSON.parse(metadataText)
       
-      setDownloadMessage('Downloading...')
-      const result = await response.json()
+      // Read story_data.json
+      const storyDataFile = zipData.file('story_data.json')
+      if (!storyDataFile) {
+        throw new Error('Invalid story package: missing story_data.json')
+      }
       
-      // Load the story data from the backend
-      setDownloadMessage('Saving file...')
-      const storyResponse = await fetch(`/api/load-story/${result.story_id}`)
-      if (!storyResponse.ok) throw new Error('Failed to load imported story')
+      const storyDataText = await storyDataFile.async('string')
+      const storyData = JSON.parse(storyDataText)
       
-      const storyData = await storyResponse.json()
+      setDownloadMessage('Converting media to base64...')
+      
+      // Convert all scene images and audio to base64 data URLs
+      for (let i = 0; i < storyData.scenes.length; i++) {
+        const scene = storyData.scenes[i]
+        
+        // Convert image to base64
+        if (scene.image_url) {
+          const imagePath = scene.image_url.replace('/media/', '')
+          const imageFile = zipData.file(imagePath)
+          if (imageFile) {
+            const imageBlob = await imageFile.async('blob')
+            const imageDataUrl = await new Promise((resolve) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result)
+              reader.readAsDataURL(imageBlob)
+            })
+            scene.image_url = imageDataUrl
+          }
+        }
+        
+        // Convert audio to base64
+        if (scene.audio_url) {
+          const audioPath = scene.audio_url.replace('/media/', '')
+          const audioFile = zipData.file(audioPath)
+          if (audioFile) {
+            const audioBlob = await audioFile.async('blob')
+            const audioDataUrl = await new Promise((resolve) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result)
+              reader.readAsDataURL(audioBlob)
+            })
+            scene.audio_url = audioDataUrl
+          }
+        }
+      }
+      
+      setDownloadMessage('Saving to local storage...')
       
       // Save to localStorage
       const localStoryId = `local_${Date.now()}`
       const localStory = {
         id: localStoryId,
-        name: result.name,
-        storyData: storyData.story_data,
+        name: metadata.name || storyData.title || 'Imported Story',
+        storyData: storyData,
         savedAt: Date.now(),
         isOffline: true
       }
@@ -201,7 +239,7 @@ function OfflineManager({ onLoadOffline, onBack }) {
       setTimeout(() => {
         setDownloadMessage('')
         setDownloading(null)
-        onLoadOffline(storyData.story_data, result.name)
+        onLoadOffline(storyData, localStory.name)
       }, 1000)
     } catch (error) {
       setDownloadMessage(`Error: ${error.message}`)
@@ -315,13 +353,13 @@ function OfflineManager({ onLoadOffline, onBack }) {
 
       <AnimatePresence>
         {downloadMessage && (
-          <motion.div 
-            className="download-popup"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-          >
-            <div className="download-popup-content">
+          <div className="download-popup">
+            <motion.div 
+              className="download-popup-content"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+            >
               <div>
                 <div className="spinner"></div>
               </div>
@@ -332,9 +370,9 @@ function OfflineManager({ onLoadOffline, onBack }) {
                 <div 
                   className="progress-bar"
                   style={{
-                    width: downloadMessage.includes('Uploading') || downloadMessage.includes('Zipping') ? '25%' : 
-                           downloadMessage === 'Downloading...' ? '60%' : 
-                           downloadMessage === 'Saving file...' ? '85%' : '100%',
+                    width: downloadMessage.includes('Uploading') || downloadMessage.includes('Zipping') || downloadMessage.includes('Extracting') ? '25%' : 
+                           downloadMessage.includes('Downloading') || downloadMessage.includes('Reading') ? '60%' : 
+                           downloadMessage.includes('Saving') || downloadMessage.includes('Converting') ? '85%' : '100%',
                     transition: 'width 0.4s ease'
                   }}
                 ></div>
@@ -342,25 +380,25 @@ function OfflineManager({ onLoadOffline, onBack }) {
               
               {/* Step Indicators */}
               <div className="progress-steps">
-                <div className={`progress-step ${(downloadMessage.includes('Uploading') || downloadMessage.includes('Zipping')) ? 'active' : (downloadMessage === 'Downloading...' || downloadMessage === 'Saving file...' || downloadMessage === 'Complete! ✓') ? 'completed' : ''}`}>
+                <div className={`progress-step ${(downloadMessage.includes('Uploading') || downloadMessage.includes('Zipping') || downloadMessage.includes('Extracting')) ? 'active' : (downloadMessage.includes('Downloading') || downloadMessage.includes('Reading') || downloadMessage.includes('Saving') || downloadMessage.includes('Converting') || downloadMessage === 'Complete! ✓') ? 'completed' : ''}`}>
                   <div className="step-dot">1</div>
-                  <span>{downloadMessage.includes('Uploading') ? 'Upload' : 'Zip'}</span>
+                  <span>{downloadMessage.includes('Uploading') ? 'Upload' : downloadMessage.includes('Extracting') ? 'Extract' : 'Zip'}</span>
                 </div>
-                <div className={`progress-step ${downloadMessage === 'Downloading...' ? 'active' : (downloadMessage === 'Saving file...' || downloadMessage === 'Complete! ✓') ? 'completed' : ''}`}>
+                <div className={`progress-step ${(downloadMessage.includes('Downloading') || downloadMessage.includes('Reading')) ? 'active' : (downloadMessage.includes('Saving') || downloadMessage.includes('Converting') || downloadMessage === 'Complete! ✓') ? 'completed' : ''}`}>
                   <div className="step-dot">2</div>
-                  <span>Download</span>
+                  <span>{downloadMessage.includes('Reading') ? 'Read' : 'Download'}</span>
                 </div>
-                <div className={`progress-step ${downloadMessage === 'Saving file...' ? 'active' : downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
+                <div className={`progress-step ${(downloadMessage.includes('Saving') || downloadMessage.includes('Converting')) ? 'active' : downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
                   <div className="step-dot">3</div>
-                  <span>Save</span>
+                  <span>{downloadMessage.includes('Converting') ? 'Convert' : 'Save'}</span>
                 </div>
                 <div className={`progress-step ${downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
                   <div className="step-dot">✓</div>
                   <span>Done</span>
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </motion.div>

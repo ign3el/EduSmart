@@ -166,13 +166,13 @@ function LoadStory({ onLoad, onBack }) {
 
       {/* Download Status Popup */}
       {downloadMessage && (
-        <motion.div 
-          className="download-popup"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-        >
-          <div className="download-popup-content">
+        <div className="download-popup">
+          <motion.div 
+            className="download-popup-content"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {downloadMessage !== 'Complete! ✓' ? <div className="spinner"></div> : <span style={{ fontSize: '1.2rem' }}>✓</span>}
               <p style={{ margin: 0 }}>{downloadMessage}</p>
@@ -210,8 +210,8 @@ function LoadStory({ onLoad, onBack }) {
                 <span>Done</span>
               </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       )}
     </motion.div>
   )
