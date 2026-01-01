@@ -81,9 +81,6 @@ async def get_current_user_from_token(credentials = Depends(security)):
 async def signup(request: SignupRequest):
     """Sign up a new user."""
     try:
-        print(f"[SIGNUP] Received request: username={request.username}, email={request.email}")
-        print(f"[SIGNUP] Password length (chars): {len(request.password)}")
-        print(f"[SIGNUP] Password repr: {repr(request.password)}")
         
         # Validate email format
         if not request.email or '@' not in request.email:
@@ -102,9 +99,11 @@ async def signup(request: SignupRequest):
         if len(password_bytes) > 72:
             raise HTTPException(status_code=400, detail=f"Password too long ({len(password_bytes)} bytes, max 72)")
         
-        user = UserOperations.create_user(request.username, request.email, request.password)
+        user = UserOperations.create_user(request.email, request.username, request.password)
         if not user:
             raise HTTPException(status_code=400, detail="Email or username already exists")
+        
+        print(f"User created successfully: {request.email}")
         
         # Generate verification token
         verification_token = generate_verification_token()

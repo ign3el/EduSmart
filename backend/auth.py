@@ -11,7 +11,7 @@ import bcrypt
 
 # Ensure passlib-compatible bcrypt metadata exists on both bcrypt and _bcrypt
 try:
-    import _bcrypt as _bcrypt
+    import _bcrypt as _bcrypt  # type: ignore
 except ImportError:  # pragma: no cover - if C backend missing, passlib will use pure Python
     _bcrypt = None
 from dotenv import load_dotenv
@@ -29,10 +29,10 @@ class _About:
     __version__ = getattr(bcrypt, "__version__", "0")
 
 if not hasattr(bcrypt, "__about__"):
-    bcrypt.__about__ = _About()
+    bcrypt.__about__ = _About()  # type: ignore
 
 if _bcrypt and not hasattr(_bcrypt, "__about__"):
-    _bcrypt.__about__ = _About()
+    _bcrypt.__about__ = _About()  # type: ignore
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

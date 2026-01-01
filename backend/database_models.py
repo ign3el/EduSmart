@@ -20,6 +20,7 @@ class UserOperations:
                        VALUES (%s, %s, %s)""",
                     (email.lower(), username, password_hash)
                 )
+                print(f"User {username} with email {email} created successfully.")
                 return cursor.lastrowid
         except mysql.connector.IntegrityError:
             return None  # User already exists
