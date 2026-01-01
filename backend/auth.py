@@ -8,6 +8,12 @@ from passlib.context import CryptContext
 import os
 import secrets
 import bcrypt
+
+# Ensure passlib-compatible bcrypt metadata exists on both bcrypt and _bcrypt
+try:
+    import _bcrypt as _bcrypt
+except ImportError:  # pragma: no cover - if C backend missing, passlib will use pure Python
+    _bcrypt = None
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,12 +24,15 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 # Password hashing
-# passlib expects bcrypt.__about__.__version__; some builds of the bcrypt
-# package omit __about__, so we patch it to avoid runtime errors.
+# passlib expects bcrypt.__about__.__version__; some builds omit it.
+class _About:
+    __version__ = getattr(bcrypt, "__version__", "0")
+
 if not hasattr(bcrypt, "__about__"):
-    class _About:
-        __version__ = getattr(bcrypt, "__version__", "0")
     bcrypt.__about__ = _About()
+
+if _bcrypt and not hasattr(_bcrypt, "__about__"):
+    _bcrypt.__about__ = _About()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -39,13 +48,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """Hash a password (bcrypt limit is 72 bytes)"""
-    # Debug: log password length before truncation
     password_bytes = password.encode('utf-8')
-    print(f"[PASSWORD DEBUG] Received password length: {len(password_bytes)} bytes")
-    print(f"[PASSWORD DEBUG] Password repr: {repr(password)}")
-    
     if len(password_bytes) > 72:
-        print(f"[PASSWORD DEBUG] Truncating from {len(password_bytes)} to 72 bytes")
         password = password_bytes[:72].decode('utf-8', errors='ignore')
     
     return pwd_context.hash(password)
