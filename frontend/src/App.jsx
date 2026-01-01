@@ -17,6 +17,7 @@ import './App.css'
 function App() {
   const { isLoggedIn, isLoading, logout } = useAuth()
   const [authStep, setAuthStep] = useState('login') // 'login' or 'signup'
+  const [signupSuccess, setSignupSuccess] = useState(false)
   const [step, setStep] = useState('home') 
   const [uploadedFile, setUploadedFile] = useState(null)
   const [selectedAvatar, setSelectedAvatar] = useState(null)
@@ -46,24 +47,57 @@ function App() {
   }
 
   if (!isLoggedIn) {
+    if (signupSuccess) {
+      return (
+        <div className="auth-container" style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          color: 'white'
+        }}>
+          <motion.div 
+            className="auth-box" 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h2>Signup Successful!</h2>
+            <p style={{ margin: '20px 0' }}>Please check your email to verify your account, then you can log in.</p>
+            <button className="auth-button" onClick={() => {
+              setSignupSuccess(false);
+              setAuthStep('login');
+            }}>
+              Proceed to Login
+            </button>
+          </motion.div>
+        </div>
+      );
+    }
+
     return (
-      <>
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
+      }}>
         <AnimatePresence mode="wait">
           {authStep === 'login' ? (
             <Login
               key="login"
               onSwitchToSignup={() => setAuthStep('signup')}
-              onSuccess={() => setStep('home')}
             />
           ) : (
             <Signup
               key="signup"
               onSwitchToLogin={() => setAuthStep('login')}
-              onSuccess={() => setAuthStep('login')}
+              onSuccess={() => setSignupSuccess(true)}
             />
           )}
         </AnimatePresence>
-      </>
+      </div>
     )
   }
 

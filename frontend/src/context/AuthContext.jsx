@@ -1,124 +1,120 @@
-import { createContext, useState, useContext, useEffect } from 'react'
+import { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import axios from 'axios';
 
-const AuthContext = createContext()
+const AuthContext = createContext();
 
-// Get API URL from environment or default to localhost for development
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Get API URL from environment variables, defaulting for local development
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Create a dedicated API client using Axios
+const apiClient = axios.create({
+  baseURL: API_URL,
+});
+
+// Use an interceptor to automatically add the auth token to every request header
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
-  const [token, setToken] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(() => localStorage.getItem('auth_token'));
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load token from localStorage on mount
+  // Function to fetch the current user's data if a token exists.
+  // useCallback is used for optimization, preventing re-creation on every render.
+  const fetchCurrentUser = useCallback(async () => {
+    if (localStorage.getItem('auth_token')) {
+      try {
+        const response = await apiClient.get('/api/auth/me');
+        setUser(response.data);
+      } catch (error) {
+        // This likely means the token is invalid or expired.
+        console.error("Failed to fetch user with stored token, logging out.", error);
+        // Clean up the invalid token.
+        localStorage.removeItem('auth_token');
+        setToken(null);
+        setUser(null);
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
+  // On initial application load, check for a token and try to fetch the user.
   useEffect(() => {
-    const savedToken = localStorage.getItem('auth_token')
-    if (savedToken) {
-      setToken(savedToken)
-      fetchCurrentUser(savedToken)
-    } else {
-      setIsLoading(false)
-    }
-  }, [])
+    fetchCurrentUser();
+  }, [fetchCurrentUser]);
 
-  const fetchCurrentUser = async (authToken) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      })
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-      } else {
-        localStorage.removeItem('auth_token')
-        setToken(null)
-      }
-    } catch (error) {
-      console.error('Failed to fetch user:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+  // Signup function
   const signup = async (username, email, password) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        const errorMsg = data.detail || data.message || 'Signup failed'
-        throw new Error(errorMsg)
-      }
-      return data
-    } catch (error) {
-      throw error
-    }
-  }
+    // Axios throws an error for non-2xx responses, simplifying error handling.
+    const response = await apiClient.post('/api/auth/signup', {
+      username,
+      email,
+      password,
+    });
+    // On success, return the new user data.
+    return response.data;
+  };
 
+  // Login function
   const login = async (email, password) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || 'Login failed')
-      }
-      const data = await response.json()
-      localStorage.setItem('auth_token', data.access_token)
-      setToken(data.access_token)
-      setUser(data.user)
-      return data
-    } catch (error) {
-      throw error
-    }
-  }
+    // The new backend /token endpoint expects data in 'application/x-www-form-urlencoded' format.
+    const params = new URLSearchParams();
+    params.append('username', email); // Per OAuth2 standard, the username field holds the email
+    params.append('password', password);
 
-  const verifyEmail = async (email, token) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/verify-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token })
-      })
-      if (!response.ok) throw new Error('Verification failed')
-      return await response.json()
-    } catch (error) {
-      throw error
-    }
-  }
+    const response = await apiClient.post('/api/auth/token', params, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
 
+    const { access_token } = response.data;
+    localStorage.setItem('auth_token', access_token);
+    setToken(access_token);
+    
+    // After successfully getting the token, fetch the user's data.
+    await fetchCurrentUser();
+  };
+
+  // Logout function
   const logout = () => {
-    localStorage.removeItem('auth_token')
-    setToken(null)
-    setUser(null)
-  }
+    localStorage.removeItem('auth_token');
+    setToken(null);
+    setUser(null);
+  };
+
+  // The value provided to consumers of the context
+  const authContextValue = {
+    user,
+    token,
+    isLoading,
+    isAuthenticated: !!user,
+    signup,
+    login,
+    logout,
+  };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      token,
-      isLoading,
-      signup,
-      login,
-      verifyEmail,
-      logout,
-      isLoggedIn: !!user
-    }}>
+    <AuthContext.Provider value={authContextValue}>
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};
 
+// Custom hook for easy access to the auth context
 export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
-}
+  return context;
+};
