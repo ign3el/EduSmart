@@ -81,26 +81,38 @@ async def get_current_user_from_token(credentials = Depends(security)):
 async def signup(request: SignupRequest):
     """Sign up a new user."""
     try:
-        
+        print(f"[SIGNUP] Start: email={request.email}, user={request.username}")
+
         # Validate email format
         if not request.email or '@' not in request.email:
+            print(f"[SIGNUP_FAIL] Invalid email: {request.email}")
             raise HTTPException(status_code=400, detail="Invalid email format")
-        
+        print("[SIGNUP] Email validation passed")
+
         # Validate username
         if not request.username or len(request.username) < 3:
+            print(f"[SIGNUP_FAIL] Invalid username: {request.username}")
             raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
-        
+        print("[SIGNUP] Username validation passed")
+
         # Validate password
         if not request.password or len(request.password) < 6:
+            print("[SIGNUP_FAIL] Password too short")
             raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-        
+        print("[SIGNUP] Password length validation passed")
+
         # Check password byte length for bcrypt (72 byte limit)
         password_bytes = request.password.encode('utf-8')
         if len(password_bytes) > 72:
+            print(f"[SIGNUP_FAIL] Password too long: {len(password_bytes)} bytes")
             raise HTTPException(status_code=400, detail=f"Password too long ({len(password_bytes)} bytes, max 72)")
-        
+        print("[SIGNUP] Password byte length validation passed")
+
+        print("[SIGNUP] All validation passed. Creating user...")
         user = UserOperations.create_user(request.email, request.username, request.password)
+        
         if not user:
+            print(f"[SIGNUP_FAIL] User creation failed for email: {request.email} or username: {request.username}. Might already exist.")
             raise HTTPException(status_code=400, detail="Email or username already exists")
         
         print(f"User created successfully: {request.email}")
