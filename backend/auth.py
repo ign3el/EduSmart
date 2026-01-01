@@ -7,6 +7,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 import os
 import secrets
+import bcrypt
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,6 +18,13 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 # Password hashing
+# passlib expects bcrypt.__about__.__version__; some builds of the bcrypt
+# package omit __about__, so we patch it to avoid runtime errors.
+if not hasattr(bcrypt, "__about__"):
+    class _About:
+        __version__ = getattr(bcrypt, "__version__", "0")
+    bcrypt.__about__ = _About()
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
