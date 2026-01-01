@@ -101,13 +101,6 @@ async def signup(request: SignupRequest):
             raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
         print("[SIGNUP] Password length validation passed")
 
-        # Check password byte length for bcrypt (72 byte limit)
-        password_bytes = request.password.encode('utf-8')
-        if len(password_bytes) > 72:
-            print(f"[SIGNUP_FAIL] Password too long: {len(password_bytes)} bytes")
-            raise HTTPException(status_code=400, detail=f"Password too long ({len(password_bytes)} bytes, max 72)")
-        print("[SIGNUP] Password byte length validation passed")
-
         print("[SIGNUP] All validation passed. Creating user...")
         user = UserOperations.create_user(request.email, request.username, request.password)
         
