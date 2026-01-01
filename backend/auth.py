@@ -31,10 +31,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """Hash a password (bcrypt limit is 72 bytes)"""
-    # Truncate to 72 bytes to comply with bcrypt limitation
+    # Debug: log password length before truncation
     password_bytes = password.encode('utf-8')
+    print(f"[PASSWORD DEBUG] Received password length: {len(password_bytes)} bytes")
+    print(f"[PASSWORD DEBUG] Password repr: {repr(password)}")
+    
     if len(password_bytes) > 72:
+        print(f"[PASSWORD DEBUG] Truncating from {len(password_bytes)} to 72 bytes")
         password = password_bytes[:72].decode('utf-8', errors='ignore')
+    
     return pwd_context.hash(password)
 
 

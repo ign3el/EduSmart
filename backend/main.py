@@ -81,6 +81,10 @@ async def get_current_user_from_token(credentials = Depends(security)):
 async def signup(request: SignupRequest):
     """Sign up a new user."""
     try:
+        print(f"[SIGNUP] Received request: username={request.username}, email={request.email}")
+        print(f"[SIGNUP] Password length (chars): {len(request.password)}")
+        print(f"[SIGNUP] Password repr: {repr(request.password)}")
+        
         # Validate email format
         if not request.email or '@' not in request.email:
             raise HTTPException(status_code=400, detail="Invalid email format")
