@@ -12,22 +12,28 @@ load_dotenv()
 # Database configuration from environment variables
 DB_CONFIG = {
     "host": os.getenv("MYSQL_HOST", "10.0.0.147"),
-    "user": os.getenv("MYSQL_USER"),
-    "password": os.getenv("MYSQL_PASSWORD"),
-    "database": os.getenv("MYSQL_DATABASE"),
+    "user": os.getenv("MYSQL_USER", "root"),  # Default to root if not set
+    "password": os.getenv("MYSQL_PASSWORD", ""),  # Default to empty password if not set
+    "database": os.getenv("MYSQL_DATABASE", "edusmart_db"),
     "port": int(os.getenv("MYSQL_PORT", "3306")),
     "pool_name": "edusmart_pool",
-    "pool_size": 10,
+    "pool_size": 5,
     "pool_reset_session": True,
     "autocommit": False
 }
 
 # Create connection pool
+connection_pool = None
 try:
     connection_pool = pooling.MySQLConnectionPool(**DB_CONFIG)
     print(f"✓ MySQL connection pool created successfully to {DB_CONFIG['host']}")
 except Exception as e:
-    print(f"✗ Failed to create MySQL connection pool: {e}")
+    print(f"⚠ Failed to create MySQL connection pool: {e}")
+    print(f"   Ensure these environment variables are set:")
+    print(f"   - MYSQL_HOST (currently: {DB_CONFIG['host']})")
+    print(f"   - MYSQL_USER (currently: {DB_CONFIG['user']})")
+    print(f"   - MYSQL_PASSWORD (currently: {'*' * len(DB_CONFIG['password']) if DB_CONFIG['password'] else 'NOT SET'})")
+    print(f"   - MYSQL_DATABASE (currently: {DB_CONFIG['database']})")
     connection_pool = None
 
 
@@ -66,8 +72,13 @@ def get_db_cursor(dictionary=True):
 
 
 def init_database():
-    """Initialize database tables"""
-    with get_db_cursor() as cursor:
+    """Initialize database tables - called on first API request"""
+    if not connection_pool:
+        print("⚠ Database not connected yet. Skipping table initialization.")
+        return False
+    
+    try:
+        with get_db_cursor() as cursor:
         # Users table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -115,9 +126,25 @@ def init_database():
         """)
         
         print("✓ Database tables initialized successfully")
+        return True
+    except Exception as e:
+        print(f"⚠ Error initializing database: {e}")
+        return False
 
 
-# Initialize database on module import
+# Flag to track if database has been initialized
+_db_initialized = False
+
+def ensure_db_initialized():
+    """Ensure database is initialized (called on first API request)"""
+    global _db_initialized
+    if not _db_initialized:
+        _db_initialized = init_database()
+        return _db_initialized
+    return True
+
+
+# Try to initialize database on module import (best effort)
 if connection_pool:
     try:
         init_database()

@@ -19,7 +19,7 @@ from fastapi.security import HTTPBearer
 from pydantic import BaseModel, EmailStr
 from services.gemini_service import GeminiService
 from models import StoryResponse
-from database import init_database, get_db_cursor
+from database import init_database, get_db_cursor, ensure_db_initialized
 from auth import create_access_token, verify_token, get_password_hash, verify_password, generate_verification_token
 from database_models import UserOperations, StoryOperations
 
@@ -32,8 +32,11 @@ mimetypes.add_type('image/png', '.png')
 app = FastAPI()
 gemini = GeminiService()
 
-# Initialize database
-init_database()
+# Database will be initialized on first API request
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup (non-blocking)"""
+    ensure_db_initialized()
 
 # -------- Pydantic Models for Auth --------
 class SignupRequest(BaseModel):
