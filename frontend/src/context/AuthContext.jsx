@@ -47,8 +47,11 @@ export const AuthProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password })
       })
-      if (!response.ok) throw new Error('Signup failed')
       const data = await response.json()
+      if (!response.ok) {
+        const errorMsg = data.detail || data.message || 'Signup failed'
+        throw new Error(errorMsg)
+      }
       return data
     } catch (error) {
       throw error
