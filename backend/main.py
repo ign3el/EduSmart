@@ -93,6 +93,11 @@ async def signup(request: SignupRequest):
         if not request.password or len(request.password) < 6:
             raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
         
+        # Check password byte length for bcrypt (72 byte limit)
+        password_bytes = request.password.encode('utf-8')
+        if len(password_bytes) > 72:
+            raise HTTPException(status_code=400, detail=f"Password too long ({len(password_bytes)} bytes, max 72)")
+        
         user = UserOperations.create_user(request.username, request.email, request.password)
         if not user:
             raise HTTPException(status_code=400, detail="Email or username already exists")
@@ -111,7 +116,7 @@ async def signup(request: SignupRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         print(f"Signup error: {e}")
-        raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
+        print(f"Error type: {type(e)}")
         raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
 
 @app.post("/api/auth/login")
