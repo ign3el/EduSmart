@@ -8,8 +8,14 @@ import os
 # Add backend to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from dotenv import load_dotenv
-load_dotenv()
+# Try to load .env file if dotenv is available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("✅ Loaded .env file")
+except ImportError:
+    print("⚠️  python-dotenv not installed, using system environment variables")
+    pass
 
 from auth import get_password_hash, verify_password
 from database_models import UserOperations
