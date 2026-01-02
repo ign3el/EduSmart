@@ -1,12 +1,14 @@
 import logging
 from typing import Optional
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 
-from auth import create_access_token, verify_token
+from auth import create_access_token, verify_token, generate_secure_token
 from database_models import User, UserOperations
+from services.email_service import send_verification_email, send_password_reset_email
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +23,25 @@ router = APIRouter(
 class SignupRequest(BaseModel):
     """Request model for user signup."""
     email: EmailStr
-    username: str = Field(..., min_length=3, max_length=50, description="Must be between 3 and 50 characters.")
-    password: str = Field(..., min_length=6, max_length=100, description="Must be at least 6 characters.")
+    username: str = Field(..., min_length=3, max_length=50, pattern="^[a-zA-Z0-9_]+$", description="3-50 characters, alphanumeric and underscores only")
+    password: str = Field(..., min_length=8, max_length=100, description="Minimum 8 characters")
+    confirm_password: str = Field(..., description="Must match password")
+    
+    @validator('confirm_password')
+    def passwords_match(cls, v, values):
+        if 'password' in values and v != values['password']:
+            raise ValueError('Passwords do not match')
+        return v
+    
+    @validator('password')
+    def password_complexity(cls, v):
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.islower() for c in v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one digit')
+        return v
 
 class UserResponse(BaseModel):
     """Response model for user data, excluding sensitive information."""
@@ -98,10 +117,14 @@ def signup(request: SignupRequest):
             detail="An unexpected error occurred while creating the user.",
         )
         
-    # Here you would typically trigger an email verification flow.
-    # For now, we just log and return the user.
-    # e.g., token = UserOperations.create_verification_token(user['id'])
-    # e.g., send_verification_email(user['email'], token)
+    # Create verification token and send email
+    try:
+        token = UserOperations.create_verification_token(user['id'])
+        send_verification_email(user['email'], token)
+        logger.info(f"Verification email sent to {user['email']}")
+    except Exception as e:
+        logger.error(f"Failed to send verification email: {e}")
+        # Don't fail signup if email fails, user can resend later
     
     logger.info(f"User '{user['username']}' created successfully (ID: {user['id']}).")
     return user
@@ -111,13 +134,21 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Handles user login via standard OAuth2 form data.
     Verifies credentials and returns a JWT access token.
-    Note: The 'username' field of the form is used for the user's email.
+    Note: The 'username' field accepts EITHER username OR email.
     """
-    user = UserOperations.authenticate(email=form_data.username, password=form_data.password)
+    # Try to authenticate with either email or username
+    user = None
+    if '@' in form_data.username:
+        # Looks like an email
+        user = UserOperations.authenticate(email=form_data.username, password=form_data.password)
+    else:
+        # Looks like a username
+        user = UserOperations.authenticate_by_username(username=form_data.username, password=form_data.password)
+    
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password.",
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
         
@@ -143,3 +174,139 @@ def read_users_me(current_user: User = Depends(get_current_user)):
     This is a protected endpoint.
     """
     return current_user
+
+@router.post("/resend-verification", status_code=status.HTTP_200_OK)
+def resend_verification_email(email: EmailStr):
+    """
+    Resends the verification email. Has a 3-minute cooldown to prevent abuse.
+    """
+    user = UserOperations.get_by_email(email)
+    if not user:
+        # Don't reveal whether email exists for security
+        return {"message": "If this email is registered, a verification link has been sent."}
+    
+    if user['is_verified']:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already verified"
+        )
+    
+    # Check cooldown (3 minutes)
+    cooldown_seconds = UserOperations.check_verification_cooldown(user['id'])
+    if cooldown_seconds > 0:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Please wait {cooldown_seconds} seconds before resending email"
+        )
+    
+    try:
+        token = UserOperations.create_verification_token(user['id'])
+        UserOperations.track_verification_email_sent(user['id'])
+        send_verification_email(email, token)
+        logger.info(f"Verification email resent to {email}")
+        return {"message": "Verification email sent successfully"}
+    except Exception as e:
+        logger.error(f"Failed to resend verification email: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email"
+        )
+
+@router.get("/verify-email", status_code=status.HTTP_200_OK)
+def verify_email(token: str):
+    """
+    Verifies a user's email address using the token from the verification email.
+    """
+    user_id = UserOperations.verify_email_with_token(token)
+    
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token"
+        )
+    
+    logger.info(f"Email verified for user ID: {user_id}")
+    return {"message": "Email verified successfully"}
+
+class ForgotPasswordRequest(BaseModel):
+    """Request model for forgot password."""
+    email: EmailStr
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+def forgot_password(request: ForgotPasswordRequest):
+    """
+    Sends a password reset email to the user.
+    Always returns success to avoid revealing which emails are registered.
+    """
+    user = UserOperations.get_by_email(request.email)
+    
+    # Always return success, don't reveal if email exists
+    if not user:
+        logger.info(f"Password reset requested for non-existent email: {request.email}")
+        return {"message": "If this email is registered, a password reset link has been sent."}
+    
+    try:
+        token = UserOperations.create_password_reset_token(user['id'])
+        send_password_reset_email(request.email, token)
+        logger.info(f"Password reset email sent to {request.email}")
+    except Exception as e:
+        logger.error(f"Failed to send password reset email: {e}")
+        # Still return success to avoid revealing email existence
+    
+    return {"message": "If this email is registered, a password reset link has been sent."}
+
+class ResetPasswordRequest(BaseModel):
+    """Request model for password reset."""
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=100)
+    
+    @validator('new_password')
+    def password_complexity(cls, v):
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.islower() for c in v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one digit')
+        return v
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+def reset_password(request: ResetPasswordRequest):
+    """
+    Resets a user's password using a valid reset token.
+    """
+    user_id = UserOperations.verify_reset_token(request.token)
+    
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Update the password
+    from auth import get_password_hash
+    password_hash = get_password_hash(request.new_password)
+    
+    try:
+        with get_db_cursor(commit=True) as cursor:
+            cursor.execute(
+                "UPDATE users SET password_hash = %s WHERE id = %s",
+                (password_hash, user_id)
+            )
+            # Delete the used token
+            cursor.execute(
+                "DELETE FROM password_reset_tokens WHERE user_id = %s",
+                (user_id,)
+            )
+        
+        logger.info(f"Password reset successful for user ID: {user_id}")
+        return {"message": "Password reset successfully"}
+    except Exception as e:
+        logger.error(f"Failed to reset password: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset password"
+        )
+
+# Import get_db_cursor at the top if not already imported
+from database import get_db_cursor

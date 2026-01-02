@@ -55,14 +55,23 @@ export const AuthProvider = ({ children }) => {
   }, [fetchCurrentUser]);
 
   // Signup function
-  const signup = async (username, email, password) => {
+  const signup = async (username, email, password, confirmPassword) => {
     // Axios throws an error for non-2xx responses, simplifying error handling.
     const response = await apiClient.post('/api/auth/signup', {
       username,
       email,
       password,
+      confirm_password: confirmPassword,
     });
     // On success, return the new user data.
+    return response.data;
+  };
+
+  // Resend verification email function
+  const resendVerificationEmail = async (email) => {
+    const response = await apiClient.post('/api/auth/resend-verification', null, {
+      params: { email },
+    });
     return response.data;
   };
 
@@ -101,6 +110,7 @@ export const AuthProvider = ({ children }) => {
     signup,
     login,
     logout,
+    resendVerificationEmail,
   };
 
   return (

@@ -7,31 +7,37 @@ import './Auth.css';
 const validate = (formData) => {
   const errors = {};
   if (!formData.username) {
-    errors.username = 'Username is required.';
+    errors.username = 'Username is required';
   } else if (formData.username.length < 3) {
-    errors.username = 'Username must be at least 3 characters.';
+    errors.username = 'Username must be at least 3 characters';
   } else if (formData.username.length > 50) {
-    errors.username = 'Username must be 50 characters or less.';
+    errors.username = 'Username must be 50 characters or less';
+  } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+    errors.username = 'Username can only contain letters, numbers, and underscores';
   }
   
   if (!formData.email) {
-    errors.email = 'Email is required.';
+    errors.email = 'Email is required';
   } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-    errors.email = 'Email address is invalid.';
+    errors.email = 'Email address is invalid';
   }
 
   if (!formData.password) {
-    errors.password = 'Password is required.';
-  } else if (formData.password.length < 6) {
-    errors.password = 'Password must be at least 6 characters.';
-  } else if (formData.password.length > 100) {
-    errors.password = 'Password must be 100 characters or less.';
+    errors.password = 'Password is required';
+  } else if (formData.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters';
+  } else if (!/[A-Z]/.test(formData.password)) {
+    errors.password = 'Password must contain at least one uppercase letter';
+  } else if (!/[a-z]/.test(formData.password)) {
+    errors.password = 'Password must contain at least one lowercase letter';
+  } else if (!/\d/.test(formData.password)) {
+    errors.password = 'Password must contain at least one digit';
   }
 
   if (!formData.passwordConfirm) {
-    errors.passwordConfirm = 'Please confirm your password.';
+    errors.passwordConfirm = 'Please confirm your password';
   } else if (formData.password !== formData.passwordConfirm) {
-    errors.passwordConfirm = 'Passwords do not match.';
+    errors.passwordConfirm = 'Passwords do not match';
   }
 
   return errors;
@@ -45,17 +51,41 @@ export default function Signup({ onSwitchToLogin, onSuccess }) {
     passwordConfirm: '',
   });
   
-  // State for validation errors that appear next to inputs
   const [fieldErrors, setFieldErrors] = useState({});
-  // State for a general API error message shown above the button
   const [apiError, setApiError] = useState('');
-  
   const [loading, setLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: '', color: '' });
   const { signup } = useAuth();
 
-  // Re-validate the form whenever the user types
+  // Calculate password strength
   useEffect(() => {
-    // Only show errors after the user has started typing
+    const password = formData.password;
+    if (!password) {
+      setPasswordStrength({ score: 0, text: '', color: '' });
+      return;
+    }
+
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+    if (/\d/.test(password)) score++;
+    if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+    const strengths = [
+      { text: 'Very Weak', color: '#ff4444' },
+      { text: 'Weak', color: '#ff8800' },
+      { text: 'Fair', color: '#ffbb00' },
+      { text: 'Good', color: '#88cc00' },
+      { text: 'Strong', color: '#00cc44' },
+    ];
+
+    setPasswordStrength({ score, ...strengths[Math.min(score, 4)] });
+  }, [formData.password]);
+
+  // Re-validate the form whenever the user types (only after they've started)
+  useEffect(() => {
     if (Object.values(formData).some(val => val !== '')) {
       setFieldErrors(validate(formData));
     }
@@ -63,42 +93,86 @@ export default function Signup({ onSwitchToLogin, onSuccess }) {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setApiError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setApiError('');
     
-    // Perform a final validation check on submit
     const validationErrors = validate(formData);
     setFieldErrors(validationErrors);
     
-    // If there are any errors, stop the form submission
     if (Object.keys(validationErrors).length > 0) {
       return;
     }
 
     setLoading(true);
     try {
-      await signup(formData.username, formData.email, formData.password);
-      if (onSuccess) onSuccess(); // Trigger success callback (e.g., show a message)
+      await signup(formData.username, formData.email, formData.password, formData.passwordConfirm);
+      setSignupSuccess(true);
     } catch (err) {
-      // Handle API errors (e.g., duplicate email/username)
-      if (err.response && err.response.status === 409) {
-        setApiError('An account with this email or username already exists.');
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          // Handle validation errors from backend
+          const errorMsg = detail.map(e => e.msg).join(', ');
+          setApiError(errorMsg);
+        } else if (detail.includes('email')) {
+          setApiError('Email already exists');
+        } else if (detail.includes('username')) {
+          setApiError('Username already taken');
+        } else {
+          setApiError(detail);
+        }
+      } else if (err.response?.status === 409) {
+        setApiError('An account with this email or username already exists');
       } else {
-        // Generic error for other issues
-        setApiError(err.response?.data?.detail || 'An unexpected error occurred. Please try again.');
+        setApiError('An unexpected error occurred. Please try again');
       }
     } finally {
       setLoading(false);
     }
   };
 
+  if (signupSuccess) {
+    return (
+      <motion.div
+        className="auth-container"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+      >
+        <div className="auth-box success-box">
+          <div className="success-icon">✓</div>
+          <h2>Account Created!</h2>
+          <p className="success-message">
+            We've sent a verification link to <strong>{formData.email}</strong>
+          </p>
+          <p className="success-submessage">
+            Please check your inbox and click the link to verify your email address.
+          </p>
+          <button
+            className="auth-button"
+            onClick={onSwitchToLogin}
+          >
+            Go to Login
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
-    <motion.div className="auth-container" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+    <motion.div
+      className="auth-container"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+    >
       <div className="auth-box">
         <h2>Create Account</h2>
+        <p className="auth-subtitle">Join EduSmart and start your learning journey</p>
+        
         <form onSubmit={handleSubmit} noValidate>
           <div className="input-group">
             <input
@@ -108,6 +182,7 @@ export default function Signup({ onSwitchToLogin, onSuccess }) {
               value={formData.username}
               onChange={handleChange}
               required
+              autoComplete="username"
               className={fieldErrors.username ? 'input-error' : ''}
             />
             {fieldErrors.username && <p className="auth-validation-error">{fieldErrors.username}</p>}
@@ -121,6 +196,7 @@ export default function Signup({ onSwitchToLogin, onSuccess }) {
               value={formData.email}
               onChange={handleChange}
               required
+              autoComplete="email"
               className={fieldErrors.email ? 'input-error' : ''}
             />
             {fieldErrors.email && <p className="auth-validation-error">{fieldErrors.email}</p>}
@@ -130,12 +206,29 @@ export default function Signup({ onSwitchToLogin, onSuccess }) {
             <input
               type="password"
               name="password"
-              placeholder="Password"
+              placeholder="Password (min. 8 characters)"
               value={formData.password}
               onChange={handleChange}
               required
+              autoComplete="new-password"
               className={fieldErrors.password ? 'input-error' : ''}
             />
+            {formData.password && (
+              <div className="password-strength">
+                <div className="password-strength-bar">
+                  <div
+                    className="password-strength-fill"
+                    style={{
+                      width: `${(passwordStrength.score / 4) * 100}%`,
+                      backgroundColor: passwordStrength.color,
+                    }}
+                  />
+                </div>
+                <span style={{ color: passwordStrength.color }}>
+                  {passwordStrength.text}
+                </span>
+              </div>
+            )}
             {fieldErrors.password && <p className="auth-validation-error">{fieldErrors.password}</p>}
           </div>
 
@@ -147,9 +240,28 @@ export default function Signup({ onSwitchToLogin, onSuccess }) {
               value={formData.passwordConfirm}
               onChange={handleChange}
               required
+              autoComplete="new-password"
               className={fieldErrors.passwordConfirm ? 'input-error' : ''}
             />
             {fieldErrors.passwordConfirm && <p className="auth-validation-error">{fieldErrors.passwordConfirm}</p>}
+          </div>
+
+          <div className="password-requirements">
+            <p>Password must contain:</p>
+            <ul>
+              <li className={formData.password.length >= 8 ? 'valid' : ''}>
+                At least 8 characters
+              </li>
+              <li className={/[A-Z]/.test(formData.password) ? 'valid' : ''}>
+                One uppercase letter
+              </li>
+              <li className={/[a-z]/.test(formData.password) ? 'valid' : ''}>
+                One lowercase letter
+              </li>
+              <li className={/\d/.test(formData.password) ? 'valid' : ''}>
+                One number
+              </li>
+            </ul>
           </div>
           
           {apiError && <p className="auth-error">{apiError}</p>}
@@ -158,8 +270,12 @@ export default function Signup({ onSwitchToLogin, onSuccess }) {
             {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
         </form>
+        
         <p className="auth-switch">
-          Already have an account? <a onClick={onSwitchToLogin}>Login</a>
+          Already have an account?{' '}
+          <button type="button" className="link-button" onClick={onSwitchToLogin}>
+            Login
+          </button>
         </p>
       </div>
     </motion.div>

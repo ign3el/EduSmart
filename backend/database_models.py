@@ -95,6 +95,18 @@ class UserOperations:
             return None
             
         return user
+    
+    @staticmethod
+    def authenticate_by_username(username: str, password: str) -> Optional[User]:
+        """Authenticates a user by username and password. Returns the user object if successful."""
+        user = UserOperations.get_by_username(username)
+        if not user:
+            return None
+        
+        if not verify_password(password, user['password_hash']):
+            return None
+            
+        return user
 
     @staticmethod
     def create_verification_token(user_id: int) -> str:
@@ -149,6 +161,81 @@ class UserOperations:
         except mysql.connector.Error as err:
             logger.error(f"Database error verifying token: {err}")
             return None
+    
+    @staticmethod
+    def create_password_reset_token(user_id: int) -> str:
+        """Creates and stores a new password reset token for a user."""
+        token = generate_secure_token()
+        expires_at = datetime.utcnow() + timedelta(hours=1)  # 1 hour expiry
+        
+        try:
+            with get_db_cursor(commit=True) as cursor:
+                # Delete any existing tokens for this user
+                cursor.execute("DELETE FROM password_reset_tokens WHERE user_id = %s", (user_id,))
+                query = "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (%s, %s, %s)"
+                cursor.execute(query, (user_id, token, expires_at))
+            return token
+        except mysql.connector.Error as err:
+            logger.error(f"Database error creating password reset token: {err}")
+            raise
+    
+    @staticmethod
+    def verify_reset_token(token: str) -> Optional[int]:
+        """
+        Verifies a password reset token and returns the user_id if valid.
+        Does not delete the token - that should be done after password is successfully reset.
+        """
+        try:
+            with get_db_cursor() as cursor:
+                query = "SELECT user_id FROM password_reset_tokens WHERE token = %s AND expires_at > NOW()"
+                cursor.execute(query, (token,))
+                result = cursor.fetchone()
+                return result['user_id'] if result else None
+        except mysql.connector.Error as err:
+            logger.error(f"Database error verifying reset token: {err}")
+            return None
+    
+    @staticmethod
+    def track_verification_email_sent(user_id: int) -> None:
+        """Records when a verification email was sent for cooldown tracking."""
+        try:
+            with get_db_cursor(commit=True) as cursor:
+                cursor.execute(
+                    "UPDATE users SET last_verification_sent = NOW() WHERE id = %s",
+                    (user_id,)
+                )
+        except mysql.connector.Error as err:
+            logger.error(f"Database error tracking verification email: {err}")
+    
+    @staticmethod
+    def check_verification_cooldown(user_id: int) -> int:
+        """
+        Checks if a user is in the cooldown period for resending verification emails.
+        Returns the number of seconds remaining in cooldown, or 0 if no cooldown.
+        """
+        try:
+            with get_db_cursor() as cursor:
+                cursor.execute(
+                    "SELECT last_verification_sent FROM users WHERE id = %s",
+                    (user_id,)
+                )
+                result = cursor.fetchone()
+                
+                if not result or not result['last_verification_sent']:
+                    return 0
+                
+                last_sent = result['last_verification_sent']
+                cooldown_duration = timedelta(minutes=3)
+                time_since_last = datetime.utcnow() - last_sent
+                
+                if time_since_last < cooldown_duration:
+                    remaining = cooldown_duration - time_since_last
+                    return int(remaining.total_seconds())
+                
+                return 0
+        except mysql.connector.Error as err:
+            logger.error(f"Database error checking verification cooldown: {err}")
+            return 0
 
 class StoryOperations:
     @staticmethod
