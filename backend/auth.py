@@ -48,7 +48,9 @@ def get_password_hash(password: str) -> str:
     password_bytes = password.encode('utf-8')
     # bcrypt has a hard 72-byte limit. We truncate the password bytes to prevent an error.
     truncated_bytes = password_bytes[:72]
-    return pwd_context.hash(truncated_bytes)
+    # Decode back to string because passlib expects a string, not bytes
+    truncated_string = truncated_bytes.decode('utf-8', errors='ignore')
+    return pwd_context.hash(truncated_string)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -58,7 +60,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     password_bytes = plain_password.encode('utf-8')
     truncated_bytes = password_bytes[:72]
-    return pwd_context.verify(truncated_bytes, hashed_password)
+    # Decode back to string because passlib expects a string, not bytes
+    truncated_string = truncated_bytes.decode('utf-8', errors='ignore')
+    return pwd_context.verify(truncated_string, hashed_password)
 
 # --- JWT Token Handling ---
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
