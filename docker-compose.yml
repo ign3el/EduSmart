@@ -42,6 +42,7 @@ services:
     restart: unless-stopped
     networks:
       - edusmart-network
+      - chatterbox-public
 
   frontend:
     build:
@@ -65,3 +66,5 @@ networks:
   edusmart-network:
     name: edusmart-network
     driver: bridge
+  chatterbox-public:
+    external: true

@@ -8,15 +8,17 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     espeak-ng \
     libsndfile1 \
+    git \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python dependencies (remove version pins to avoid build issues)
 RUN pip install --no-cache-dir \
     flask==3.0.0 \
-    TTS==0.22.0 \
-    numpy==1.24.3 \
-    torch==2.1.0 \
-    torchaudio==2.1.0
+    TTS \
+    numpy \
+    torch \
+    torchaudio
 
 # Create app file
 COPY app.py /app/
