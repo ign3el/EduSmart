@@ -4,7 +4,7 @@ A lightweight HTTP server for text-to-speech using Coqui TTS
 Supports multiple applications with optional API key authentication
 """
 from flask import Flask, request, jsonify, send_file
-from TTS.api import TTS
+from TTS.api import TTS  # type: ignore
 import io
 import logging
 import os

@@ -18,8 +18,17 @@ SMTP_PORT = int(os.getenv("MAIL_PORT", "587"))
 SMTP_USER = os.getenv("MAIL_USERNAME", "")
 SMTP_PASSWORD = os.getenv("MAIL_PASSWORD", "")
 FROM_EMAIL = os.getenv("MAIL_FROM", "EduSmart <noreply@edusmart.com>")
-FRONTEND_URL = os.getenv("APP_URL", "http://localhost:5173")
+# Use APP_URL for production, fallback to FRONTEND_URL for dev
+FRONTEND_URL = os.getenv("APP_URL") or os.getenv("FRONTEND_URL", "http://localhost:5173")
 MAIL_STARTTLS = os.getenv("MAIL_STARTTLS", "True").lower() == "true"
+
+# Log configuration on startup
+logger.info(f"Email Service Configuration:")
+logger.info(f"  Backend: {EMAIL_BACKEND}")
+logger.info(f"  SMTP Host: {SMTP_HOST}:{SMTP_PORT}")
+logger.info(f"  From Email: {FROM_EMAIL}")
+logger.info(f"  Frontend URL: {FRONTEND_URL}")
+logger.info(f"  STARTTLS: {MAIL_STARTTLS}")
 
 def send_email(to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
     """
@@ -64,7 +73,7 @@ def _send_smtp_email(to_email: str, subject: str, html_content: str, text_conten
     """Send email via SMTP"""
     try:
         if not SMTP_USER or not SMTP_PASSWORD:
-            logger.error("SMTP credentials not configured. Set SMTP_USER and SMTP_PASSWORD in .env")
+            logger.error("SMTP credentials not configured. Set MAIL_USERNAME and MAIL_PASSWORD in .env")
             return False
         
         # Create message
@@ -72,6 +81,12 @@ def _send_smtp_email(to_email: str, subject: str, html_content: str, text_conten
         msg['Subject'] = subject
         msg['From'] = FROM_EMAIL
         msg['To'] = to_email
+        
+        # NOTE: Gmail SMTP overrides the FROM address with the authenticated user's email
+        # To use a custom FROM address (like edusmart@ign3el.com):
+        # 1. Add the custom email as an alias in Gmail Settings > Accounts > "Send mail as"
+        # 2. OR use a different SMTP provider (SendGrid, AWS SES, Mailgun, etc.)
+        # 3. OR use your domain's SMTP server if available
         
         # Attach plain text and HTML
         if text_content:
