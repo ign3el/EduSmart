@@ -8,12 +8,16 @@ import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
-from dotenv import load_dotenv
+# Load environment variables from .env file if available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # dotenv not installed, use system environment variables
+    pass
+
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-
-# Load environment variables from .env file
-load_dotenv()
 
 # --- Configuration ---
 # It is CRITICAL that JWT_SECRET is set in a production environment.
