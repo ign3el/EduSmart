@@ -75,7 +75,7 @@ class JobStateManager:
                 VALUES (?, ?, ?, ?, ?)
             """, (story_id, "processing", title, grade_level, total_scenes))
     
-    def create_scene(self, story_id: str, scene_index: int, text: str, character_prompt: str = None):
+    def create_scene(self, story_id: str, scene_index: int, text: str, character_prompt: Optional[str] = None):
         """Create a new scene for tracking."""
         scene_id = f"{story_id}_scene_{scene_index}"
         with self._get_conn() as conn:
@@ -85,7 +85,7 @@ class JobStateManager:
             """, (scene_id, story_id, scene_index, text, character_prompt))
         return scene_id
     
-    def update_scene_image(self, scene_id: str, status: str, image_url: str = None):
+    def update_scene_image(self, scene_id: str, status: str, image_url: Optional[str] = None):
         """Update scene image status."""
         with self._get_conn() as conn:
             conn.execute("""
@@ -95,7 +95,7 @@ class JobStateManager:
             """, (status, image_url, scene_id))
             self._check_story_completion(scene_id)
     
-    def update_scene_audio(self, scene_id: str, status: str, audio_url: str = None):
+    def update_scene_audio(self, scene_id: str, status: str, audio_url: Optional[str] = None):
         """Update scene audio status."""
         with self._get_conn() as conn:
             conn.execute("""
@@ -180,7 +180,7 @@ class JobStateManager:
             
             return [dict(row) for row in rows]
     
-    def mark_story_failed(self, story_id: str, error: str = None):
+    def mark_story_failed(self, story_id: str, error: Optional[str] = None):
         """Mark story as failed."""
         with self._get_conn() as conn:
             conn.execute("""

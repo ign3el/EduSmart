@@ -234,12 +234,8 @@ Transform the document into JSON format with this exact structure:
                     contents=[
                         types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
                         teacher_prompt,
-                        "Also include document analysis context in your story design"
-                    ],
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=StorySchema,
-                    )
+                        "Also include document analysis context in your story design. Return valid JSON only."
+                    ]
                 )
             
             response = self._call_with_exponential_backoff(_generate_story)

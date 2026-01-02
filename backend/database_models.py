@@ -2,7 +2,7 @@
 Database models and operations for users and stories.
 """
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, TypedDict
+from typing import Optional, Dict, Any
 import logging
 import json
 import mysql.connector
@@ -12,15 +12,8 @@ from auth import get_password_hash, verify_password, generate_secure_token
 
 logger = logging.getLogger(__name__)
 
-class User(TypedDict):
-    id: int
-    email: str
-    username: str
-    password_hash: str
-    is_verified: bool
-    is_premium: bool
-    created_at: datetime
-    updated_at: datetime
+# Use Dict instead of TypedDict to avoid required field errors
+User = Dict[str, Any]
 
 class UserOperations:
     @staticmethod

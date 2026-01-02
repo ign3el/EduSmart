@@ -15,7 +15,7 @@ Backend Services Package
 This package contains all the core AI services for EduSmart.
 """
 
-from .gemini_service import GeminiService
+from .story_service import GeminiService
 
 __all__ = [
     'GeminiService',

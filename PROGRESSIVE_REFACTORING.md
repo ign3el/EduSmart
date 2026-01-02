@@ -143,7 +143,7 @@ docker-compose up -d --build
 
 ### Mobile Optimizations
 
-1. **Lower Image Resolution**: Target 768×768 (adjustable in `gemini_service.py`)
+1. **Lower Image Resolution**: Target 768×768 (adjustable in `story_service.py`)
 2. **Lazy Loading**: Images load only when scene is visited
 3. **Audio Streaming**: No preloading, plays on-demand
 4. **Progressive Rendering**: Text shows immediately, media fills in

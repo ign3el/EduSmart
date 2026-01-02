@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 # Import the new, clean refactored modules
 from database import initialize_database
 from routers.auth import router as auth_router
-from services.gemini_service import GeminiService
+from services.story_service import GeminiService
 from services.chatterbox_client import chatterbox
 from job_state import job_manager
 from typing import Optional
@@ -136,7 +136,7 @@ async def get_avatars():
 async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "en-US-JennyNeural", story_seed: Optional[int] = None):
     try:
         img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"], scene.get("text", ""), story_seed)
-        aud_task = asyncio.to_thread(chatterbox.generate_audio, scene["text"], voice)
+        aud_task = chatterbox.generate_audio(scene["text"], voice)
         
         image_bytes, audio_bytes = await asyncio.gather(img_task, aud_task, return_exceptions=False)
 

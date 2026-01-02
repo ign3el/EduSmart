@@ -31,6 +31,8 @@ services:
       - MAIL_FROM=${MAIL_FROM}
       - MAIL_PORT=${MAIL_PORT:-587}
       - MAIL_SERVER=${MAIL_SERVER:-smtp.gmail.com}
+      # Chatterbox TTS Configuration
+      - CHATTERBOX_URL=http://chatterbox-tts:5000
     volumes:
       - ./backend:/app
       - ./backend/outputs:/app/outputs
@@ -61,4 +63,5 @@ volumes:
 
 networks:
   edusmart-network:
+    name: edusmart-network
     driver: bridge
