@@ -14,6 +14,7 @@ class ChatterboxClient:
     def __init__(self):
         # Chatterbox TTS endpoint (self-hosted)
         self.base_url = os.getenv("CHATTERBOX_URL", "http://localhost:8001")
+        self.api_key = os.getenv("CHATTERBOX_API_KEY", None)
         self.timeout = 60  # Longer timeout for TTS generation
     
     def _detect_language_and_voice(self, text: str, default_voice: str = "en-US-JennyNeural") -> str:
@@ -42,6 +43,11 @@ class ChatterboxClient:
             # Auto-detect language
             selected_voice = self._detect_language_and_voice(text, voice)
             
+            # Prepare headers
+            headers = {"Content-Type": "application/json"}
+            if self.api_key:
+                headers["X-API-Key"] = self.api_key
+            
             # Call Chatterbox API
             response = await asyncio.to_thread(
                 requests.post,
@@ -52,6 +58,7 @@ class ChatterboxClient:
                     "rate": 0.9,  # Slightly slower for clarity
                     "format": "mp3"
                 },
+                headers=headers,
                 timeout=self.timeout
             )
             

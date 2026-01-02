@@ -1,15 +1,34 @@
 """
 Chatterbox TTS Service
 A lightweight HTTP server for text-to-speech using Coqui TTS
+Supports multiple applications with optional API key authentication
 """
 from flask import Flask, request, jsonify, send_file
 from TTS.api import TTS
 import io
 import logging
+import os
+from functools import wraps
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Configuration
+API_KEY = os.getenv('API_KEY', None)
+MAX_TEXT_LENGTH = int(os.getenv('MAX_TEXT_LENGTH', 1000))
+ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*')
+
+# API Key middleware
+def require_api_key(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if API_KEY:
+            provided_key = request.headers.get('X-API-Key')
+            if provided_key != API_KEY:
+                return jsonify({"error": "Invalid or missing API key"}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Initialize TTS model (using fast, lightweight model)
 # jenny_xtts_v2 is a good quality English model
@@ -26,11 +45,13 @@ def health():
     return jsonify({"status": "healthy", "model_loaded": tts is not None}), 200
 
 @app.route('/tts', methods=['POST'])
+@require_api_key
 def generate_tts():
     """
     Generate TTS audio from text
     Request body: {"text": "...", "voice": "en-US-JennyNeural"}
-    Returns: MP3 audio file
+    Headers: X-API-Key: your-api-key (if API_KEY is set)
+    Returns: WAV audio file
     """
     try:
         data = request.get_json()
@@ -39,6 +60,9 @@ def generate_tts():
         
         if not text:
             return jsonify({"error": "No text provided"}), 400
+        
+        if len(text) > MAX_TEXT_LENGTH:
+            return jsonify({"error": f"Text too long (max {MAX_TEXT_LENGTH} chars)"}), 400
         
         if not tts:
             return jsonify({"error": "TTS model not loaded"}), 503

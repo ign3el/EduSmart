@@ -1,0 +1,33 @@
+# Chatterbox TTS - Standalone Microservice
+# Shared TTS service for multiple applications
+
+services:
+  chatterbox-tts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatterbox-tts
+    ports:
+      - "5000:5000"
+    environment:
+      - API_KEY=${API_KEY:-your-secret-api-key}
+      - MAX_TEXT_LENGTH=${MAX_TEXT_LENGTH:-1000}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+    volumes:
+      - tts_cache:/root/.local/share/tts
+    restart: unless-stopped
+    networks:
+      - chatterbox-public
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  tts_cache:
+
+networks:
+  chatterbox-public:
+    name: chatterbox-public
+    driver: bridge
