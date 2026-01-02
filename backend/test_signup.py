@@ -87,7 +87,13 @@ def test_database_insert(password_hash):
             result = cursor.fetchone()
             
             if result:
-                stored_id, stored_email, stored_username, stored_hash, stored_hash_len = result
+                # Result is a dictionary (MySQL cursor with dictionary=True)
+                stored_id = result['id']
+                stored_email = result['email']
+                stored_username = result['username']
+                stored_hash = result['password_hash']
+                stored_hash_len = result['hash_len']
+                
                 print(f"✅ User retrieved from database")
                 print(f"   ID: {stored_id}")
                 print(f"   Email: {stored_email}")
