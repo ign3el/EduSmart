@@ -26,11 +26,15 @@ services:
       # JWT Configuration
       - JWT_SECRET=${JWT_SECRET}
       # Email Configuration
+      - EMAIL_BACKEND=${EMAIL_BACKEND:-smtp}
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
       - MAIL_FROM=${MAIL_FROM}
       - MAIL_PORT=${MAIL_PORT:-587}
       - MAIL_SERVER=${MAIL_SERVER:-smtp.gmail.com}
+      - MAIL_STARTTLS=${MAIL_STARTTLS:-True}
+      - MAIL_SSL_TLS=${MAIL_SSL_TLS:-False}
+      - APP_URL=${APP_URL:-https://edusmart.ign3el.com}
       # Chatterbox TTS Configuration
       - CHATTERBOX_URL=http://chatterbox-tts:5000
     volumes:
