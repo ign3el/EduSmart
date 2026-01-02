@@ -151,10 +151,13 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    logger.info(f"User found: {user['email']}, is_verified: {user.get('is_verified', False)}")
         
     # Optional: Check if the user's email has been verified.
     # This is a good security practice.
     if not user['is_verified']:
+        logger.warning(f"Login blocked for unverified user: {user['email']}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified. Please check your inbox for a verification link.",

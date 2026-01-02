@@ -24,10 +24,7 @@ export default function VerifyEmail() {
       try {
         await axios.get(`${API_URL}/api/auth/verify-email?token=${token}`);
         setStatus('success');
-        setMessage('Your email has been verified successfully!');
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
+        setMessage('Your email has been verified successfully! You can now log in to your account.');
       } catch (err) {
         setStatus('error');
         if (err.response?.data?.detail) {
@@ -68,7 +65,13 @@ export default function VerifyEmail() {
               <div className="success-icon">✓</div>
               <h2>Email Verified!</h2>
               <p>{message}</p>
-              <p className="redirect-message">Redirecting to login...</p>
+              <button
+                className="auth-button"
+                onClick={() => navigate('/login')}
+                style={{ marginTop: '20px' }}
+              >
+                Go to Login
+              </button>
             </>
           )}
 

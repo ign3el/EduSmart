@@ -130,7 +130,9 @@ class UserOperations:
         try:
             with get_db_cursor(commit=True) as cursor:
                 cursor.execute("UPDATE users SET is_verified = TRUE WHERE id = %s", (user_id,))
-                return cursor.rowcount > 0
+                rows_affected = cursor.rowcount
+                logger.info(f"set_verified for user {user_id}: {rows_affected} rows updated")
+                return rows_affected > 0
         except mysql.connector.Error as err:
             logger.error(f"Database error setting verified status: {err}")
             return False
@@ -143,20 +145,30 @@ class UserOperations:
         """
         try:
             with get_db_cursor(commit=True) as cursor:
+                # Check if token exists and is not expired
                 query = "SELECT user_id FROM email_verifications WHERE token = %s AND expires_at > NOW()"
                 cursor.execute(query, (token,))
                 result = cursor.fetchone()
                 
                 if not result:
+                    logger.warning(f"Verification token not found or expired: {token[:20]}...")
                     return None
                     
                 user_id = result['user_id']
+                logger.info(f"Found verification token for user ID: {user_id}")
                 
-                if UserOperations.set_verified(user_id):
-                    logger.info(f"Email successfully verified for user ID: {user_id}")
+                # Update user's is_verified status
+                cursor.execute("UPDATE users SET is_verified = TRUE WHERE id = %s", (user_id,))
+                rows_updated = cursor.rowcount
+                logger.info(f"Updated is_verified for user {user_id}: {rows_updated} rows affected")
+                
+                if rows_updated > 0:
+                    # Delete the used token
                     cursor.execute("DELETE FROM email_verifications WHERE token = %s", (token,))
+                    logger.info(f"✅ Email successfully verified for user ID: {user_id}")
                     return user_id
                 else:
+                    logger.error(f"Failed to update is_verified for user {user_id}")
                     return None
         except mysql.connector.Error as err:
             logger.error(f"Database error verifying token: {err}")
