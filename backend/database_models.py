@@ -31,16 +31,28 @@ class UserOperations:
             with get_db_cursor(commit=True) as cursor:
                 query = "INSERT INTO users (email, username, password_hash) VALUES (%s, %s, %s)"
                 cursor.execute(query, (email.lower(), username, password_hash))
+                
+                if cursor.rowcount == 0:
+                    logger.error("User creation failed unexpectedly (rowcount is 0).")
+                    return None
+
                 user_id = cursor.lastrowid
-                if user_id:
-                    logger.info(f"User '{username}' created with ID: {user_id}")
-                    return UserOperations.get_by_id(user_id)
-                return None
+                logger.info(f"User '{username}' created with ID: {user_id}")
+                
+                # Construct a partial User object. This is more efficient than calling get_by_id.
+                new_user: User = {
+                    "id": user_id,
+                    "email": email.lower(),
+                    "username": username,
+                    "is_verified": False,
+                    "is_premium": False,
+                }
+                return new_user
         except mysql.connector.IntegrityError:
-            logger.warning(f"Failed to create user. Email '{email}' or username '{username}' may already exist.")
+            logger.warning(f"IntegrityError on user creation for '{username}'. Likely a duplicate email or username.")
             return None
         except mysql.connector.Error as err:
-            logger.error(f"Database error during user creation: {err}")
+            logger.error(f"Database error during user creation for '{username}': {err}")
             return None
 
     @staticmethod
