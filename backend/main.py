@@ -19,6 +19,8 @@ from dotenv import load_dotenv
 from database import initialize_database
 from routers.auth import router as auth_router
 from services.gemini_service import GeminiService
+from services.chatterbox_client import chatterbox
+from job_state import job_manager
 from typing import Optional
 
 # Load environment variables from .env file
@@ -134,7 +136,7 @@ async def get_avatars():
 async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "en-US-JennyNeural", story_seed: Optional[int] = None):
     try:
         img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"], scene.get("text", ""), story_seed)
-        aud_task = asyncio.to_thread(gemini.generate_voiceover, scene["text"], voice)
+        aud_task = asyncio.to_thread(chatterbox.generate_audio, scene["text"], voice)
         
         image_bytes, audio_bytes = await asyncio.gather(img_task, aud_task, return_exceptions=False)
 
@@ -147,7 +149,7 @@ async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "e
         if not audio_bytes:
             logger.warning(f"Audio retry for scene {i}...")
             await asyncio.sleep(2)
-            audio_bytes = await asyncio.to_thread(gemini.generate_voiceover, scene["text"], voice)
+            audio_bytes = await chatterbox.generate_audio(scene["text"], voice)
         
         if audio_bytes:
             aud_name = f"{job_id}_scene_{i}.mp3"
@@ -160,47 +162,199 @@ async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "e
     except Exception as e:
         logger.error(f"Failed to generate media for Scene {i}: {e}")
 
-async def run_ai_workflow(job_id: str, file_path: str, grade_level: str, voice: str = "en-US-JennyNeural"):
+async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_index: int, scene: dict, voice: str, story_seed: int):
+    """
+    Generate image and audio for a scene IN PARALLEL.
+    Updates job state as each completes.
+    """
+    character_prompt = scene.get("image_description", "")
+    text = scene.get("text", "")
+    
+    async def generate_image():
+        try:
+            if not character_prompt:
+                job_manager.update_scene_image(scene_id, "skipped")
+                return
+            
+            job_manager.update_scene_image(scene_id, "processing")
+            img_bytes = await asyncio.to_thread(
+                gemini.generate_image,
+                character_prompt,
+                text,
+                story_seed
+            )
+            
+            if img_bytes:
+                img_name = f"scene_{scene_index}.png"
+                img_path = os.path.join("outputs", story_id, img_name)
+                os.makedirs(os.path.dirname(img_path), exist_ok=True)
+                with open(img_path, "wb") as f:
+                    f.write(img_bytes)
+                job_manager.update_scene_image(scene_id, "completed", f"/api/outputs/{story_id}/{img_name}")
+                logger.info(f"✓ Scene {scene_index} image complete")
+            else:
+                job_manager.update_scene_image(scene_id, "failed")
+                logger.error(f"✗ Scene {scene_index} image failed")
+        except Exception as e:
+            logger.error(f"✗ Scene {scene_index} image error: {e}")
+            job_manager.update_scene_image(scene_id, "failed")
+    
+    async def generate_audio():
+        try:
+            if not text:
+                job_manager.update_scene_audio(scene_id, "skipped")
+                return
+            
+            job_manager.update_scene_audio(scene_id, "processing")
+            audio_bytes = await chatterbox.generate_audio(text, voice)
+            
+            if audio_bytes:
+                aud_name = f"scene_{scene_index}.mp3"
+                aud_path = os.path.join("outputs", story_id, aud_name)
+                os.makedirs(os.path.dirname(aud_path), exist_ok=True)
+                with open(aud_path, "wb") as f:
+                    f.write(audio_bytes)
+                job_manager.update_scene_audio(scene_id, "completed", f"/api/outputs/{story_id}/{aud_name}")
+                logger.info(f"✓ Scene {scene_index} audio complete")
+            else:
+                job_manager.update_scene_audio(scene_id, "failed")
+                logger.error(f"✗ Scene {scene_index} audio failed")
+        except Exception as e:
+            logger.error(f"✗ Scene {scene_index} audio error: {e}")
+            job_manager.update_scene_audio(scene_id, "failed")
+    
+    # Run image and audio generation IN PARALLEL
+    await asyncio.gather(generate_image(), generate_audio())
+
+async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level: str, voice: str = "en-US-JennyNeural"):
+    """
+    Progressive story generation workflow:
+    1. Generate story structure
+    2. Create scene records immediately
+    3. Process scenes in parallel (images + audio per scene)
+    """
     try:
-        jobs[job_id]["progress"] = 10
+        # Generate story structure
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
         if not story_data:
             raise Exception("AI failed to generate story content.")
-
-        jobs[job_id]["progress"] = 30
-        story_seed = int(uuid.uuid4().hex[:8], 16)
-
+        
         scenes = story_data.get("scenes", [])
+        title = story_data.get("title", "Untitled Story")
         
-        batch = [generate_scene_media(job_id, i, scene, voice, story_seed) for i, scene in enumerate(scenes)]
-        await asyncio.gather(*batch)
+        # Initialize job state
+        job_manager.create_story(story_id, title, grade_level, len(scenes))
         
-        logger.info(f"✓ All {len(scenes)} scenes complete.")
-
-        jobs[job_id]["progress"] = 100
-        jobs[job_id]["status"] = "completed"
-        story_data["upload_url"] = f"/api/uploads/{os.path.basename(file_path)}"
-        jobs[job_id]["result"] = story_data
+        # Create scene records immediately (text is ready)
+        scene_ids = []
+        for i, scene in enumerate(scenes):
+            scene_id = job_manager.create_scene(
+                story_id, 
+                i, 
+                scene.get("text", ""),
+                scene.get("image_prompt", "")
+            )
+            scene_ids.append(scene_id)
+        
+        logger.info(f"✓ Story structure ready: {len(scenes)} scenes")
+        
+        # Generate media for all scenes in parallel
+        story_seed = int(uuid.uuid4().hex[:8], 16)
+        tasks = [
+            generate_scene_media_progressive(story_id, scene_ids[i], i, scene, voice, story_seed)
+            for i, scene in enumerate(scenes)
+        ]
+        await asyncio.gather(*tasks, return_exceptions=True)
+        
+        logger.info(f"✓ All media generation complete for story {story_id}")
+        
     except Exception as e:
         logger.error(f"AI Workflow Error: {e}")
-        jobs[job_id]["status"] = "failed"
-        jobs[job_id]["error"] = str(e)
+        job_manager.mark_story_failed(story_id, str(e))
 
 @app.post("/api/upload")
 async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = File(...), grade_level: str = Form("Grade 4"), voice: str = Form("en-US-JennyNeural")):
-    job_id = str(uuid.uuid4())
-    upload_path = os.path.join("uploads", f"{job_id}_{file.filename}")
+    story_id = str(uuid.uuid4())
+    upload_path = os.path.join("uploads", f"{story_id}_{file.filename}")
     with open(upload_path, "wb") as f:
         f.write(await file.read())
     
-    jobs[job_id] = {"status": "processing", "progress": 0, "result": None, "upload_path": upload_path}
-    background_tasks.add_task(run_ai_workflow, job_id, upload_path, grade_level, voice)
-    return {"job_id": job_id}
+    # Use progressive workflow
+    background_tasks.add_task(run_ai_workflow_progressive, story_id, upload_path, grade_level, voice)
+    return {"story_id": story_id}
+
+
+# Progressive endpoints for scene-by-scene loading
+@app.get("/api/story/{story_id}/status")
+async def get_story_status(story_id: str):
+    """Get overall story status with scene completion info."""
+    status = job_manager.get_story_status(story_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Story not found")
+    
+    scenes = job_manager.get_all_scenes(story_id)
+    return {
+        "story_id": story_id,
+        "status": status["status"],
+        "title": status["title"],
+        "total_scenes": status["total_scenes"],
+        "completed_scenes": status["completed_scenes"],
+        "scenes": [
+            {
+                "scene_index": s["scene_index"],
+                "text": s["text"],
+                "image_status": s["image_status"],
+                "audio_status": s["audio_status"],
+                "image_url": s["image_url"],
+                "audio_url": s["audio_url"]
+            }
+            for s in scenes
+        ]
+    }
+
+
+@app.get("/api/story/{story_id}/scene/{scene_index}")
+async def get_scene_status(story_id: str, scene_index: int):
+    """Get specific scene data."""
+    scene_id = f"{story_id}_scene_{scene_index}"
+    scene = job_manager.get_scene(scene_id)
+    if not scene:
+        raise HTTPException(status_code=404, detail="Scene not found")
+    
+    return {
+        "scene_index": scene["scene_index"],
+        "text": scene["text"],
+        "image_status": scene["image_status"],
+        "audio_status": scene["audio_status"],
+        "image_url": scene["image_url"],
+        "audio_url": scene["audio_url"]
+    }
 
 
 @app.get("/api/status/{job_id}")
 async def get_status(job_id: str):
+    # Check if it's a progressive story
+    status = job_manager.get_story_status(job_id)
+    if status:
+        scenes = job_manager.get_all_scenes(job_id)
+        return {
+            "status": status["status"],
+            "progress": int((status["completed_scenes"] / status["total_scenes"]) * 100) if status["total_scenes"] > 0 else 0,
+            "result": {
+                "title": status["title"],
+                "scenes": [
+                    {
+                        "text": s["text"],
+                        "image_url": s["image_url"],
+                        "audio_url": s["audio_url"]
+                    }
+                    for s in scenes
+                ]
+            }
+        }
+    
+    # Fall back to old job system
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     return jobs[job_id]

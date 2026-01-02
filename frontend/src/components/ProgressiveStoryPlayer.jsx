@@ -1,0 +1,204 @@
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiPlay, FiPause, FiSkipForward, FiSkipBack, FiRotateCw, FiLoader } from 'react-icons/fi';
+import './StoryPlayer.css';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+/**
+ * Progressive Story Player
+ * - Displays scenes as they become available
+ * - Polls story status for progressive loading
+ * - Shows skeleton/spinner for incomplete scenes
+ */
+function ProgressiveStoryPlayer({ storyId, avatar, onRestart, onSave, isSaved = false }) {
+  const [scenes, setScenes] = useState([]);
+  const [currentScene, setCurrentScene] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [storyStatus, setStoryStatus] = useState('processing');
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const audioRef = useRef(null);
+  
+  // Poll for story status
+  useEffect(() => {
+    let pollInterval;
+    
+    const fetchStatus = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/story/${storyId}/status`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        setStoryStatus(data.status);
+        setScenes(data.scenes || []);
+        
+        // Stop polling when complete
+        if (data.status === 'completed') {
+          clearInterval(pollInterval);
+        }
+      } catch (error) {
+        console.error('Failed to fetch story status:', error);
+      }
+    };
+    
+    fetchStatus(); // Initial fetch
+    pollInterval = setInterval(fetchStatus, 3000); // Poll every 3s
+    
+    return () => clearInterval(pollInterval);
+  }, [storyId]);
+  
+  const scene = scenes[currentScene];
+  const isSceneReady = scene && 
+    scene.image_status === 'completed' && 
+    scene.audio_status === 'completed';
+  
+  // Handle audio playback
+  useEffect(() => {
+    if (!audioRef.current || !isSceneReady) return;
+    
+    if (isPlaying) {
+      audioRef.current.play().catch(err => {
+        console.error('Audio play failed:', err);
+        setIsPlaying(false);
+      });
+    } else {
+      audioRef.current.pause();
+    }
+  }, [isPlaying, isSceneReady]);
+  
+  // Reset on scene change
+  useEffect(() => {
+    setIsPlaying(false);
+    setImageLoaded(false);
+    
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      if (isSceneReady) {
+        audioRef.current.src = `${API_URL}${scene.audio_url}`;
+        audioRef.current.load();
+      }
+    }
+  }, [currentScene, isSceneReady, scene?.audio_url]);
+  
+  const handleNext = () => {
+    if (currentScene < scenes.length - 1) {
+      setCurrentScene(currentScene + 1);
+    }
+  };
+  
+  const handlePrev = () => {
+    if (currentScene > 0) {
+      setCurrentScene(currentScene - 1);
+    }
+  };
+  
+  if (!scene) {
+    return (
+      <div className="story-player">
+        <div className="loading-state">
+          <FiLoader className="spinner" />
+          <p>Generating your story...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="story-player">
+      {/* Progress indicator */}
+      <div className="story-progress-bar">
+        <div 
+          className="progress-fill" 
+          style={{ width: `${((currentScene + 1) / scenes.length) * 100}%` }}
+        />
+      </div>
+      
+      <div className="scene-container">
+        {/* Image with skeleton loading */}
+        <div className="scene-image-wrapper">
+          {!isSceneReady || !imageLoaded ? (
+            <div className="skeleton-image">
+              <FiLoader className="spinner" />
+              <p>Generating scene {currentScene + 1}...</p>
+            </div>
+          ) : (
+            <motion.img
+              key={currentScene}
+              src={`${API_URL}${scene.image_url}`}
+              alt={`Scene ${currentScene + 1}`}
+              className="scene-image"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onLoad={() => setImageLoaded(true)}
+            />
+          )}
+          
+          {/* Avatar overlay */}
+          {avatar && imageLoaded && (
+            <div className="avatar-overlay">
+              <img src={`/avatars/${avatar}.png`} alt="Avatar" />
+            </div>
+          )}
+        </div>
+        
+        {/* Text */}
+        <div className="scene-text">
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={currentScene}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              {scene.text || 'Loading...'}
+            </motion.p>
+          </AnimatePresence>
+        </div>
+        
+        {/* Controls */}
+        <div className="player-controls">
+          <button onClick={handlePrev} disabled={currentScene === 0}>
+            <FiSkipBack />
+          </button>
+          
+          <button 
+            onClick={() => setIsPlaying(!isPlaying)} 
+            disabled={!isSceneReady}
+            className="play-btn"
+          >
+            {isPlaying ? <FiPause /> : <FiPlay />}
+          </button>
+          
+          <button onClick={handleNext} disabled={currentScene === scenes.length - 1}>
+            <FiSkipForward />
+          </button>
+        </div>
+        
+        {/* Scene counter */}
+        <div className="scene-counter">
+          Scene {currentScene + 1} / {scenes.length}
+        </div>
+        
+        {/* Action buttons */}
+        <div className="action-buttons">
+          <button onClick={onRestart}>
+            <FiRotateCw /> New Story
+          </button>
+          {!isSaved && storyStatus === 'completed' && (
+            <button onClick={onSave} className="save-btn">
+              Save Story
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Hidden audio element */}
+      {isSceneReady && (
+        <audio ref={audioRef} style={{ display: 'none' }} />
+      )}
+    </div>
+  );
+}
+
+export default ProgressiveStoryPlayer;
