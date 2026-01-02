@@ -6,7 +6,6 @@ import io
 import wave
 import asyncio
 import requests
-import edge_tts
 from urllib.parse import quote
 from typing import Optional, Any
 from google import genai
@@ -534,76 +533,5 @@ Transform the document into JSON format with this exact structure:
             print(f"RunPod FLUX/ComfyUI error: {str(e)[:120]}")
             return None
 
-    def _detect_language_and_voice(self, text: str, default_voice: str) -> str:
-        """Detect text language and return appropriate TTS voice."""
-        # Check if text contains Arabic characters
-        arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF' or '\u0750' <= c <= '\u077F')
-        total_chars = sum(1 for c in text if c.isalpha())
-        
-        if total_chars > 0 and arabic_chars / total_chars > 0.3:
-            # Arabic text detected - use Arabic voice
-            return "ar-SA-HamedNeural"  # Saudi Arabic male voice, clear for kids
-        
-        # For other languages, use the provided voice (usually English)
-        return default_voice
-
-    def generate_voiceover(self, text: str, voice: str = "en-US-JennyNeural") -> Optional[bytes]:
-        """Generate TTS audio using Microsoft Edge-TTS (free, unlimited, ARM-compatible)."""
-        async def _generate_edge_tts():
-            try:
-                # Auto-detect language and select appropriate voice
-                selected_voice = self._detect_language_and_voice(text, voice)
-                
-                # Use Microsoft Edge TTS with natural voice optimized for kids
-                communicate = edge_tts.Communicate(
-                    text, 
-                    voice=selected_voice,
-                    rate="-10%",  # Slightly slower for clarity with kids
-                    volume="+0%"
-                )
-                
-                # Use absolute temp file path to avoid Docker path issues
-                import tempfile
-                temp_dir = tempfile.gettempdir()
-                temp_file = os.path.join(temp_dir, f"temp_audio_{os.getpid()}_{int(time.time() * 1000)}.mp3")
-                
-                # Save audio to temp file
-                await communicate.save(temp_file)
-                
-                # Retry with exponential backoff if file not ready
-                audio_bytes = None
-                for attempt in range(5):
-                    try:
-                        await asyncio.sleep(0.05 * (attempt + 1))  # 50ms, 100ms, 150ms, 200ms, 250ms
-                        if os.path.exists(temp_file):
-                            with open(temp_file, 'rb') as f:
-                                audio_bytes = f.read()
-                            break
-                    except Exception as read_error:
-                        if attempt == 4:
-                            raise read_error
-                        continue
-                
-                if not audio_bytes:
-                    raise FileNotFoundError(f"Failed to read temp audio file after retries: {temp_file}")
-                
-                # Clean up temp file safely
-                try:
-                    if os.path.exists(temp_file):
-                        os.remove(temp_file)
-                except Exception as cleanup_error:
-                    print(f"Temp file cleanup warning: {cleanup_error}")
-                
-                print(f"✓ Audio generated via Edge-TTS: {len(audio_bytes)} bytes")
-                return audio_bytes
-                
-            except Exception as e:
-                print(f"Edge-TTS error: {e}")
-                return None
-        
-        # Run async function synchronously (FastAPI compatible)
-        try:
-            return asyncio.run(_generate_edge_tts())
-        except Exception as e:
-            print(f"AUDIO GENERATION FAILED: {e}")
-            return None
+    # TTS generation removed - now handled by external Chatterbox service via HTTP
+    # See services/chatterbox_client.py for TTS implementation
