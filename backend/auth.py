@@ -17,7 +17,7 @@ except ImportError:
     pass
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 
 # --- Configuration ---
 # It is CRITICAL that JWT_SECRET is set in a production environment.
@@ -34,23 +34,22 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 # --- Password Hashing ---
-# Create a password context for bcrypt.
-# This handles all the complexity of salting and hashing.
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 def get_password_hash(password: str) -> str:
     """
     Hashes a password using bcrypt.
     
-    This function correctly handles the 72-byte limit of the bcrypt algorithm
-    by encoding the password to UTF-8 and then truncating to 72 bytes before hashing.
+    Handles the 72-byte limit of the bcrypt algorithm by truncating
+    the password bytes before hashing.
     """
+    # Encode to UTF-8 bytes
     password_bytes = password.encode('utf-8')
-    # bcrypt has a hard 72-byte limit. We truncate the password bytes to prevent an error.
+    # Truncate to 72 bytes (bcrypt's hard limit)
     truncated_bytes = password_bytes[:72]
-    # Decode back to string because passlib expects a string, not bytes
-    truncated_string = truncated_bytes.decode('utf-8', errors='ignore')
-    return pwd_context.hash(truncated_string)
+    # Generate salt and hash
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(truncated_bytes, salt)
+    # Return as string
+    return hashed.decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -58,11 +57,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     
     Uses the same truncation logic as get_password_hash to ensure consistency.
     """
+    # Encode and truncate the plain password
     password_bytes = plain_password.encode('utf-8')
     truncated_bytes = password_bytes[:72]
-    # Decode back to string because passlib expects a string, not bytes
-    truncated_string = truncated_bytes.decode('utf-8', errors='ignore')
-    return pwd_context.verify(truncated_string, hashed_password)
+    # Encode the stored hash back to bytes
+    hashed_bytes = hashed_password.encode('utf-8')
+    # Verify
+    return bcrypt.checkpw(truncated_bytes, hashed_bytes)
 
 # --- JWT Token Handling ---
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
