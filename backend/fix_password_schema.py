@@ -10,9 +10,15 @@ Run this script to diagnose and fix password hash truncation errors.
 import mysql.connector
 import os
 import sys
-from dotenv import load_dotenv
+import re
+from typing import Any
 
-load_dotenv()
+# Try to load .env file if available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 def check_and_fix_schema():
     """Check current schema and fix if needed"""
@@ -47,14 +53,14 @@ def check_and_fix_schema():
         print("-" * 80)
         
         # Find password_hash column
-        password_hash_col = [col for col in columns if col[0] == 'password_hash']
+        # Type ignore because MySQL rows are accessed by index but type checker sees dict
+        password_hash_col = [col for col in columns if str(col[0]) == 'password_hash']  # type: ignore
         if password_hash_col:
-            current_type = password_hash_col[0][1]
+            current_type = str(password_hash_col[0][1])  # type: ignore
             print(f"\n📋 Current password_hash type: {current_type}")
             
             # Extract VARCHAR size if present
             if 'varchar' in current_type.lower():
-                import re
                 match = re.search(r'varchar\((\d+)\)', current_type, re.IGNORECASE)
                 if match:
                     current_size = int(match.group(1))
@@ -93,8 +99,8 @@ def check_and_fix_schema():
                     # Verify the change
                     cursor.execute("DESCRIBE users;")
                     columns_after = cursor.fetchall()
-                    password_hash_col_after = [col for col in columns_after if col[0] == 'password_hash']
-                    print(f"   New type: {password_hash_col_after[0][1]}")
+                    password_hash_col_after = [col for col in columns_after if str(col[0]) == 'password_hash']  # type: ignore
+                    print(f"   New type: {str(password_hash_col_after[0][1])}")  # type: ignore
                 else:
                     print("\n⏭️  Skipping fix. You can run this script again to apply the fix.")
                     print("\n   Manual fix SQL:")
