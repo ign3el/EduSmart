@@ -26,7 +26,7 @@ const VoiceSettings = ({ language, setLanguage, speed, setSpeed, silence, setSil
             groupName: "Hindi",
             voices: [
                 { name: "Male - Clear (Pratham)", value: "hi_male_natural" },
-                { name:f: "Female - Warm (Priyamvada)", value: "hi_female_friendly" },
+                { name: "Female - Warm (Priyamvada)", value: "hi_female_friendly" },
                 { name: "Male - Deep (Rohan)", value: "hi_male_deep" },
             ]
         }
