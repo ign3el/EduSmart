@@ -31,7 +31,7 @@ function App() {
 }
 
 function MainApp() {
-  const { isLoggedIn, isLoading, logout } = useAuth()
+  const { isAuthenticated, isLoading, logout } = useAuth()
   const [authStep, setAuthStep] = useState('login') // 'login' or 'signup'
   const [signupSuccess, setSignupSuccess] = useState(false)
   const [step, setStep] = useState('home') 
@@ -62,7 +62,7 @@ function MainApp() {
     )
   }
 
-  if (!isLoggedIn) {
+  if (!isAuthenticated) {
     if (signupSuccess) {
       return (
         <div className="auth-container" style={{
