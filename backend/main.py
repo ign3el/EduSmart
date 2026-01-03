@@ -168,7 +168,7 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
     Generate image and audio for a scene IN PARALLEL.
     Updates job state as each completes.
     """
-    character_prompt = scene.get("image_description", "")
+    character_prompt = scene.get("image_prompt", "")
     text = scene.get("text", "")
     
     async def generate_image():
