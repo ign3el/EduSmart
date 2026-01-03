@@ -38,7 +38,11 @@ function MainApp() {
   const [step, setStep] = useState('home') 
   const [uploadedFile, setUploadedFile] = useState(null)
   const [selectedAvatar, setSelectedAvatar] = useState(null)
-  const [selectedVoice, setSelectedVoice] = useState('en-US-JennyNeural')
+  // New state for Piper TTS
+  const [language, setLanguage] = useState('en_female_pro');
+  const [speed, setSpeed] = useState(1.0);
+  const [silence, setSilence] = useState(0.0);
+  
   const [storyData, setStoryData] = useState(null)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState(null)
@@ -197,9 +201,11 @@ function MainApp() {
     }
   }
 
-  const handleConfirmFile = (voice) => {
-    if (voice) {
-      setSelectedVoice(voice)
+  const handleConfirmFile = (settings) => {
+    if (settings) {
+      setLanguage(settings.language);
+      setSpeed(settings.speed);
+      setSilence(settings.silence);
     }
     setStep('avatar')
   }
@@ -220,9 +226,19 @@ function MainApp() {
       formData.append('file', uploadedFile)
       formData.append('grade_level', gradeLevel)
       formData.append('avatar_type', avatar.id)
-      formData.append('voice', selectedVoice)  // Send selected voice to backend
+      // Append new Piper TTS settings
+      formData.append('language', language)
+      formData.append('speed', speed)
+      formData.append('silence', silence)
 
-      const response = await fetch('/api/upload', { method: 'POST', body: formData })
+      // Use apiClient for automatic auth headers, assuming it's the default export from api.js
+      const response = await fetch(`${API_URL}/api/upload`, { 
+        method: 'POST', 
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      })
       
       if (!response.ok) throw new Error("Failed to start story generation.")
       

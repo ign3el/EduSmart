@@ -1,11 +1,13 @@
-"""
-Admin-only API endpoints for inspecting application state.
-"""
-import sqlite3
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Response
+import sqlite3
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+import io
+
 from routers.auth import get_current_user
 from database_models import User
+from services.piper_client import piper_tts
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -17,6 +19,13 @@ router = APIRouter(
     responses={403: {"description": "Operation not permitted"}},
 )
 
+# --- Pydantic Models ---
+class TtsTestRequest(BaseModel):
+    text: str
+    language: str = "en"
+    speed: float = 1.0
+    silence: float = 0.0
+
 # --- Dependency for Admin User ---
 async def get_admin_user(current_user: User = Depends(get_current_user)):
     """
@@ -26,6 +35,29 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
     if not current_user or not current_user.get('is_admin'):
         raise HTTPException(status_code=403, detail="You do not have permission to access this resource.")
     return current_user
+
+# --- TTS Test Endpoint ---
+@router.post("/tts/test", dependencies=[Depends(get_admin_user)])
+async def test_tts(request: TtsTestRequest):
+    """
+    Allows admins to test the Piper TTS service with custom text and settings.
+    Streams back a WAV audio file.
+    """
+    try:
+        audio_bytes = await piper_tts.generate_audio(
+            text=request.text,
+            language=request.language,
+            speed=request.speed,
+            silence=request.silence
+        )
+        if not audio_bytes:
+            raise HTTPException(status_code=500, detail="TTS generation failed, received no audio data.")
+
+        return StreamingResponse(io.BytesIO(audio_bytes), media_type="audio/wav")
+    except Exception as e:
+        logger.error(f"Error in TTS test endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # --- Database Viewer for job_state.db ---
 DB_PATH = "job_state.db"

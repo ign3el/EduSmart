@@ -342,15 +342,10 @@ class StoryOperations:
             with get_db_cursor() as cursor:
 
                 query = """
-
-                                        SELECT s.id, s.story_id, s.name, s.created_at, s.updated_at, u.username
-
-                                        FROM user_stories s
-
-                                        LEFT JOIN users u ON s.user_id = u.id
-
-                                        ORDER BY s.updated_at DESC
-
+                    SELECT s.id, s.story_id, s.name, s.created_at, s.updated_at, u.username
+                    FROM user_stories s
+                    LEFT JOIN users u ON s.user_id = u.id
+                    ORDER BY s.updated_at DESC
                 """
 
                 cursor.execute(query)

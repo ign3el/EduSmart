@@ -22,7 +22,7 @@ from routers.admin import router as admin_router
 from core.setup import create_admin_user
 from database_models import User, StoryOperations
 from services.story_service import GeminiService
-from services.chatterbox_client import chatterbox
+from services.piper_client import piper_tts
 from job_state import job_manager
 from typing import Optional
 
@@ -142,36 +142,7 @@ async def get_avatars():
         {"id": "dinosaur", "name": "Dino-Explorer", "description": "Nature guide."}
     ]
 
-async def generate_scene_media(job_id: str, i: int, scene: dict, voice: str = "en-US-JennyNeural", story_seed: Optional[int] = None):
-    try:
-        img_task = asyncio.to_thread(gemini.generate_image, scene["image_description"], scene.get("text", ""), story_seed)
-        aud_task = chatterbox.generate_audio(scene["text"], voice)
-        
-        image_bytes, audio_bytes = await asyncio.gather(img_task, aud_task, return_exceptions=False)
-
-        if image_bytes:
-            img_name = f"{job_id}_scene_{i}.png"
-            with open(os.path.join("outputs", img_name), "wb") as f:
-                f.write(image_bytes)
-            scene["image_url"] = f"/api/outputs/{img_name}"
-
-        if not audio_bytes:
-            logger.warning(f"Audio retry for scene {i}...")
-            await asyncio.sleep(2)
-            audio_bytes = await chatterbox.generate_audio(scene["text"], voice)
-        
-        if audio_bytes:
-            aud_name = f"{job_id}_scene_{i}.mp3"
-            with open(os.path.join("outputs", aud_name), "wb") as f:
-                f.write(audio_bytes)
-            scene["audio_url"] = f"/api/outputs/{aud_name}"
-        else:
-            logger.error(f"Audio generation failed for scene {i}")
-            
-    except Exception as e:
-        logger.error(f"Failed to generate media for Scene {i}: {e}")
-
-async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_index: int, scene: dict, voice: str, story_seed: int):
+async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_index: int, scene: dict, language: str, speed: float, silence: float, story_seed: int):
     """
     Generate image and audio for a scene IN PARALLEL.
     Updates job state as each completes.
@@ -215,10 +186,10 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
                 return
             
             job_manager.update_scene_audio(scene_id, "processing")
-            audio_bytes = await chatterbox.generate_audio(text, voice)
+            audio_bytes = await piper_tts.generate_audio(text, language, speed, silence)
             
             if audio_bytes:
-                aud_name = f"scene_{scene_index}.mp3"
+                aud_name = f"scene_{scene_index}.mp3" # Piper output is WAV, but we'll keep mp3 for consistency downstream
                 aud_path = os.path.join("outputs", story_id, aud_name)
                 os.makedirs(os.path.dirname(aud_path), exist_ok=True)
                 with open(aud_path, "wb") as f:
@@ -235,7 +206,7 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
     # Run image and audio generation IN PARALLEL
     await asyncio.gather(generate_image(), generate_audio())
 
-async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level: str, voice: str = "en-US-JennyNeural"):
+async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level: str, language: str, speed: float, silence: float):
     """
     Progressive story generation workflow:
     1. Generate story structure
@@ -275,7 +246,7 @@ async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level
         if len(scenes) > 0:
             logger.info("Starting media generation for Scene 1 (priority)...")
             await generate_scene_media_progressive(
-                story_id, scene_ids[0], 0, scenes[0], voice, story_seed
+                story_id, scene_ids[0], 0, scenes[0], language, speed, silence, story_seed
             )
             logger.info("✓ Finished media generation for Scene 1.")
 
@@ -283,7 +254,7 @@ async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level
         if len(scenes) > 1:
             logger.info(f"Starting parallel media generation for remaining {len(scenes) - 1} scenes...")
             remaining_tasks = [
-                generate_scene_media_progressive(story_id, scene_ids[i], i, scene, voice, story_seed)
+                generate_scene_media_progressive(story_id, scene_ids[i], i, scene, language, speed, silence, story_seed)
                 for i, scene in enumerate(scenes[1:], start=1) # Start enumeration from index 1
             ]
             await asyncio.gather(*remaining_tasks, return_exceptions=True)
@@ -296,7 +267,7 @@ async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level
         job_manager.mark_story_failed(story_id, str(e))
 
 @app.post("/api/upload")
-async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = File(...), grade_level: str = Form("Grade 4"), voice: str = Form("en-US-JennyNeural")):
+async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = File(...), grade_level: str = Form("Grade 4"), language: str = Form("en"), speed: float = Form(1.0), silence: float = Form(0.0)):
     story_id = str(uuid.uuid4())
     upload_path = os.path.join("uploads", f"{story_id}_{file.filename}")
     with open(upload_path, "wb") as f:
@@ -306,7 +277,7 @@ async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = Fil
     job_manager.initialize_story(story_id, grade_level)
     
     # Use progressive workflow
-    background_tasks.add_task(run_ai_workflow_progressive, story_id, upload_path, grade_level, voice)
+    background_tasks.add_task(run_ai_workflow_progressive, story_id, upload_path, grade_level, language, speed, silence)
     return {"job_id": story_id}
 
 

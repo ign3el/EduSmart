@@ -32,5 +32,18 @@ export const getJobStateTableData = async (tableName) => {
   return response.data;
 };
 
+export const generateTestSpeech = async (settings) => {
+  const { text, language, speed, silence } = settings;
+  const response = await apiClient.post('/api/admin/tts/test', {
+    text,
+    language,
+    speed,
+    silence
+  }, {
+    responseType: 'arraybuffer' // This is crucial for receiving audio data
+  });
+  return response.data;
+}
+
 
 export default apiClient;

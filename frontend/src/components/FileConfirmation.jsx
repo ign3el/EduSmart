@@ -1,23 +1,16 @@
 import { useState } from 'react'
-import { FiCheck, FiFile, FiEdit2 } from 'react-icons/fi'
+import { FiFile, FiEdit2 } from 'react-icons/fi'
+import VoiceSettings from './VoiceSettings' // Import the new component
 import './FileConfirmation.css'
+import './VoiceSettings.css' // Import the new CSS
 
 function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onEditGrade }) {
-  const [selectedVoice, setSelectedVoice] = useState('The Wise Elder')
-  const [showGradeSelector, setShowGradeSelector] = useState(false)
+  // New state for Piper TTS settings
+  const [language, setLanguage] = useState('en');
+  const [speed, setSpeed] = useState(1.0);
+  const [silence, setSilence] = useState(0.0);
 
-  const voices = [
-    { id: 'The Wise Elder', name: 'The Wise Elder (M)', description: '⭐⭐⭐⭐⭐ Deep, slow, and gravelly; perfect for wizards or kings.' },
-    { id: 'The Curious Child', name: 'The Curious Child (F)', description: '⭐⭐⭐⭐⭐ High pitch, energetic, and slightly breathless.' },
-    { id: 'The Fairy Godmother', name: 'The Fairy Godmother (F)', description: '⭐⭐⭐⭐⭐ Very soft, breathy, and soothing; ideal for bedtime.' },
-    { id: 'The Storyteller', name: 'The Storyteller (M)', description: '⭐⭐⭐⭐ Very rhythmic with a pleasant lilt; keeps attention well.' },
-    { id: 'The Bold Knight', name: 'The Bold Knight (M)', description: '⭐⭐⭐⭐ Authoritative and strong; good for action sequences.' },
-    { id: 'The Helpful Guide', name: 'The Helpful Guide (F)', description: '⭐⭐⭐⭐ Bright, friendly, and very high energy.' },
-    { id: 'The Magical Spirit', name: 'The Magical Spirit (F)', description: '⭐⭐⭐⭐ Airy and resonant; sounds slightly ethereal.' },
-    { id: 'The Fast Rabbit', name: 'The Fast Rabbit (F)', description: '⭐⭐⭐⭐ Rapid cadence; great for energetic or nervous characters.' },
-    { id: 'The Giant', name: 'The Giant (M)', description: '⭐⭐⭐⭐ Very deep and slow; one of the lowest male voices.' },
-    { id: 'The Classic Narrator', name: 'The Classic Narrator (F)', description: '⭐⭐⭐ Standard Southern English; very clear and articulate.' },
-  ]
+  const [showGradeSelector, setShowGradeSelector] = useState(false)
 
   const gradeLabels = {
     1: 'KG-1 / Grade 1',
@@ -30,7 +23,8 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onE
   }
 
   const handleConfirm = () => {
-    onConfirm(selectedVoice)
+    // Pass up an object with all the settings
+    onConfirm({ language, speed, silence })
   }
 
   const handleGradeChange = (newGrade) => {
@@ -91,26 +85,17 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onE
       </div>
 
       <div className="voice-selection">
-        <h3>🎙️ Choose Narrator Voice</h3>
-        <p className="voice-description">Select the voice that will narrate your story</p>
+        <h3>🎙️ Configure Narrator Voice</h3>
+        <p className="voice-description">Select the language and adjust the pace of the narration.</p>
         
-        <div className="voice-grid">
-          {voices.map((voice) => (
-            <div
-              key={voice.id}
-              className={`voice-option ${selectedVoice === voice.id ? 'selected' : ''}`}
-              onClick={() => setSelectedVoice(voice.id)}
-            >
-              <div className="voice-radio">
-                {selectedVoice === voice.id && <FiCheck />}
-              </div>
-              <div className="voice-details">
-                <h4>{voice.name}</h4>
-                <p>{voice.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <VoiceSettings 
+            language={language}
+            setLanguage={setLanguage}
+            speed={speed}
+            setSpeed={setSpeed}
+            silence={silence}
+            setSilence={setSilence}
+        />
       </div>
 
       <div className="confirmation-actions">
