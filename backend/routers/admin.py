@@ -217,10 +217,10 @@ async def migrate_saved_stories():
                     skipped.append({"story_id": story_id, "reason": "Already in database"})
                     continue
                 
-                # Insert into database with NULL user_id (orphaned)
+                # Insert into database assigned to admin
                 query = """
                     INSERT INTO user_stories (story_id, user_id, name, story_data, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                 """
                 
                 now = datetime.now()
