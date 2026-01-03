@@ -48,16 +48,25 @@ def scan_and_migrate_stories():
     error_count = 0
     
     for story_folder in story_folders:
-        story_id = story_folder.name
-        story_json_path = story_folder / "story.json"
+        folder_name = story_folder.name
+        metadata_path = story_folder / "metadata.json"
         
-        if not story_json_path.exists():
-            print(f"⚠️  {story_id}: No story.json found, skipping")
+        if not metadata_path.exists():
+            print(f"⚠️  {folder_name}: No metadata.json found, skipping")
             skipped_count += 1
             continue
         
         # Check if story already exists in database
         try:
+            # Read metadata.json
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+            
+            story_id = metadata.get('id', folder_name)
+            story_name = metadata.get('name', 'Untitled Story')
+            story_data = metadata.get('story_data', {})
+            story_title = story_data.get('title', story_name)
+            
             with get_db_cursor() as cursor:
                 cursor.execute("SELECT story_id FROM user_stories WHERE story_id = %s", (story_id,))
                 existing = cursor.fetchone()
@@ -66,12 +75,6 @@ def scan_and_migrate_stories():
                     print(f"✓ {story_id}: Already in database, skipping")
                     skipped_count += 1
                     continue
-                
-                # Read story.json
-                with open(story_json_path, 'r', encoding='utf-8') as f:
-                    story_data = json.load(f)
-                
-                story_title = story_data.get('title', 'Untitled Story')
                 
                 # Insert into database with NULL user_id (orphaned)
                 query = """
@@ -85,13 +88,13 @@ def scan_and_migrate_stories():
                 
                 cursor.execute(query, (
                     story_id,
-                    story_title,
+                    story_name,
                     json.dumps(story_data),
                     created_at,
                     now
                 ))
                 
-                print(f"✅ {story_id}: Migrated '{story_title}'")
+                print(f"✅ {story_id}: Migrated '{story_name}'")
                 migrated_count += 1
                 
         except mysql.connector.Error as e:

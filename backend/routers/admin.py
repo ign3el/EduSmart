@@ -172,14 +172,23 @@ async def migrate_saved_stories():
     errors = []
     
     for story_folder in story_folders:
-        story_id = story_folder.name
-        story_json_path = story_folder / "story.json"
+        folder_name = story_folder.name
+        metadata_path = story_folder / "metadata.json"
         
-        if not story_json_path.exists():
-            skipped.append({"story_id": story_id, "reason": "No story.json found"})
+        if not metadata_path.exists():
+            skipped.append({"story_id": folder_name, "reason": "No metadata.json found"})
             continue
         
         try:
+            # Read metadata.json
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+            
+            story_id = metadata.get('id', folder_name)
+            story_name = metadata.get('name', 'Untitled Story')
+            story_data = metadata.get('story_data', {})
+            story_title = story_data.get('title', story_name)
+            
             with get_db_cursor() as cursor:
                 cursor.execute("SELECT story_id FROM user_stories WHERE story_id = %s", (story_id,))
                 existing = cursor.fetchone()
@@ -187,12 +196,6 @@ async def migrate_saved_stories():
                 if existing:
                     skipped.append({"story_id": story_id, "reason": "Already in database"})
                     continue
-                
-                # Read story.json
-                with open(story_json_path, 'r', encoding='utf-8') as f:
-                    story_data = json.load(f)
-                
-                story_title = story_data.get('title', 'Untitled Story')
                 
                 # Insert into database with NULL user_id (orphaned)
                 query = """
@@ -205,13 +208,13 @@ async def migrate_saved_stories():
                 
                 cursor.execute(query, (
                     story_id,
-                    story_title,
+                    story_name,
                     json.dumps(story_data),
                     created_at,
                     now
                 ))
                 
-                migrated.append({"story_id": story_id, "title": story_title})
+                migrated.append({"story_id": story_id, "title": story_name})
                 
         except mysql.connector.Error as e:
             errors.append({"story_id": story_id, "error": str(e)})
