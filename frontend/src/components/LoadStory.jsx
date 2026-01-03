@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import apiClient from '../services/api'
+import { getItemsPerPage } from '../utils/responsiveUtils'
 import './LoadStory.css'
 
 function LoadStory({ onLoad, onBack }) {
@@ -10,17 +11,28 @@ function LoadStory({ onLoad, onBack }) {
   const [downloadMessage, setDownloadMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage(window.innerWidth))
 
   useEffect(() => {
     fetchStories()
     
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768)
+      setItemsPerPage(getItemsPerPage(window.innerWidth))
     }
     
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
   }, [])
 
   const fetchStories = async () => {
@@ -130,6 +142,16 @@ function LoadStory({ onLoad, onBack }) {
       animate={{ opacity: 1, y: 0 }}
     >
       <h2>📚 Your Saved Stories</h2>
+      
+      {!isOnline && (
+        <div className="offline-warning">
+          <span className="offline-icon">📡</span>
+          <div>
+            <strong>You are offline!</strong>
+            <p>Cannot load or manage online stories. Please check your internet connection.</p>
+          </div>
+        </div>
+      )}
       
       {loading ? (
         <div className="loading-stories">Loading stories...</div>

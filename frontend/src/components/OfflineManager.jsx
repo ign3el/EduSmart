@@ -4,6 +4,7 @@ import JSZip from 'jszip'
 import apiClient from '../services/api'
 import * as storyStorage from '../utils/storyStorage'
 import { isStandalone } from '../utils/serviceWorkerRegistration'
+import { getItemsPerPage } from '../utils/responsiveUtils'
 import './OfflineManager.css'
 
 function OfflineManager({ onLoadOffline, onBack }) {
@@ -16,12 +17,10 @@ function OfflineManager({ onLoadOffline, onBack }) {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [isPWA, setIsPWA] = useState(false)
   const [exportPage, setExportPage] = useState(1)
-  const [exportPageSize] = useState(10)
   const [importPage, setImportPage] = useState(1)
-  const [importPageSize] = useState(10)
   const [exportSearchQuery, setExportSearchQuery] = useState('')
   const [importSearchQuery, setImportSearchQuery] = useState('')
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage(window.innerWidth))
 
   const loadLocalStories = async () => {
     try {
@@ -48,9 +47,9 @@ function OfflineManager({ onLoadOffline, onBack }) {
     // Check if install prompt is available
     setShowInstallPrompt(typeof window.showInstallPrompt === 'function')
     
-    // Handle window resize
+    // Handle window resize for responsive pagination
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768)
+      setItemsPerPage(getItemsPerPage(window.innerWidth))
     }
     
     const handleStorage = (event) => {
@@ -408,7 +407,6 @@ function OfflineManager({ onLoadOffline, onBack }) {
               const filtered = localStories.filter(story =>
                 (story.name || '').toLowerCase().includes(importSearchQuery.toLowerCase())
               )
-              const itemsPerPage = isMobile ? 4 : 10
               const totalPages = Math.ceil(filtered.length / itemsPerPage)
               const startIndex = (importPage - 1) * itemsPerPage
               const endIndex = startIndex + itemsPerPage
@@ -482,6 +480,17 @@ function OfflineManager({ onLoadOffline, onBack }) {
       <div className="action-section">
           <h3>📤 Export Online Stories</h3>
           <p>Download stories for offline use ({onlineStories.length} total)</p>
+          
+          {!isOnline && (
+            <div className="offline-warning">
+              <span className="offline-icon">📡</span>
+              <div>
+                <strong>You are offline!</strong>
+                <p>Cannot download online stories while offline. Please reconnect to download stories for offline use.</p>
+              </div>
+            </div>
+          )}
+          
           {onlineStories.length > 0 ? (
             <>
               {/* Search Bar */}
@@ -495,6 +504,7 @@ function OfflineManager({ onLoadOffline, onBack }) {
                     setExportPage(1)
                   }}
                   className="search-input"
+                  disabled={!isOnline}
                 />
                 {exportSearchQuery && (
                   <button 
@@ -511,7 +521,6 @@ function OfflineManager({ onLoadOffline, onBack }) {
                 const filtered = onlineStories.filter(story =>
                   story.name.toLowerCase().includes(exportSearchQuery.toLowerCase())
                 )
-                const itemsPerPage = isMobile ? 4 : 10
                 const totalPages = Math.ceil(filtered.length / itemsPerPage)
                 const startIndex = (exportPage - 1) * itemsPerPage
                 const endIndex = startIndex + itemsPerPage
@@ -534,7 +543,8 @@ function OfflineManager({ onLoadOffline, onBack }) {
                           <button 
                             className="export-btn"
                             onClick={() => exportStory(story.story_id, story.name)}
-                            disabled={downloading !== null}
+                            disabled={downloading !== null || !isOnline}
+                            title={!isOnline ? "Cannot download while offline" : "Download for offline use"}
                           >
                             {downloading === story.story_id ? '⏳ Downloading...' : '📥 Export'}
                           </button>
