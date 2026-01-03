@@ -1,6 +1,8 @@
 import logging
 import io
+import httpx
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from langdetect import detect, LangDetectException
 import PyPDF2
@@ -14,10 +16,18 @@ router = APIRouter(
     tags=["Upload"],
 )
 
+TTS_API_URL = "https://tts.ign3el.com"
+TTS_API_KEY = "TTS_AHTE_2026!"
+
 class TextExtractionResponse(BaseModel):
     text: str
     language_code: str
     suggested_engine: str
+
+class TTSPreviewRequest(BaseModel):
+    text: str
+    voice: str
+    speed: float = 1.0
 
 @router.post("/extract-text", response_model=TextExtractionResponse)
 async def extract_text_from_file(file: UploadFile = File(...)):
@@ -78,4 +88,62 @@ async def extract_text_from_file(file: UploadFile = File(...)):
         if isinstance(e, HTTPException):
             raise e
         logger.error(f"Error processing file upload: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/tts-preview")
+async def tts_preview(request: TTSPreviewRequest):
+    """
+    Proxy endpoint for TTS preview to avoid CORS issues.
+    Routes to appropriate TTS service based on voice.
+    """
+    try:
+        # Determine endpoint based on voice
+        if request.voice.startswith('ar_'):
+            # Arabic - use Piper endpoint
+            endpoint = f"{TTS_API_URL}/tts"
+            payload = {
+                "text": request.text,
+                "speaker_id": request.voice
+            }
+        else:
+            # English - use Kokoro endpoint
+            endpoint = f"{TTS_API_URL}/v1/audio/speech"
+            payload = {
+                "model": "kokoro",
+                "input": request.text,
+                "voice": request.voice,
+                "response_format": "mp3",
+                "speed": request.speed
+            }
+
+        # Make request to TTS API
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                endpoint,
+                json=payload,
+                headers={
+                    'Content-Type': 'application/json',
+                    'TTS_API_KEY': TTS_API_KEY
+                }
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"TTS API error: {response.status_code} - {response.text}")
+                raise HTTPException(status_code=response.status_code, detail="TTS service error")
+            
+            # Return audio response
+            return Response(
+                content=response.content,
+                media_type="audio/mpeg",
+                headers={
+                    "Content-Disposition": "inline; filename=preview.mp3"
+                }
+            )
+
+    except httpx.TimeoutException:
+        logger.error("TTS API timeout")
+        raise HTTPException(status_code=504, detail="TTS service timeout")
+    except Exception as e:
+        logger.error(f"Error in TTS preview: {e}")
         raise HTTPException(status_code=500, detail=str(e))

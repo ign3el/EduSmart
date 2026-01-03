@@ -32,8 +32,7 @@ const TEACHERS = [
   }
 ];
 
-const TTS_API_URL = "https://tts.ign3el.com";
-const TTS_API_KEY = "TTS_AHTE_2026!";
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 function TeacherCard({ activeVoice = "af_sarah", onVoiceSelect, detectedLanguage = "en" }) {
   const [playingVoice, setPlayingVoice] = useState(null);
@@ -75,37 +74,18 @@ function TeacherCard({ activeVoice = "af_sarah", onVoiceSelect, detectedLanguage
         return;
       }
 
-      // Determine endpoint based on voice
-      const endpoint = teacher.id.startsWith('ar_') 
-        ? `${TTS_API_URL}/tts`
-        : `${TTS_API_URL}/v1/audio/speech`;
-
-      // Build request based on endpoint
-      let requestBody;
-      if (teacher.id.startsWith('ar_')) {
-        // Piper format for Arabic
-        requestBody = {
-          text: teacher.sample,
-          speaker_id: teacher.id
-        };
-      } else {
-        // Kokoro format for English
-        requestBody = {
-          model: "kokoro",
-          input: teacher.sample,
-          voice: teacher.id,
-          response_format: "mp3",
-          speed: 1.0
-        };
-      }
-
-      const response = await fetch(endpoint, {
+      // Use backend proxy endpoint
+      const response = await fetch(`${API_URL}/api/upload/tts-preview`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'TTS_API_KEY': TTS_API_KEY
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          text: teacher.sample,
+          voice: teacher.id,
+          speed: 1.0
+        })
       });
 
       if (!response.ok) {

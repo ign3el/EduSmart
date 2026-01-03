@@ -11,5 +11,19 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'motion': ['framer-motion'],
+          'icons': ['react-icons'],
+          'utils': ['axios', 'zustand', 'jszip']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600,
+    sourcemap: false
   }
 })
