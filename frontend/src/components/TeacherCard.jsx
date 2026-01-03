@@ -4,28 +4,82 @@ import './TeacherCard.css';
 
 const TEACHERS = [
   { 
-    id: "af_sarah", 
-    name: "Sarah", 
-    personality: "Educational", 
-    description: "Professional US English teacher with clear pronunciation",
-    lang: "en",
-    sample: "Hello! I'm Sarah, your educational guide. I'll help make learning fun and engaging.",
-    icon: "👩‍🏫"
-  },
-  { 
     id: "af_bella", 
     name: "Bella", 
-    personality: "Natural", 
-    description: "Warm storyteller with expressive delivery",
+    personality: "Warm & Expressive", 
+    description: "Enthusiastic storyteller with natural emotion and varied pitch",
     lang: "en",
     sample: "Hi there! I'm Bella. Let me take you on an amazing learning adventure!",
     icon: "🌟"
   },
   { 
+    id: "af_heart", 
+    name: "Heart", 
+    personality: "Gentle & Caring", 
+    description: "Soft, nurturing voice perfect for younger learners",
+    lang: "en",
+    sample: "Hello sweetie! I'm Heart. Let's discover wonderful things together!",
+    icon: "❤️"
+  },
+  { 
+    id: "af_nicole", 
+    name: "Nicole", 
+    personality: "Energetic & Fun", 
+    description: "Dynamic voice with playful enthusiasm for active learning",
+    lang: "en",
+    sample: "Hey! I'm Nicole! Ready to explore and have some fun learning?",
+    icon: "🎧"
+  },
+  { 
+    id: "af_sarah", 
+    name: "Sarah", 
+    personality: "Professional & Clear", 
+    description: "Calm, articulate educator for focused instruction",
+    lang: "en",
+    sample: "Hello! I'm Sarah, your educational guide. I'll help make learning fun and engaging.",
+    icon: "👩‍🏫"
+  },
+  { 
+    id: "af_sky", 
+    name: "Sky", 
+    personality: "Bright & Cheerful", 
+    description: "Light, optimistic voice that encourages curiosity",
+    lang: "en",
+    sample: "Hi! I'm Sky! Let's explore the world of learning together!",
+    icon: "☀️"
+  },
+  { 
+    id: "am_michael", 
+    name: "Michael", 
+    personality: "Wise Narrator", 
+    description: "Mature male voice with authoritative storytelling",
+    lang: "en",
+    sample: "Greetings! I'm Michael. Let me guide you through fascinating stories.",
+    icon: "📚"
+  },
+  { 
+    id: "am_fenrir", 
+    name: "Fenrir", 
+    personality: "Strong & Confident", 
+    description: "Powerful male voice for adventurous narratives",
+    lang: "en",
+    sample: "Hello! I'm Fenrir. Get ready for exciting tales of learning!",
+    icon: "🐺"
+  },
+  { 
+    id: "bf_emma", 
+    name: "Emma", 
+    personality: "British Elegance", 
+    description: "Refined British accent with graceful storytelling",
+    lang: "en",
+    sample: "Good day! I'm Emma. Allow me to share marvelous stories with you.",
+    icon: "🇬🇧"
+  },
+  { 
     id: "ar_teacher", 
     name: "Nour", 
-    personality: "Educational", 
-    description: "Clear Modern Standard Arabic educator",
+    personality: "Arabic Educator", 
+    description: "Clear Modern Standard Arabic with warm delivery",
     lang: "ar",
     sample: "مرحباً! أنا نور، معلمتك العربية. سأساعدك في رحلة تعليمية ممتعة.",
     icon: "🌙"
@@ -47,7 +101,7 @@ function TeacherCard({ activeVoice = "af_sarah", onVoiceSelect, detectedLanguage
   });
 
   // Auto-select default voice based on language
-  const defaultVoice = detectedLanguage === 'ar' ? 'ar_teacher' : 'af_sarah';
+  const defaultVoice = detectedLanguage === 'ar' ? 'ar_teacher' : 'af_bella';
   
   // If no voice is selected or current voice doesn't match language, use default
   const currentActiveVoice = filteredTeachers.find(t => t.id === activeVoice) 
