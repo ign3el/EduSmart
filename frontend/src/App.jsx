@@ -67,16 +67,27 @@ function MainApp() {
   // Handle browser back button to navigate within app steps
   useEffect(() => {
     const handlePopState = (event) => {
-      event.preventDefault()
-      const prev = previousStep(step)
-      setStep(prev)
-      window.history.pushState({ step: prev }, '')
+      if (event.state && event.state.step) {
+        // Use the step from history state
+        setStep(event.state.step)
+      } else {
+        // Fallback to previous step logic
+        const prev = previousStep(step)
+        setStep(prev)
+      }
     }
 
-    window.history.pushState({ step }, '')
+    // Push current step to history
+    window.history.replaceState({ step }, '', window.location.pathname)
     window.addEventListener('popstate', handlePopState)
+    
     return () => window.removeEventListener('popstate', handlePopState)
   }, [step])
+
+  const navigateTo = (newStep) => {
+    window.history.pushState({ step: newStep }, '', window.location.pathname)
+    setStep(newStep)
+  }
 
   // If not logged in and not loading, show auth screen
   if (isLoading) {
@@ -181,7 +192,7 @@ function MainApp() {
       // Proceed after completion
       setTimeout(() => {
         setShowUploadProgress(false)
-        setStep('confirm')
+        navigateTo('confirm')
         setError(null) 
         setIsSaved(false)
       }, 800)
@@ -212,7 +223,7 @@ function MainApp() {
       setVoice(settings.voice);
       setSpeed(settings.speed);
     }
-    setStep('avatar')
+    navigateTo('avatar')
   }
 
   const handleAvatarSelect = async (avatar) => {
@@ -222,7 +233,7 @@ function MainApp() {
 
   const generateStory = async (avatar) => {
     try {
-      setStep('generating')
+      navigateTo('generating')
       setError(null)
       setProgress(0)
       setIsSaved(false)
@@ -271,7 +282,7 @@ function MainApp() {
               if (!storyData || storyData.scenes.length === 0) {
                 // First scene is ready - show it immediately
                 setStoryData(job.result)
-                setStep('playing')
+                navigateTo('playing')
               } else {
                 // Update story data with newly completed scenes
                 setStoryData(job.result)
@@ -285,7 +296,7 @@ function MainApp() {
               setTotalScenes(job.total_scenes)
               setCompletedSceneCount(job.total_scenes)
             }
-            setStep('playing')
+            navigateTo('playing')
           } else if (job.status === 'failed') {
             clearInterval(pollTimer)
             throw new Error(job.error || "AI Generation failed.")
@@ -293,13 +304,13 @@ function MainApp() {
         } catch (err) {
           clearInterval(pollTimer)
           setError("Connection lost: " + err.message)
-          setStep('upload')
+          navigateTo('upload')
         }
       }, 2000)
 
     } catch (err) {
       setError(err.message)
-      setStep('upload')
+      navigateTo('upload')
     }
   }
 
@@ -313,7 +324,7 @@ function MainApp() {
       }
     }
     
-    setStep('home')
+    navigateTo('home')
     setUploadedFile(null)
     setSelectedAvatar(null)
     setStoryData(null)
@@ -343,7 +354,7 @@ function MainApp() {
     setSelectedAvatar({ id: 'offline', name: 'Offline Story' })
     setIsSaved(true)
     setIsOfflineMode(true)
-    setStep('playing')
+    navigateTo('playing')
   }
 
   const handleSaveOffline = async (storyData, storyName) => {
@@ -380,7 +391,7 @@ function MainApp() {
           setSelectedAvatar({ id: 'loaded', name: response.data.name });
           setIsSaved(true);
           setSavedStoryId(storyId);
-          setStep('playing');
+          navigateTo('playing');
       } else {
         setError('Story data is incomplete or invalid');
       }
@@ -400,7 +411,7 @@ function MainApp() {
         {isAuthenticated && (
           <div className="header-user-actions">
             {user && user.is_admin && (
-              <button className="admin-btn" onClick={() => setStep('admin')}>Admin Panel</button>
+              <button className="admin-btn" onClick={() => navigateTo('admin')}>Admin Panel</button>
             )}
             <button className="logout-btn" onClick={logout}>Logout</button>
           </div>
@@ -422,7 +433,7 @@ function MainApp() {
                 <motion.div key="admin-panel" className="step-container">
                   <AdminPanel 
                     onPlayStory={handlePlayStoryFromAdmin}
-                    onBack={() => setStep('home')}
+                    onBack={() => navigateTo('home')}
                   />
                 </motion.div>
               </Suspense>
@@ -437,7 +448,7 @@ function MainApp() {
                 <div className="home-buttons">
                   <motion.button 
                     className="home-btn create-btn"
-                    onClick={() => setStep('upload')}
+                    onClick={() => navigateTo('upload')}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -447,7 +458,7 @@ function MainApp() {
                   </motion.button>
                   <motion.button 
                     className="home-btn load-btn"
-                    onClick={() => setStep('load')}
+                    onClick={() => navigateTo('load')}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -457,7 +468,7 @@ function MainApp() {
                   </motion.button>
                   <motion.button 
                     className="home-btn offline-btn"
-                    onClick={() => setStep('offline')}
+                    onClick={() => navigateTo('offline')}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -476,7 +487,7 @@ function MainApp() {
                 gradeLevel={gradeLevel}
                 onGradeLevelChange={setGradeLevel}
               />
-              <button className="back-to-home-btn" onClick={() => setStep('home')}>
+              <button className="back-to-home-btn" onClick={() => navigateTo('home')}>
                 ← Back to Home
               </button>
             </motion.div>
@@ -488,7 +499,7 @@ function MainApp() {
                 file={uploadedFile}
                 gradeLevel={gradeLevel}
                 onConfirm={handleConfirmFile}
-                onBack={() => setStep('upload')}
+                onBack={() => navigateTo('upload')}
                 onReupload={handleReuploadClick}
                 onEditGrade={(newGrade) => setGradeLevel(newGrade)}
               />
@@ -499,7 +510,7 @@ function MainApp() {
             <motion.div key="offline" className="step-container">
               <OfflineManager 
                 onLoadOffline={handleLoadOffline}
-                onBack={() => setStep('home')}
+                onBack={() => navigateTo('home')}
               />
             </motion.div>
           )}
@@ -512,9 +523,9 @@ function MainApp() {
                   setSelectedAvatar({ id: 'loaded', name: 'Saved Story' })
                   setIsSaved(true)
                   setSavedStoryId(storyId)
-                  setStep('playing')
+                  navigateTo('playing')
                 }}
-                onBack={() => setStep('home')}
+                onBack={() => navigateTo('home')}
               />
             </motion.div>
           )}

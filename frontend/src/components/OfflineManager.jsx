@@ -15,6 +15,8 @@ function OfflineManager({ onLoadOffline, onBack }) {
   const [storageInfo, setStorageInfo] = useState(null)
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [isPWA, setIsPWA] = useState(false)
+  const [exportPage, setExportPage] = useState(1)
+  const [exportPageSize] = useState(10)
 
   const loadLocalStories = async () => {
     try {
@@ -388,22 +390,47 @@ function OfflineManager({ onLoadOffline, onBack }) {
       <div className="offline-actions">
       <div className="action-section">
           <h3>📤 Export Online Stories</h3>
-          <p>Download stories for offline use</p>
+          <p>Download stories for offline use ({onlineStories.length} total)</p>
           {onlineStories.length > 0 ? (
-            <div className="export-list">
-              {onlineStories.slice(0, 3).map((story) => (
-                <div key={story.id} className="export-item">
-                  <span>{story.name}</span>
-                  <button 
-                    className="export-btn"
-                    onClick={() => exportStory(story.id, story.name)}
-                    disabled={downloading !== null}
+            <>
+              <div className="export-list">
+                {onlineStories
+                  .slice((exportPage - 1) * exportPageSize, exportPage * exportPageSize)
+                  .map((story) => (
+                    <div key={story.id} className="export-item">
+                      <span>{story.name}</span>
+                      <button 
+                        className="export-btn"
+                        onClick={() => exportStory(story.id, story.name)}
+                        disabled={downloading !== null}
+                      >
+                        {downloading === story.id ? '⏳ Downloading...' : '📥 Export'}
+                      </button>
+                    </div>
+                  ))}
+              </div>
+              {onlineStories.length > exportPageSize && (
+                <div className="pagination">
+                  <button
+                    onClick={() => setExportPage(p => Math.max(1, p - 1))}
+                    disabled={exportPage === 1}
+                    className="pagination-btn"
                   >
-                    {downloading === story.id ? '⏳ Downloading...' : '📥 Export'}
+                    ← Previous
+                  </button>
+                  <span className="pagination-info">
+                    Page {exportPage} of {Math.ceil(onlineStories.length / exportPageSize)}
+                  </span>
+                  <button
+                    onClick={() => setExportPage(p => Math.min(Math.ceil(onlineStories.length / exportPageSize), p + 1))}
+                    disabled={exportPage >= Math.ceil(onlineStories.length / exportPageSize)}
+                    className="pagination-btn"
+                  >
+                    Next →
                   </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           ) : (
             <p className="no-export">No online stories to export</p>
           )}

@@ -52,13 +52,18 @@ def create_icon(size, output_path):
     print(f"✅ Created: {output_path} ({size}x{size})")
 
 if __name__ == "__main__":
+    import os
+    import subprocess
+    
     if not PIL_AVAILABLE:
         print("\n📦 Installing Pillow...")
-        import subprocess
-        subprocess.check_call(["pip", "install", "Pillow"])
-        from PIL import Image, ImageDraw, ImageFont
-    
-    import os
+        try:
+            subprocess.check_call(["pip", "install", "Pillow"])
+            from PIL import Image, ImageDraw, ImageFont
+        except Exception as e:
+            print(f"❌ Failed to install Pillow: {e}")
+            print("Please install manually: pip install Pillow")
+            exit(1)
     
     # Ensure we're in the frontend/public directory
     public_dir = os.path.join(os.path.dirname(__file__), 'frontend', 'public')
