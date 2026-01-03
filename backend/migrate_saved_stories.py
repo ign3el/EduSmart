@@ -83,7 +83,7 @@ def scan_and_migrate_stories():
             story_data = metadata.get('story_data', {})
             story_title = story_data.get('title', story_name)
             
-            with get_db_cursor() as cursor:
+            with get_db_cursor(commit=True) as cursor:
                 cursor.execute("SELECT story_id FROM user_stories WHERE story_id = %s", (story_id,))
                 existing = cursor.fetchone()
                 

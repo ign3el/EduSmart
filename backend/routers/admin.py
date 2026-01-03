@@ -170,7 +170,7 @@ async def migrate_saved_stories():
     # Get admin user ID
     admin_user_id = None
     try:
-        with get_db_cursor() as cursor:
+        with get_db_cursor(commit=True) as cursor:
             cursor.execute("SELECT id FROM users WHERE is_admin = 1 LIMIT 1")
             admin = cursor.fetchone()
             if admin:
@@ -209,7 +209,7 @@ async def migrate_saved_stories():
             story_data = metadata.get('story_data', {})
             story_title = story_data.get('title', story_name)
             
-            with get_db_cursor() as cursor:
+            with get_db_cursor(commit=True) as cursor:
                 cursor.execute("SELECT story_id FROM user_stories WHERE story_id = %s", (story_id,))
                 existing = cursor.fetchone()
                 
