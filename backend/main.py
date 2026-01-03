@@ -268,14 +268,15 @@ async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level
         
         logger.info(f"✓ Story structure ready: {len(scenes)} scenes")
         
-        # Generate media for all scenes in parallel
+        # Generate media for all scenes sequentially to prioritize early scenes
         story_seed = int(uuid.uuid4().hex[:8], 16)
-        tasks = [
-            generate_scene_media_progressive(story_id, scene_ids[i], i, scene, voice, story_seed)
-            for i, scene in enumerate(scenes)
-        ]
-        await asyncio.gather(*tasks, return_exceptions=True)
-        
+        for i, scene in enumerate(scenes):
+            logger.info(f"Starting media generation for Scene {i+1}/{len(scenes)}...")
+            await generate_scene_media_progressive(
+                story_id, scene_ids[i], i, scene, voice, story_seed
+            )
+            logger.info(f"✓ Finished media generation for Scene {i+1}")
+
         logger.info(f"✓ All media generation complete for story {story_id}")
         
     except Exception as e:
