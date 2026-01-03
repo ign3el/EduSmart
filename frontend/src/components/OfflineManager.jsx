@@ -17,6 +17,11 @@ function OfflineManager({ onLoadOffline, onBack }) {
   const [isPWA, setIsPWA] = useState(false)
   const [exportPage, setExportPage] = useState(1)
   const [exportPageSize] = useState(10)
+  const [importPage, setImportPage] = useState(1)
+  const [importPageSize] = useState(10)
+  const [exportSearchQuery, setExportSearchQuery] = useState('')
+  const [importSearchQuery, setImportSearchQuery] = useState('')
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
 
   const loadLocalStories = async () => {
     try {
@@ -43,6 +48,11 @@ function OfflineManager({ onLoadOffline, onBack }) {
     // Check if install prompt is available
     setShowInstallPrompt(typeof window.showInstallPrompt === 'function')
     
+    // Handle window resize
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    
     const handleStorage = (event) => {
       if (event.key?.startsWith('edusmart_story_')) {
         loadLocalStories()
@@ -58,11 +68,13 @@ function OfflineManager({ onLoadOffline, onBack }) {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     window.addEventListener('storage', handleStorage)
+    window.addEventListener('resize', handleResize)
     
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('resize', handleResize)
     }
   }, [])
 
@@ -368,22 +380,101 @@ function OfflineManager({ onLoadOffline, onBack }) {
             </div>
           </div>
         ) : (
-          <div className="story-grid">
-            {localStories.map((story, index) => (
-              <div key={story.id} className={`story-card variant-${(index % 4) + 1}`}>
-                <div className="story-card-top">
-                  <span className="story-chip">Offline ready</span>
-                  <span className="story-date">Saved {formatDate(story.savedAt)}</span>
+          <>
+            {/* Search Bar */}
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="🔍 Search offline stories..."
+                value={importSearchQuery}
+                onChange={(e) => {
+                  setImportSearchQuery(e.target.value)
+                  setImportPage(1)
+                }}
+                className="search-input"
+              />
+              {importSearchQuery && (
+                <button 
+                  className="clear-search"
+                  onClick={() => setImportSearchQuery('')}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {(() => {
+              const filtered = localStories.filter(story =>
+                (story.name || '').toLowerCase().includes(importSearchQuery.toLowerCase())
+              )
+              const itemsPerPage = isMobile ? 4 : 10
+              const totalPages = Math.ceil(filtered.length / itemsPerPage)
+              const startIndex = (importPage - 1) * itemsPerPage
+              const endIndex = startIndex + itemsPerPage
+              const paginated = filtered.slice(startIndex, endIndex)
+
+              return filtered.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-emoji">🔍</div>
+                  <div>
+                    <h4>No stories found</h4>
+                    <p>No offline stories match "{importSearchQuery}"</p>
+                    <button onClick={() => setImportSearchQuery('')} className="clear-search-btn">
+                      Clear Search
+                    </button>
+                  </div>
                 </div>
-                <h4>{story.name || 'Untitled Story'}</h4>
-                <p className="story-subtext">{story.storyData?.title || 'Ready to play anywhere.'}</p>
-                <div className="story-card-actions">
-                  <button className="story-btn primary" onClick={() => loadFromLocal(story.id)}>▶ Play</button>
-                  <button className="story-btn ghost" onClick={() => deleteLocal(story.id)}>🗑 Delete</button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ) : (
+                <>
+                  {/* Results Info */}
+                  <div className="results-info">
+                    Showing {startIndex + 1}-{Math.min(endIndex, filtered.length)} of {filtered.length} offline {filtered.length === 1 ? 'story' : 'stories'}
+                    {importSearchQuery && ` matching "${importSearchQuery}"`}
+                  </div>
+
+                  <div className="story-grid">
+                    {paginated.map((story, index) => (
+                      <div key={story.id} className={`story-card variant-${(index % 4) + 1}`}>
+                        <div className="story-card-top">
+                          <span className="story-chip">Offline ready</span>
+                          <span className="story-date">Saved {formatDate(story.savedAt)}</span>
+                        </div>
+                        <h4>{story.name || 'Untitled Story'}</h4>
+                        <p className="story-subtext">{story.storyData?.title || 'Ready to play anywhere.'}</p>
+                        <div className="story-card-actions">
+                          <button className="story-btn primary" onClick={() => loadFromLocal(story.id)}>▶ Play</button>
+                          <button className="story-btn ghost" onClick={() => deleteLocal(story.id)}>🗑 Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="pagination">
+                      <button
+                        onClick={() => setImportPage(p => Math.max(1, p - 1))}
+                        disabled={importPage === 1}
+                        className="pagination-btn"
+                      >
+                        ← Previous
+                      </button>
+                      <span className="pagination-info">
+                        Page {importPage} of {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setImportPage(p => Math.min(totalPages, p + 1))}
+                        disabled={importPage >= totalPages}
+                        className="pagination-btn"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
+          </>
         )}
       </div>
 
@@ -393,43 +484,87 @@ function OfflineManager({ onLoadOffline, onBack }) {
           <p>Download stories for offline use ({onlineStories.length} total)</p>
           {onlineStories.length > 0 ? (
             <>
-              <div className="export-list">
-                {onlineStories
-                  .slice((exportPage - 1) * exportPageSize, exportPage * exportPageSize)
-                  .map((story) => (
-                    <div key={story.id} className="export-item">
-                      <span>{story.name}</span>
-                      <button 
-                        className="export-btn"
-                        onClick={() => exportStory(story.id, story.name)}
-                        disabled={downloading !== null}
-                      >
-                        {downloading === story.id ? '⏳ Downloading...' : '📥 Export'}
-                      </button>
-                    </div>
-                  ))}
+              {/* Search Bar */}
+              <div className="search-container">
+                <input
+                  type="text"
+                  placeholder="🔍 Search stories..."
+                  value={exportSearchQuery}
+                  onChange={(e) => {
+                    setExportSearchQuery(e.target.value)
+                    setExportPage(1)
+                  }}
+                  className="search-input"
+                />
+                {exportSearchQuery && (
+                  <button 
+                    className="clear-search"
+                    onClick={() => setExportSearchQuery('')}
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
-              {onlineStories.length > exportPageSize && (
-                <div className="pagination">
-                  <button
-                    onClick={() => setExportPage(p => Math.max(1, p - 1))}
-                    disabled={exportPage === 1}
-                    className="pagination-btn"
-                  >
-                    ← Previous
-                  </button>
-                  <span className="pagination-info">
-                    Page {exportPage} of {Math.ceil(onlineStories.length / exportPageSize)}
-                  </span>
-                  <button
-                    onClick={() => setExportPage(p => Math.min(Math.ceil(onlineStories.length / exportPageSize), p + 1))}
-                    disabled={exportPage >= Math.ceil(onlineStories.length / exportPageSize)}
-                    className="pagination-btn"
-                  >
-                    Next →
-                  </button>
-                </div>
-              )}
+
+              {(() => {
+                const filtered = onlineStories.filter(story =>
+                  story.name.toLowerCase().includes(exportSearchQuery.toLowerCase())
+                )
+                const itemsPerPage = isMobile ? 4 : 10
+                const totalPages = Math.ceil(filtered.length / itemsPerPage)
+                const startIndex = (exportPage - 1) * itemsPerPage
+                const endIndex = startIndex + itemsPerPage
+                const paginated = filtered.slice(startIndex, endIndex)
+
+                return filtered.length === 0 ? (
+                  <p className="no-export">No stories found matching "{exportSearchQuery}"</p>
+                ) : (
+                  <>
+                    {/* Results Info */}
+                    <div className="results-info">
+                      Showing {startIndex + 1}-{Math.min(endIndex, filtered.length)} of {filtered.length} {filtered.length === 1 ? 'story' : 'stories'}
+                      {exportSearchQuery && ` matching "${exportSearchQuery}"`}
+                    </div>
+
+                    <div className="export-list">
+                      {paginated.map((story) => (
+                        <div key={story.story_id} className="export-item">
+                          <span>{story.name}</span>
+                          <button 
+                            className="export-btn"
+                            onClick={() => exportStory(story.story_id, story.name)}
+                            disabled={downloading !== null}
+                          >
+                            {downloading === story.story_id ? '⏳ Downloading...' : '📥 Export'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="pagination">
+                        <button
+                          onClick={() => setExportPage(p => Math.max(1, p - 1))}
+                          disabled={exportPage === 1}
+                          className="pagination-btn"
+                        >
+                          ← Previous
+                        </button>
+                        <span className="pagination-info">
+                          Page {exportPage} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setExportPage(p => Math.min(totalPages, p + 1))}
+                          disabled={exportPage >= totalPages}
+                          className="pagination-btn"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </>
           ) : (
             <p className="no-export">No online stories to export</p>
