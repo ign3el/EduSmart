@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import JSZip from 'jszip'
+import apiClient from '../services/api'
 import './OfflineManager.css'
 
 function OfflineManager({ onLoadOffline, onBack }) {
@@ -57,10 +58,8 @@ function OfflineManager({ onLoadOffline, onBack }) {
 
   const loadOnlineStories = async () => {
     try {
-      const response = await fetch('/api/list-stories')
-      if (!response.ok) throw new Error('Failed to fetch online stories')
-      const data = await response.json()
-      setOnlineStories(data)
+      const response = await apiClient.get('/api/list-stories')
+      setOnlineStories(response.data)
     } catch (error) {
       console.error('Error loading online stories:', error)
     }
@@ -113,15 +112,13 @@ function OfflineManager({ onLoadOffline, onBack }) {
     
     try {
       // Step 1: Request ZIP creation
-      const response = await fetch(`/api/export-story/${storyId}`)
-      if (!response.ok) throw new Error('Export failed')
+      const response = await apiClient.get(`/api/export-story/${storyId}`, {
+        responseType: 'blob'
+      })
       
-      // Step 2: Download
-      setDownloadMessage('Downloading...')
-      const blob = await response.blob()
-      
-      // Step 3: Save
+      // Step 2: Save
       setDownloadMessage('Saving file...')
+      const blob = response.data
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
