@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
   }, [fetchCurrentUser]);
 
   // Signup function
-  const signup = async (username, email, password, confirmPassword) => {
+  const signup = useCallback(async (username, email, password, confirmPassword) => {
     // Axios throws an error for non-2xx responses, simplifying error handling.
     const response = await apiClient.post('/api/auth/signup', {
       username,
@@ -65,18 +65,18 @@ export const AuthProvider = ({ children }) => {
     });
     // On success, return the new user data.
     return response.data;
-  };
+  }, []);
 
   // Resend verification email function
-  const resendVerificationEmail = async (email) => {
+  const resendVerificationEmail = useCallback(async (email) => {
     const response = await apiClient.post('/api/auth/resend-verification', null, {
       params: { email },
     });
     return response.data;
-  };
+  }, []);
 
   // Login function
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     // The new backend /token endpoint expects data in 'application/x-www-form-urlencoded' format.
     const params = new URLSearchParams();
     params.append('username', email); // Per OAuth2 standard, the username field holds the email
@@ -92,17 +92,17 @@ export const AuthProvider = ({ children }) => {
     
     // After successfully getting the token, fetch the user's data.
     await fetchCurrentUser();
-  };
+  }, [fetchCurrentUser]);
 
   // Logout function
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('auth_token');
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
   // The value provided to consumers of the context
-  const authContextValue = {
+  const authContextValue = useMemo(() => ({
     user,
     token,
     isLoading,
@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     resendVerificationEmail,
-  };
+  }), [user, token, isLoading, signup, login, logout, resendVerificationEmail]);
 
   return (
     <AuthContext.Provider value={authContextValue}>
