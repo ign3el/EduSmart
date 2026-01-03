@@ -504,7 +504,6 @@ function OfflineManager({ onLoadOffline, onBack }) {
                     setExportPage(1)
                   }}
                   className="search-input"
-                  disabled={!isOnline}
                 />
                 {exportSearchQuery && (
                   <button 
