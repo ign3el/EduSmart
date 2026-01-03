@@ -141,7 +141,7 @@ IMAGE_PROMPT REQUIREMENTS:
 ✓ Set appropriate environment (classroom, nature, laboratory, historical setting)
 ✓ Use composition that focuses attention on learning elements
 
-Generate 6-10 scenes. Output ONLY the JSON object.
+Generate 6-10 scenes. Output ONLY the JSON object."""
 
             def _generate_story_unified():
                 return self.client.models.generate_content(
@@ -177,9 +177,8 @@ Generate 6-10 scenes. Output ONLY the JSON object.
             print("STORY ERROR: Received empty or invalid response from GenAI model.")
             return None
         except Exception as e:
-            print(f"STORY ERROR: {{e}}")
+            print(f"STORY ERROR: {e}")
             return None
-
 
     def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None) -> Optional[bytes]:
         """Image generation via RunPod ComfyUI FLUX.1-dev with enhanced quality prompting. Uses story_seed for character consistency."""
