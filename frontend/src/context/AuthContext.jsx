@@ -52,7 +52,8 @@ export const AuthProvider = ({ children }) => {
   // On initial application load, check for a token and try to fetch the user.
   useEffect(() => {
     fetchCurrentUser();
-  }, [fetchCurrentUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Signup function
   const signup = useCallback(async (username, email, password, confirmPassword) => {
