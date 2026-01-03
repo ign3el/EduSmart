@@ -366,8 +366,10 @@ function MainApp() {
   }
 
   const handlePlayStoryFromAdmin = async (storyId) => {
+    console.log('handlePlayStoryFromAdmin called with storyId:', storyId);
     try {
       const response = await apiClient.get(`/api/load-story/${storyId}`);
+      console.log('Story loaded:', response.data);
       if (response.data) {
           setStoryData(response.data.story_data);
           setSelectedAvatar({ id: 'loaded', name: response.data.name });
@@ -376,6 +378,7 @@ function MainApp() {
           setStep('playing');
       }
     } catch (err) {
+        console.error('Error loading story:', err);
         setError(`Failed to load story ${storyId}. It may have been deleted.`);
         console.error(err);
     }

@@ -110,7 +110,11 @@ const StoryList = ({ onPlayStory }) => {
                                     <td>
                                         <button 
                                             className="play-story-button"
-                                            onClick={() => onPlayStory(story.story_id)}
+                                            onClick={() => {
+                                                console.log('Play clicked for story:', story);
+                                                console.log('Story ID:', story.story_id);
+                                                onPlayStory(story.story_id);
+                                            }}
                                         >
                                             Play
                                         </button>
