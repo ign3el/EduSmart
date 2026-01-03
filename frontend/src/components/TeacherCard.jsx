@@ -76,6 +76,33 @@ const TEACHERS = [
     icon: "🇬🇧"
   },
   { 
+    id: "bf_isabella", 
+    name: "Isabella", 
+    personality: "British Charm", 
+    description: "Warm British accent perfect for engaging young learners",
+    lang: "en",
+    sample: "Hello there! I'm Isabella. Shall we explore wonderful stories together?",
+    icon: "👸"
+  },
+  { 
+    id: "bm_george", 
+    name: "George", 
+    personality: "British Gentleman", 
+    description: "Distinguished British male voice with clear articulation",
+    lang: "en",
+    sample: "Good afternoon! I'm George. Let me guide you through fascinating tales.",
+    icon: "🎩"
+  },
+  { 
+    id: "bm_fable", 
+    name: "Fable", 
+    personality: "British Storyteller", 
+    description: "Expressive British male narrator for captivating adventures",
+    lang: "en",
+    sample: "Greetings! I'm Fable. Prepare for enchanting stories of learning!",
+    icon: "📜"
+  },
+  { 
     id: "ar_teacher", 
     name: "Nour", 
     personality: "Arabic Educator", 
