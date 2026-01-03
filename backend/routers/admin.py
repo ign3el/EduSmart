@@ -1,13 +1,19 @@
 import logging
 import sqlite3
 import requests
+import os
+import json
+from pathlib import Path
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import io
 
 from .auth import get_current_user
-from database_models import User
+from database_models import User, StoryOperations
+from database import get_db_cursor
+import mysql.connector
 from services.kokoro_client import generate_tts
 
 # Setup logging
@@ -131,3 +137,147 @@ async def get_job_state_db_table_content(table_name: str):
         if conn:
             conn.close()
     return {"table_name": table_name, "content": content}
+
+@router.post("/migrate-saved-stories", dependencies=[Depends(get_admin_user)])
+async def migrate_saved_stories():
+    """
+    Admin endpoint to scan saved_stories folder and create database entries
+    for stories that exist on disk but not in the database.
+    """
+    # Try multiple possible locations
+    possible_paths = [
+        Path("saved_stories"),
+        Path("backend/saved_stories"),
+        Path("/app/saved_stories"),
+        Path("/app/backend/saved_stories")
+    ]
+    
+    saved_stories_path = None
+    for path in possible_paths:
+        if path.exists():
+            saved_stories_path = path
+            break
+    
+    if not saved_stories_path:
+        return {
+            "success": False,
+            "message": "saved_stories folder not found",
+            "searched_paths": [str(p.absolute()) for p in possible_paths]
+        }
+    
+    story_folders = [f for f in saved_stories_path.iterdir() if f.is_dir()]
+    
+    migrated = []
+    skipped = []
+    errors = []
+    
+    for story_folder in story_folders:
+        story_id = story_folder.name
+        story_json_path = story_folder / "story.json"
+        
+        if not story_json_path.exists():
+            skipped.append({"story_id": story_id, "reason": "No story.json found"})
+            continue
+        
+        try:
+            with get_db_cursor() as cursor:
+                cursor.execute("SELECT story_id FROM user_stories WHERE story_id = %s", (story_id,))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    skipped.append({"story_id": story_id, "reason": "Already in database"})
+                    continue
+                
+                # Read story.json
+                with open(story_json_path, 'r', encoding='utf-8') as f:
+                    story_data = json.load(f)
+                
+                story_title = story_data.get('title', 'Untitled Story')
+                
+                # Insert into database with NULL user_id (orphaned)
+                query = """
+                    INSERT INTO user_stories (story_id, user_id, name, story_data, created_at, updated_at)
+                    VALUES (%s, NULL, %s, %s, %s, %s)
+                """
+                
+                now = datetime.now()
+                created_at = datetime.fromtimestamp(story_folder.stat().st_ctime)
+                
+                cursor.execute(query, (
+                    story_id,
+                    story_title,
+                    json.dumps(story_data),
+                    created_at,
+                    now
+                ))
+                
+                migrated.append({"story_id": story_id, "title": story_title})
+                
+        except mysql.connector.Error as e:
+            errors.append({"story_id": story_id, "error": str(e)})
+        except json.JSONDecodeError as e:
+            errors.append({"story_id": story_id, "error": f"Invalid JSON: {e}"})
+        except Exception as e:
+            errors.append({"story_id": story_id, "error": str(e)})
+    
+    return {
+        "success": True,
+        "saved_stories_path": str(saved_stories_path.absolute()),
+        "total_folders": len(story_folders),
+        "migrated_count": len(migrated),
+        "skipped_count": len(skipped),
+        "error_count": len(errors),
+        "migrated": migrated,
+        "skipped": skipped,
+        "errors": errors
+    }
+
+@router.get("/debug-stories", dependencies=[Depends(get_admin_user)])
+async def debug_stories():
+    """
+    Debug endpoint to check what stories exist in database vs saved_stories folder.
+    """
+    # Check database
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT story_id, name, user_id FROM user_stories ORDER BY updated_at DESC")
+            db_stories = cursor.fetchall()
+    except Exception as e:
+        db_stories = []
+        db_error = str(e)
+    
+    # Check saved_stories folder
+    possible_paths = [
+        Path("saved_stories"),
+        Path("backend/saved_stories"),
+        Path("/app/saved_stories"),
+        Path("/app/backend/saved_stories")
+    ]
+    
+    saved_stories_path = None
+    for path in possible_paths:
+        if path.exists():
+            saved_stories_path = path
+            break
+    
+    disk_stories = []
+    if saved_stories_path:
+        for folder in saved_stories_path.iterdir():
+            if folder.is_dir():
+                story_json = folder / "story.json"
+                disk_stories.append({
+                    "story_id": folder.name,
+                    "has_json": story_json.exists()
+                })
+    
+    return {
+        "database": {
+            "count": len(db_stories),
+            "stories": [{"story_id": s["story_id"], "name": s["name"], "user_id": s.get("user_id")} for s in db_stories]
+        },
+        "disk": {
+            "path": str(saved_stories_path.absolute()) if saved_stories_path else None,
+            "count": len(disk_stories),
+            "stories": disk_stories
+        }
+    }
