@@ -33,6 +33,13 @@ class GeminiService:
             try:
                 return func(*args, **kwargs)
             except Exception as e:
+                error_str = str(e)
+                # Detect quota exhaustion (don't retry indefinitely)
+                if "429" in error_str and "RESOURCE_EXHAUSTED" in error_str and "quota" in error_str.lower():
+                    if attempt >= 2:  # Stop after 2 attempts for quota issues
+                        print(f"❌ Gemini API quota exhausted. Please upgrade API tier or wait for reset.")
+                        raise Exception("AI Service quota exceeded. Please try again later or contact support.")
+                
                 if attempt < self.max_retries:
                     delay = self._exponential_backoff(attempt)
                     print(f"Attempt {attempt + 1} failed: {str(e)[:100]}... Retrying in {delay}s...")
