@@ -48,7 +48,24 @@ function LoadStory({ onLoad, onBack }) {
       setLoading(false)
     }
   }
-) => {
+
+  // Filter stories based on search query
+  const filteredStories = stories.filter(story =>
+    story.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  // Pagination
+  const totalPages = Math.ceil(filteredStories.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedStories = filteredStories.slice(startIndex, endIndex)
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
+  const handleLoad = async (story) => {
     try {
       console.log('Loading story with story_id:', story.story_id)
       console.log('Full story object:', story)
@@ -58,28 +75,11 @@ function LoadStory({ onLoad, onBack }) {
     } catch (error) {
       console.error('Failed to load story:', error)
       const errorMsg = error.response?.data?.detail || error.message
-      alert(`Failed to load story: ${errorMsg}\n\nStory ID: ${story.story_id || story.i
-  const endIndex = startIndex + itemsPerPage
-  const paginatedStories = filteredStories.slice(startIndex, endIndex)
-
-  // Reset to page 1 when search changes
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery])
-
-  const handleLoad = async (storyId) => {
-    try {
-      console.log('Loading story with ID:', storyId)
-      const response = await apiClient.get(`/api/load-story/${storyId}`)
-      console.log('Story loaded successfully:', response.data.name)
-      onLoad(response.data.story_data, response.data.name, storyId)
-    } catch (error) {
-      console.error('Failed to load story:', error)
-      const errorMsg = error.response?.data?.detail || error.message
-      alert(`Failed to load story: ${errorMsg}\n\nStory ID: ${storyId}`)
+      alert(`Failed to load story: ${errorMsg}\n\nStory ID: ${story.story_id || story.id}`)
     }
   }
-) => {
+
+  const handleDelete = async (story) => {
     if (!confirm(`Delete "${story.name}"? This cannot be undone.`)) return
     
     try {
@@ -105,8 +105,7 @@ function LoadStory({ onLoad, onBack }) {
       const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
-      link.download = `${story.name.replace(/\s+/g, '_')}_${story.story_i
-      link.download = `${storyName.replace(/\s+/g, '_')}_${storyId.substring(0, 8)}.zip`
+      link.download = `${story.name.replace(/\s+/g, '_')}_${story.story_id.substring(0, 8)}.zip`
       
       document.body.appendChild(link)
       link.click()
