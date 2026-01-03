@@ -107,7 +107,114 @@
 
 .voice-selection {
   display: grid;
-  gap: 0.9rem;
+  gap: 1.5rem;
+  background: linear-gradient(150deg, rgba(12, 21, 40, 0.7), rgba(12, 21, 40, 0.55));
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.detecting-language {
+  text-align: center;
+  padding: 2rem;
+  color: var(--ink-2);
+}
+
+.detecting-language p {
+  font-size: 1.1rem;
+  margin: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Speed Control Styling */
+.speed-control {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding: 1.2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--edge);
+}
+
+.speed-control label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: var(--ink-1);
+  font-size: 1rem;
+  margin-bottom: 0.3rem;
+}
+
+.speed-value {
+  padding: 0.3rem 0.8rem;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: white;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 10px;
+  background: linear-gradient(to right, 
+    rgba(168, 85, 247, 0.3) 0%, 
+    rgba(236, 72, 153, 0.5) 50%,
+    rgba(59, 130, 246, 0.3) 100%);
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+  transition: all var(--transition);
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 6px 18px rgba(168, 85, 247, 0.6);
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+  transition: all var(--transition);
+}
+
+.slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 6px 18px rgba(168, 85, 247, 0.6);
+}
+
+.speed-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .voice-selection h3 {

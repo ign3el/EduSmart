@@ -16,8 +16,11 @@ import LoadStory from './components/LoadStory'
 import OfflineManager from './components/OfflineManager'
 import ReuploadConfirmModal from './components/ReuploadConfirmModal'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
+import TeacherCard from './components/TeacherCard'
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 import './App.css'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 function App() {
   // Use Routes to handle verification and password reset pages
@@ -41,6 +44,7 @@ function MainApp() {
   // New state for Kokoro TTS
   const [voice, setVoice] = useState('af_sarah');
   const [speed, setSpeed] = useState(1.0);
+  const [detectedLanguage, setDetectedLanguage] = useState('en');
   
   const [storyData, setStoryData] = useState(null)
   const [progress, setProgress] = useState(0)
