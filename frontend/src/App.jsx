@@ -328,7 +328,7 @@ function MainApp() {
           <h1>EduSmart — AI Storymaker</h1>
           <p>Transform your PDFs or DOCX files into animated, voice-guided adventures tailored for every grade.</p>
         </div>
-        {isLoggedIn && (
+        {isAuthenticated && (
           <button className="logout-btn" onClick={logout}>Logout</button>
         )}
       </header>
