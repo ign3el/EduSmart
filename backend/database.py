@@ -148,6 +148,23 @@ def initialize_database():
                 logger.info(f"Creating table '{table_name}'...")
                 cursor.execute(table_description)
             logger.info("✓ Database schema initialized successfully")
+
+            # --- Schema Migration: Add 'is_admin' column if it doesn't exist ---
+            logger.info("Checking for necessary schema migrations...")
+            cursor.execute("""
+                SELECT COUNT(*) AS count
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                AND table_name = 'users'
+                AND column_name = 'is_admin'
+            """)
+            if cursor.fetchone()['count'] == 0:
+                logger.warning("! 'is_admin' column not found in 'users' table. Adding it now...")
+                cursor.execute("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE")
+                logger.info("✓ Successfully added 'is_admin' column to 'users' table.")
+            else:
+                logger.info("✓ 'users' table schema is up to date.")
+
     except (mysql.connector.Error, ConnectionError) as err:
         logger.error(f"⚠ Could not initialize database: {err}")
         # This is a critical failure on startup, so re-raise
