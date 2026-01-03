@@ -507,3 +507,117 @@ async def delete_story(story_id: str, user: User = Depends(get_current_user)):
         shutil.rmtree(story_dir)
 
     return {"message": "Story deleted successfully"}
+
+@app.get("/api/export-job/{job_id}")
+async def export_job(job_id: str):
+    """
+    Export a job (story generation) as a ZIP file for offline use.
+    Includes all scenes with images and audio files.
+    """
+    # Check if it's a progressive story
+    status = job_manager.get_story_status(job_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if status["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Job not completed yet")
+    
+    scenes = job_manager.get_all_scenes(job_id)
+    
+    # Create ZIP file in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Add story metadata
+        story_data = {
+            "title": status["title"],
+            "scenes": []
+        }
+        
+        # Add each scene's assets
+        for idx, scene in enumerate(scenes):
+            scene_data = {
+                "text": scene["text"],
+                "image_url": f"scene_{idx}.png",
+                "audio_url": f"scene_{idx}.wav"
+            }
+            story_data["scenes"].append(scene_data)
+            
+            # Add image file
+            if scene["image_url"]:
+                img_path = scene["image_url"].replace("/api/outputs/", "outputs/")
+                if os.path.exists(img_path):
+                    zip_file.write(img_path, f"scene_{idx}.png")
+            
+            # Add audio file
+            if scene["audio_url"]:
+                audio_path = scene["audio_url"].replace("/api/outputs/", "outputs/")
+                if os.path.exists(audio_path):
+                    zip_file.write(audio_path, f"scene_{idx}.wav")
+        
+        # Add story.json
+        zip_file.writestr("story.json", json.dumps(story_data, indent=2))
+    
+    zip_buffer.seek(0)
+    
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename={status['title'].replace(' ', '_')}.zip"
+        }
+    )
+
+@app.get("/api/export-story/{story_id}")
+async def export_story(story_id: str, user: User = Depends(get_current_user)):
+    """
+    Export a saved story as a ZIP file for offline use.
+    Includes all scenes with images and audio files.
+    """
+    story = StoryOperations.get_story(story_id, user)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found or you do not have permission to access it.")
+    
+    story_data = story.get("story_data", {})
+    
+    # Create ZIP file in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Update story data with local file references
+        export_data = {
+            "title": story_data.get("title", story["name"]),
+            "scenes": []
+        }
+        
+        # Add each scene's assets
+        for idx, scene in enumerate(story_data.get("scenes", [])):
+            scene_data = {
+                "text": scene.get("text", ""),
+                "image_url": f"scene_{idx}.png",
+                "audio_url": f"scene_{idx}.wav"
+            }
+            export_data["scenes"].append(scene_data)
+            
+            # Add image file from saved_stories directory
+            if scene.get("image_url"):
+                img_path = os.path.join("saved_stories", story_id, f"scene_{idx}.png")
+                if os.path.exists(img_path):
+                    zip_file.write(img_path, f"scene_{idx}.png")
+            
+            # Add audio file from saved_stories directory
+            if scene.get("audio_url"):
+                audio_path = os.path.join("saved_stories", story_id, f"scene_{idx}.wav")
+                if os.path.exists(audio_path):
+                    zip_file.write(audio_path, f"scene_{idx}.wav")
+        
+        # Add story.json
+        zip_file.writestr("story.json", json.dumps(export_data, indent=2))
+    
+    zip_buffer.seek(0)
+    
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename={story['name'].replace(' ', '_')}.zip"
+        }
+    )
