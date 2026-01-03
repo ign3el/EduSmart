@@ -483,13 +483,24 @@ async def load_story(story_id: str, user: User = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Story not found or you do not have permission to view it.")
     
     # The 'story_data' from the DB needs to have its URLs updated to point to the correct static path
-    # This logic seems to be missing from the new DB operation, so we add it back here.
     story_data = story.get("story_data", {})
-    for scene in story_data.get("scenes", []):
+    
+    logger.info(f"Loading story {story_id}, has {len(story_data.get('scenes', []))} scenes")
+    
+    for i, scene in enumerate(story_data.get("scenes", [])):
+        original_image = scene.get("image_url", "")
+        original_audio = scene.get("audio_url", "")
+        
+        logger.info(f"Scene {i} original image_url: {original_image}")
+        logger.info(f"Scene {i} original audio_url: {original_audio}")
+        
         if scene.get("image_url"):
             scene["image_url"] = scene["image_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
         if scene.get("audio_url"):
             scene["audio_url"] = scene["audio_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+            
+        logger.info(f"Scene {i} updated image_url: {scene.get('image_url')}")
+        logger.info(f"Scene {i} updated audio_url: {scene.get('audio_url')}")
             
     return {"name": story["name"], "story_data": story_data}
 
