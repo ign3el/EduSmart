@@ -83,6 +83,42 @@ const TEACHERS = [
     lang: "ar",
     sample: "مرحباً! أنا نور، معلمتك العربية. سأساعدك في رحلة تعليمية ممتعة.",
     icon: "🌙"
+  },
+  { 
+    id: "hf_alpha", 
+    name: "Priya", 
+    personality: "Hindi Teacher", 
+    description: "Professional Hindi educator with clear pronunciation",
+    lang: "hi",
+    sample: "नमस्ते! मैं प्रिया हूँ। आइए साथ में सीखें!",
+    icon: "🇮🇳"
+  },
+  { 
+    id: "hf_beta", 
+    name: "Anjali", 
+    personality: "Warm & Friendly", 
+    description: "Gentle Hindi storyteller with expressive delivery",
+    lang: "hi",
+    sample: "नमस्कार! मैं अंजलि हूँ। चलिए एक अद्भुत कहानी सुनते हैं!",
+    icon: "✨"
+  },
+  { 
+    id: "hm_omega", 
+    name: "Arjun", 
+    personality: "Strong Narrator", 
+    description: "Confident male Hindi voice for engaging stories",
+    lang: "hi",
+    sample: "नमस्ते! मैं अर्जुन हूँ। आइए रोमांचक कहानियाँ सुनें!",
+    icon: "🎯"
+  },
+  { 
+    id: "hm_psi", 
+    name: "Vikram", 
+    personality: "Wise Teacher", 
+    description: "Authoritative male Hindi educator for learning",
+    lang: "hi",
+    sample: "नमस्कार! मैं विक्रम हूँ। चलिए ज्ञान की यात्रा शुरू करें!",
+    icon: "📖"
   }
 ];
 
@@ -97,11 +133,16 @@ function TeacherCard({ activeVoice = "af_sarah", onVoiceSelect, detectedLanguage
     if (detectedLanguage === 'ar') {
       return teacher.lang === 'ar';
     }
-    return teacher.lang !== 'ar';
+    if (detectedLanguage === 'hi') {
+      return teacher.lang === 'hi';
+    }
+    return teacher.lang === 'en';
   });
 
   // Auto-select default voice based on language
-  const defaultVoice = detectedLanguage === 'ar' ? 'ar_teacher' : 'af_bella';
+  const defaultVoice = detectedLanguage === 'ar' ? 'ar_teacher' 
+    : detectedLanguage === 'hi' ? 'hf_alpha'
+    : 'af_bella';
   
   // If no voice is selected or current voice doesn't match language, use default
   const currentActiveVoice = filteredTeachers.find(t => t.id === activeVoice) 
