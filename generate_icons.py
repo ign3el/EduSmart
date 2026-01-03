@@ -4,7 +4,7 @@ Run: python generate_icons.py
 """
 
 try:
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw, ImageFont  # type: ignore
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
