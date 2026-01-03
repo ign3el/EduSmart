@@ -245,7 +245,7 @@ async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level
         title = story_data.get("title", "Untitled Story")
         
         # Initialize job state
-        job_manager.create_story(story_id, title, grade_level, len(scenes))
+        job_manager.update_story_metadata(story_id, title, len(scenes))
         
         # Create scene records immediately (text is ready)
         scene_ids = []
@@ -280,6 +280,9 @@ async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = Fil
     upload_path = os.path.join("uploads", f"{story_id}_{file.filename}")
     with open(upload_path, "wb") as f:
         f.write(await file.read())
+
+    # Immediately create a record for the job to prevent race conditions
+    job_manager.initialize_story(story_id, grade_level)
     
     # Use progressive workflow
     background_tasks.add_task(run_ai_workflow_progressive, story_id, upload_path, grade_level, voice)

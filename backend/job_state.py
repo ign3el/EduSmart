@@ -67,13 +67,22 @@ class JobStateManager:
                 ON scenes(story_id, scene_index)
             """)
     
-    def create_story(self, story_id: str, title: str, grade_level: str, total_scenes: int):
-        """Create a new story job."""
+    def initialize_story(self, story_id: str, grade_level: str):
+        """Create a preliminary story job record."""
         with self._get_conn() as conn:
             conn.execute("""
-                INSERT INTO stories (story_id, status, title, grade_level, total_scenes)
-                VALUES (?, ?, ?, ?, ?)
-            """, (story_id, "processing", title, grade_level, total_scenes))
+                INSERT INTO stories (story_id, status, title, grade_level, total_scenes, completed_scenes)
+                VALUES (?, 'initializing', 'Initializing story...', ?, 0, 0)
+            """, (story_id, grade_level))
+
+    def update_story_metadata(self, story_id: str, title: str, total_scenes: int):
+        """Update story metadata after initial AI processing."""
+        with self._get_conn() as conn:
+            conn.execute("""
+                UPDATE stories
+                SET status = 'processing', title = ?, total_scenes = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE story_id = ?
+            """, (title, total_scenes, story_id))
     
     def create_scene(self, story_id: str, scene_index: int, text: str, character_prompt: Optional[str] = None):
         """Create a new scene for tracking."""
