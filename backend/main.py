@@ -510,10 +510,13 @@ async def load_story(story_id: str, user: User = Depends(get_current_user)):
     Load a specific story. Enforces ownership rules (users can only load their own
     stories, unless they are an admin).
     """
+    logger.info(f"Loading story {story_id} for user {user.get('email')} (admin: {user.get('is_admin')})")
     story = StoryOperations.get_story(story_id, user)
     if not story:
+        logger.warning(f"Story {story_id} not found or user {user.get('email')} lacks permission")
         raise HTTPException(status_code=404, detail="Story not found or you do not have permission to view it.")
     
+    logger.info(f"Successfully loaded story {story_id}: {story.get('name')}")
     # The 'story_data' from the DB needs to have its URLs updated to point to the correct static path
     story_data = story.get("story_data", {})
     

@@ -16,9 +16,11 @@ function LoadStory({ onLoad, onBack }) {
   const fetchStories = async () => {
     try {
       const response = await apiClient.get('/api/list-stories')
+      console.log('Fetched stories:', response.data)
       setStories(response.data)
     } catch (error) {
       console.error('Error fetching stories:', error)
+      alert('Failed to load stories. Please refresh the page.')
     } finally {
       setLoading(false)
     }
@@ -26,10 +28,14 @@ function LoadStory({ onLoad, onBack }) {
 
   const handleLoad = async (storyId) => {
     try {
+      console.log('Loading story with ID:', storyId)
       const response = await apiClient.get(`/api/load-story/${storyId}`)
+      console.log('Story loaded successfully:', response.data.name)
       onLoad(response.data.story_data, response.data.name, storyId)
     } catch (error) {
-      alert('Failed to load story: ' + error.message)
+      console.error('Failed to load story:', error)
+      const errorMsg = error.response?.data?.detail || error.message
+      alert(`Failed to load story: ${errorMsg}\n\nStory ID: ${storyId}`)
     }
   }
 
