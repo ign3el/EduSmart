@@ -332,8 +332,9 @@ function OfflineManager({ onLoadOffline, onBack }) {
             {isOnline ? '🟢 Online' : '🔴 Offline'}
           </div>
           {storageInfo && (
-            <div className="storage-info">
-              💾 {storageInfo.usage}MB / {storageInfo.quota}MB used
+            <div className="storage-info" title={storageInfo.persisted ? 'Storage protected from automatic deletion' : 'Storage may be cleared by browser'}>
+              💾 {storageInfo.usage}MB / {storageInfo.quota}MB
+              {storageInfo.persisted && ' 🔒'}
             </div>
           )}
           {showInstallPrompt && !isPWA && (

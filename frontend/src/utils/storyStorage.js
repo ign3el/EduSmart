@@ -7,6 +7,21 @@ const DB_VERSION = 1;
 const STORE_NAME = 'stories';
 const SIZE_LIMIT_MB = 5; // Try localStorage for stories under 5MB
 
+// Request persistent storage to protect downloaded stories from eviction
+async function requestPersistentStorage() {
+  if (navigator.storage && navigator.storage.persist) {
+    const isPersisted = await navigator.storage.persisted();
+    if (!isPersisted) {
+      const granted = await navigator.storage.persist();
+      console.log(`Persistent storage ${granted ? 'granted ✅' : 'denied ❌'}`);
+      return granted;
+    }
+    console.log('Persistent storage already granted ✅');
+    return true;
+  }
+  return false;
+}
+
 // Initialize IndexedDB
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -26,6 +41,9 @@ function openDB() {
 
 // Save story (auto-selects IndexedDB or localStorage based on size)
 export async function saveStory(storyData) {
+  // Request persistent storage on first save to protect from eviction
+  await requestPersistentStorage();
+  
   const storyJson = JSON.stringify(storyData);
   const sizeInMB = new Blob([storyJson]).size / 1024 / 1024;
   
@@ -157,10 +175,13 @@ export async function deleteStory(storyId) {
 export async function getStorageInfo() {
   if (navigator.storage && navigator.storage.estimate) {
     const estimate = await navigator.storage.estimate();
+    const isPersisted = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+    
     return {
       usage: (estimate.usage / 1024 / 1024).toFixed(2), // MB
       quota: (estimate.quota / 1024 / 1024).toFixed(2), // MB
-      available: ((estimate.quota - estimate.usage) / 1024 / 1024).toFixed(2) // MB
+      available: ((estimate.quota - estimate.usage) / 1024 / 1024).toFixed(2), // MB
+      persisted: isPersisted // Whether storage is protected from eviction
     };
   }
   return null;
