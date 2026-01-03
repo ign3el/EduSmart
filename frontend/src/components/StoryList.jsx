@@ -115,10 +115,6 @@ const StoryList = ({ onPlayStory }) => {
                                             className="play-story-button"
                                             disabled={playingStoryId === story.story_id}
                                             onClick={() => {
-                                                console.log('=== BUTTON CLICKED ===');
-                                                console.log('Play clicked for story:', story);
-                                                console.log('Story ID:', story.story_id);
-                                                console.log('Story name:', story.name);
                                                 setPlayingStoryId(story.story_id);
                                                 onPlayStory(story.story_id);
                                             }}

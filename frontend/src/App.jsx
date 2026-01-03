@@ -367,40 +367,26 @@ function MainApp() {
   }
 
   const handlePlayStoryFromAdmin = async (storyId) => {
-    console.log('=== PLAY STORY DEBUG ===');
-    console.log('1. storyId received:', storyId);
-    console.log('2. Current step:', step);
-    
     if (!storyId) {
-      console.error('ERROR: storyId is undefined or null');
       setError('Cannot play story: Invalid story ID');
       return;
     }
     
     try {
-      console.log('3. Making API call to /api/load-story/' + storyId);
       const response = await apiClient.get(`/api/load-story/${storyId}`);
-      console.log('4. API Response:', response);
-      console.log('5. Response data:', response.data);
-      console.log('6. Story data structure:', response.data?.story_data);
       
       if (response.data && response.data.story_data) {
-          console.log('7. Setting story data...');
           setStoryData(response.data.story_data);
           setSelectedAvatar({ id: 'loaded', name: response.data.name });
           setIsSaved(true);
           setSavedStoryId(storyId);
-          console.log('8. Changing step to "playing"');
           setStep('playing');
-          console.log('9. Step change complete');
       } else {
-        console.error('ERROR: Invalid response structure', response.data);
         setError('Story data is incomplete or invalid');
       }
     } catch (err) {
-        console.error('10. ERROR loading story:', err);
-        console.error('Error details:', err.response || err.message);
-        setError(`Failed to load story ${storyId}. ${err.response?.data?.detail || err.message}`);
+        console.error('Error loading story:', err);
+        setError(`Failed to load story. ${err.response?.data?.detail || err.message}`);
     }
   }
 
