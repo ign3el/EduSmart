@@ -21,7 +21,10 @@ class GeminiService:
         self.audio_model = "gemini-2.5-flash-preview-tts"  # Optimized TTS
         # Exponential backoff configuration
         self.base_delay = 1  # Start with 1 second
-        self.max_retries = 5  # Maximum retry attempts 
+        self.max_retries = 5  # Maximum retry attempts
+        # TPM (Tokens Per Minute) tracking
+        self.tpm_limit = 1_000_000  # Gemini 2.5 Flash TPM limit
+        self.last_request_tokens = 0  # Track last request size 
 
     def _exponential_backoff(self, attempt: int) -> int:
         """Calculate exponential backoff delay: base_delay * (2 ^ attempt)."""
@@ -34,11 +37,19 @@ class GeminiService:
                 return func(*args, **kwargs)
             except Exception as e:
                 error_str = str(e)
+                
                 # Detect quota exhaustion (don't retry indefinitely)
-                if "429" in error_str and "RESOURCE_EXHAUSTED" in error_str and "quota" in error_str.lower():
-                    if attempt >= 2:  # Stop after 2 attempts for quota issues
-                        print(f"❌ Gemini API quota exhausted. Please upgrade API tier or wait for reset.")
-                        raise Exception("AI Service quota exceeded. Please try again later or contact support.")
+                if "429" in error_str and "RESOURCE_EXHAUSTED" in error_str:
+                    # Check if it's quota vs TPM limit
+                    if "quota" in error_str.lower():
+                        if attempt >= 2:  # Stop after 2 attempts for quota issues
+                            print(f"❌ Gemini API quota exhausted. Please upgrade API tier or wait for reset.")
+                            raise Exception("AI Service quota exceeded. Please try again later or contact support.")
+                    elif "tokens per minute" in error_str.lower() or "tpm" in error_str.lower():
+                        if attempt >= 1:  # TPM limits usually resolve faster
+                            print(f"⚠️  TPM limit hit. Consider shortening document or waiting 60 seconds.")
+                            # Wait longer for TPM to reset (60 seconds)
+                            time.sleep(60)
                 
                 if attempt < self.max_retries:
                     delay = self._exponential_backoff(attempt)
@@ -49,72 +60,47 @@ class GeminiService:
                     raise
 
     def process_file_to_story(self, file_path: str, grade_level: str) -> Optional[dict]:
-        """Generates the story JSON structure with a single, consolidated prompt."""
+        """Generates the story JSON structure with a single, consolidated prompt. Token-optimized for TPM limits."""
         try:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # A single, consolidated prompt that instructs the AI to "think" first
-            # and then produce the JSON output.
-            unified_prompt = f"""
-You are an expert instructional designer and creative storyteller for {grade_level} students.
-Your task is to transform the provided document into a high-engagement, interactive learning story.
+            # Token-optimized prompt (reduced from 650 to ~350 tokens)
+            unified_prompt = f"""Transform this document into an interactive educational story for {grade_level} students.
 
-**INTERNAL THOUGHT PROCESS (Follow these steps first, before generating the final output):**
+OUTPUT: Valid JSON object only (no markdown, no extra text).
 
-1.  **DEEP ANALYSIS:** Perform a thorough analysis of the document to extract:
-    - Core learning objectives and key concepts.
-    - Specific facts, data points, and essential vocabulary.
-    - The logical progression of topics.
-
-2.  **STORY ARCHITECTURE:** Based on your analysis, design a story with:
-    - A clear narrative arc (Introduction, Exploration, Application, Conclusion).
-    - Characters and plot points that are direct metaphors for the learning objectives.
-    - A structure of 6-10 scenes, with each scene introducing a new concept.
-
-**FINAL JSON OUTPUT (Your entire response must be ONLY the single JSON object):**
-
-Based on your internal analysis, generate a single, valid JSON object with the exact structure below.
-
-**CRITICAL JSON FORMATTING RULES:**
-- Ensure the entire output is a single JSON object, starting with `{{` and ending with `}}`.
-- Do not include any text, notes, or markdown (like ```json) before or after the JSON object.
-- Ensure every object in an array is followed by a comma, except for the last one.
-- Double-check that all strings are properly enclosed in double quotes.
-
-**JSON STRUCTURE:**
-```json
+STRUCTURE:
 {{
-  "title": "A creative, engaging title for the story",
-  "description": "A one-paragraph summary of the story's plot and educational goals.",
+  "title": "Story title",
+  "description": "Plot summary and goals",
   "grade_level": "{grade_level}",
-  "subject": "The main subject of the lesson (e.g., 'Science', 'History')",
-  "learning_outcome": "A sentence describing what the student will be able to do after the story.",
+  "subject": "Main subject area",
+  "learning_outcome": "What student learns",
   "scenes": [
     {{
       "scene_number": 1,
-      "narrative_text": "Engaging, age-appropriate story text for this scene. It must teach a specific concept from your analysis.",
-      "image_prompt": "A detailed, 4-5 sentence description for an AI image generator (3D Pixar style) that visually reinforces the concept in this scene. Must exactly match the narrative text.",
-      "check_for_understanding": "A brief question to check comprehension of this scene's topic."
+      "narrative_text": "Age-appropriate story teaching one concept (2-3 sentences)",
+      "image_prompt": "3D Pixar-style visual description (2-3 sentences) matching narrative",
+      "check_for_understanding": "Comprehension question"
     }}
   ],
   "quiz": [
     {{
       "question_number": 1,
-      "question_text": "A multiple-choice question testing a key learning objective.",
-      "options": [
-        "A. Plausible incorrect option",
-        "B. The correct option",
-        "C. Another plausible incorrect option",
-        "D. A final plausible incorrect option"
-      ],
+      "question_text": "Multiple-choice question",
+      "options": ["A. Option", "B. Option", "C. Option", "D. Option"],
       "correct_answer": "B",
-      "explanation": "A brief, clear explanation of why the correct answer is right."
+      "explanation": "Why correct"
     }}
   ]
 }}
-```
-"""
+
+RULES:
+- 6-10 scenes with clear narrative arc
+- Each scene = 1 concept
+- Engaging characters as learning metaphors
+- Valid JSON only (no ```json markers)"""
 
             def _generate_story_unified():
                 return self.client.models.generate_content(
