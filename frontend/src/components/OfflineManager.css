@@ -27,6 +27,13 @@
   font-size: clamp(1.4rem, 3vw, 1.8rem);
 }
 
+.header-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .connection-status {
   padding: 0.45rem 0.9rem;
   border-radius: 999px;
@@ -42,6 +49,16 @@
 .connection-status.offline {
   color: #f43f5e;
   border-color: rgba(244, 63, 94, 0.4);
+}
+
+.storage-info {
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.1);
 }
 
 .offline-actions {

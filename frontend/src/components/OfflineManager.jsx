@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import JSZip from 'jszip'
 import apiClient from '../services/api'
+import * as storyStorage from '../utils/storyStorage'
 import './OfflineManager.css'
 
 function OfflineManager({ onLoadOffline, onBack }) {
@@ -10,22 +11,19 @@ function OfflineManager({ onLoadOffline, onBack }) {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [downloading, setDownloading] = useState(null)
   const [downloadMessage, setDownloadMessage] = useState('')
+  const [storageInfo, setStorageInfo] = useState(null)
 
-  const loadLocalStories = () => {
-    const stories = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key?.startsWith('edusmart_story_')) {
-        try {
-          const story = JSON.parse(localStorage.getItem(key))
-          stories.push(story)
-        } catch (error) {
-          console.error('Error loading story:', error)
-        }
-      }
+  const loadLocalStories = async () => {
+    try {
+      const stories = await storyStorage.listStories()
+      setLocalStories(stories)
+      
+      // Get storage info
+      const info = await storyStorage.getStorageInfo()
+      setStorageInfo(info)
+    } catch (error) {
+      console.error('Failed to load local stories:', error)
     }
-    stories.sort((a, b) => b.savedAt - a.savedAt)
-    setLocalStories(stories)
   }
 
   useEffect(() => {
@@ -76,38 +74,38 @@ function OfflineManager({ onLoadOffline, onBack }) {
         isOffline: true
       }
       
-      const storyJson = JSON.stringify(localStory)
-      const sizeInMB = (new Blob([storyJson]).size / 1024 / 1024).toFixed(2)
-      
-      if (sizeInMB > 5) {
-        throw new Error(`Story too large (${sizeInMB}MB). LocalStorage limit is ~5MB.`)
-      }
-      
-      localStorage.setItem(`edusmart_story_${storyId}`, storyJson)
+      const result = await storyStorage.saveStory(localStory)
       setLocalStories(prev => [localStory, ...prev])
       
+      console.log(`Story saved (${result.size.toFixed(2)}MB) to ${result.storage}`)
       return storyId
     } catch (error) {
-      if (error.name === 'QuotaExceededError') {
-        throw new Error('Storage quota exceeded. Story is too large for offline storage.')
-      }
       throw new Error('Failed to save locally: ' + error.message)
     }
   }
 
-  const loadFromLocal = (storyId) => {
+  const loadFromLocal = async (storyId) => {
     try {
-      const storyData = JSON.parse(localStorage.getItem(`edusmart_story_${storyId}`))
-      onLoadOffline(storyData.storyData, storyData.name)
+      const storyData = await storyStorage.loadStory(storyId)
+      if (storyData) {
+        onLoadOffline(storyData.storyData, storyData.name)
+      } else {
+        alert('Story not found')
+      }
     } catch (error) {
       alert('Failed to load story: ' + error.message)
     }
   }
 
-  const deleteLocal = (storyId) => {
-    if (confirm('Delete this local story?')) {
-      localStorage.removeItem(`edusmart_story_${storyId}`)
+  const deleteLocal = async (storyId) => {
+    if (!confirm('Delete this local story?')) return
+    
+    try {
+      await storyStorage.deleteStory(storyId)
       setLocalStories(prev => prev.filter(s => s.id !== storyId))
+      await loadLocalStories() // Refresh storage info
+    } catch (error) {
+      alert('Failed to delete story: ' + error.message)
     }
   }
 
@@ -236,9 +234,9 @@ function OfflineManager({ onLoadOffline, onBack }) {
         }
       }
       
-      setDownloadMessage('Saving to local storage...')
+      setDownloadMessage('Saving to storage...')
       
-      // Save to localStorage
+      // Save using storyStorage (auto-selects IndexedDB or localStorage)
       const localStoryId = `local_${Date.now()}`
       const localStory = {
         id: localStoryId,
@@ -248,22 +246,8 @@ function OfflineManager({ onLoadOffline, onBack }) {
         isOffline: true
       }
       
-      try {
-        const storyJson = JSON.stringify(localStory)
-        const sizeInMB = (new Blob([storyJson]).size / 1024 / 1024).toFixed(2)
-        
-        // Check if story is too large (>5MB can cause issues)
-        if (sizeInMB > 5) {
-          throw new Error(`Story is too large (${sizeInMB}MB). LocalStorage limit is ~5-10MB. Try downloading a smaller story or use online playback.`)
-        }
-        
-        localStorage.setItem(`edusmart_story_${localStoryId}`, storyJson)
-      } catch (e) {
-        if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
-          throw new Error('Storage quota exceeded. This story is too large for offline storage. Please use online playback instead.')
-        }
-        throw e
-      }
+      const result = await storyStorage.saveStory(localStory)
+      console.log(`Story imported (${result.size.toFixed(2)}MB) to ${result.storage}`)
       
       setDownloadMessage('Complete! ✓')
       
@@ -295,8 +279,15 @@ function OfflineManager({ onLoadOffline, onBack }) {
     >
       <div className="offline-header">
         <h2>📱 Offline Story Manager</h2>
-        <div className={`connection-status ${isOnline ? 'online' : 'offline'}`}>
-          {isOnline ? '🟢 Online' : '🔴 Offline'}
+        <div className="header-info">
+          <div className={`connection-status ${isOnline ? 'online' : 'offline'}`}>
+            {isOnline ? '🟢 Online' : '🔴 Offline'}
+          </div>
+          {storageInfo && (
+            <div className="storage-info">
+              💾 {storageInfo.usage}MB / {storageInfo.quota}MB used
+            </div>
+          )}
         </div>
       </div>
 
