@@ -7,7 +7,7 @@ import io
 
 from routers.auth import get_current_user
 from database_models import User
-from services.piper_client import piper_tts, TTSConnectionError
+from services.tts_service import kokoro_tts, TTSConnectionError
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -22,9 +22,8 @@ router = APIRouter(
 # --- Pydantic Models ---
 class TtsTestRequest(BaseModel):
     text: str
-    language: str = "en"
+    voice: str = "af_sarah"
     speed: float = 1.0
-    silence: float = 0.0
 
 # --- Dependency for Admin User ---
 async def get_admin_user(current_user: User = Depends(get_current_user)):
@@ -40,15 +39,14 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 @router.post("/tts/test", dependencies=[Depends(get_admin_user)])
 async def test_tts(request: TtsTestRequest):
     """
-    Allows admins to test the Piper TTS service with custom text and settings.
+    Allows admins to test the Kokoro TTS service with custom text and settings.
     Streams back a WAV audio file.
     """
     try:
-        audio_bytes = await piper_tts.generate_audio(
+        audio_bytes = await kokoro_tts.generate_audio(
             text=request.text,
-            language=request.language,
-            speed=request.speed,
-            silence=request.silence
+            voice=request.voice,
+            speed=request.speed
         )
         if not audio_bytes:
             raise HTTPException(status_code=500, detail="TTS generation failed, received no audio data.")

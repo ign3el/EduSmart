@@ -38,10 +38,9 @@ function MainApp() {
   const [step, setStep] = useState('home') 
   const [uploadedFile, setUploadedFile] = useState(null)
   const [selectedAvatar, setSelectedAvatar] = useState(null)
-  // New state for Piper TTS
-  const [language, setLanguage] = useState('en_female_pro');
+  // New state for Kokoro TTS
+  const [voice, setVoice] = useState('af_sarah');
   const [speed, setSpeed] = useState(1.0);
-  const [silence, setSilence] = useState(0.0);
   
   const [storyData, setStoryData] = useState(null)
   const [progress, setProgress] = useState(0)
@@ -203,9 +202,8 @@ function MainApp() {
 
   const handleConfirmFile = (settings) => {
     if (settings) {
-      setLanguage(settings.language);
+      setVoice(settings.voice);
       setSpeed(settings.speed);
-      setSilence(settings.silence);
     }
     setStep('avatar')
   }
@@ -226,10 +224,9 @@ function MainApp() {
       formData.append('file', uploadedFile)
       formData.append('grade_level', gradeLevel)
       formData.append('avatar_type', avatar.id)
-      // Append new Piper TTS settings
-      formData.append('language', language)
+      // Append new Kokoro TTS settings
+      formData.append('voice', voice)
       formData.append('speed', speed)
-      formData.append('silence', silence)
 
       // Use apiClient for automatic auth headers, assuming it's the default export from api.js
       const response = await fetch(`${API_URL}/api/upload`, { 

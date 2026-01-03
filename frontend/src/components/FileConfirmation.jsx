@@ -5,10 +5,9 @@ import './FileConfirmation.css'
 import './VoiceSettings.css' // Import the new CSS
 
 function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onEditGrade }) {
-  // New state for Piper TTS settings
-  const [language, setLanguage] = useState('en');
+  // New state for Kokoro TTS settings
+  const [voice, setVoice] = useState('af_sarah');
   const [speed, setSpeed] = useState(1.0);
-  const [silence, setSilence] = useState(0.0);
 
   const [showGradeSelector, setShowGradeSelector] = useState(false)
 
@@ -24,7 +23,7 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onE
 
   const handleConfirm = () => {
     // Pass up an object with all the settings
-    onConfirm({ language, speed, silence })
+    onConfirm({ voice, speed })
   }
 
   const handleGradeChange = (newGrade) => {
@@ -86,15 +85,13 @@ function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onE
 
       <div className="voice-selection">
         <h3>🎙️ Configure Narrator Voice</h3>
-        <p className="voice-description">Select the language and adjust the pace of the narration.</p>
+        <p className="voice-description">Select the voice and adjust the pace of the narration.</p>
         
         <VoiceSettings 
-            language={language}
-            setLanguage={setLanguage}
+            voice={voice}
+            setVoice={setVoice}
             speed={speed}
             setSpeed={setSpeed}
-            silence={silence}
-            setSilence={setSilence}
         />
       </div>
 

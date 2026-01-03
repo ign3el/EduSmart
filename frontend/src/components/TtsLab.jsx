@@ -4,10 +4,9 @@ import VoiceSettings from './VoiceSettings';
 import './TtsLab.css';
 
 const TtsLab = () => {
-    const [text, setText] = useState("Hello, this is a test of the text to speech engine.");
-    const [language, setLanguage] = useState('en');
+    const [text, setText] = useState("Hello, this is a test of the Kokoro text to speech engine.");
+    const [voice, setVoice] = useState('af_sarah');
     const [speed, setSpeed] = useState(1.0);
-    const [silence, setSilence] = useState(0.0);
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +32,7 @@ const TtsLab = () => {
             }
             const audioContext = audioContextRef.current;
 
-            const audioData = await generateTestSpeech({ text, language, speed, silence });
+            const audioData = await generateTestSpeech({ text, voice, speed });
             const audioBuffer = await audioContext.decodeAudioData(audioData);
 
             const source = audioContext.createBufferSource();
@@ -68,7 +67,7 @@ const TtsLab = () => {
     return (
         <div className="tts-lab">
             <p className="tts-lab-description">
-                Use this tool to test the Piper TTS voices and settings in real-time.
+                Use this tool to test the Kokoro TTS voices and settings in real-time.
             </p>
             <div className="tts-lab-main">
                 <div className="tts-lab-textarea-container">
@@ -82,12 +81,10 @@ const TtsLab = () => {
                 </div>
                 <div className="tts-lab-controls">
                     <VoiceSettings
-                        language={language}
-                        setLanguage={setLanguage}
+                        voice={voice}
+                        setVoice={setVoice}
                         speed={speed}
                         setSpeed={setSpeed}
-                        silence={silence}
-                        setSilence={setSilence}
                     />
                     <div className="tts-lab-actions">
                         <button 
