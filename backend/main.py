@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 # Import the new, clean refactored modules
 from database import initialize_database
 from routers.auth import router as auth_router, get_current_user
+from routers.admin import router as admin_router
 from database_models import User, StoryOperations
 from services.story_service import GeminiService
 from services.chatterbox_client import chatterbox
@@ -99,6 +100,7 @@ async def startup_event():
 # --- API Routers ---
 # Include the new authentication router, which contains /signup, /token, /me
 app.include_router(auth_router)
+app.include_router(admin_router)
 
 
 # --- Non-Auth related application logic ---

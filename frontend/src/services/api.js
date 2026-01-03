@@ -20,4 +20,17 @@ apiClient.interceptors.request.use(
   }
 );
 
+// --- Admin DB Viewer Functions ---
+
+export const getJobStateDbTables = async () => {
+  const response = await apiClient.get('/api/admin/db/job_state/tables');
+  return response.data;
+};
+
+export const getJobStateTableData = async (tableName) => {
+  const response = await apiClient.get(`/api/admin/db/job_state/table/${tableName}`);
+  return response.data;
+};
+
+
 export default apiClient;

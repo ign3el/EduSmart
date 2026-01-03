@@ -17,6 +17,7 @@ import OfflineManager from './components/OfflineManager'
 import ReuploadConfirmModal from './components/ReuploadConfirmModal'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
 import AdminDashboard from './components/AdminDashboard'
+import AdminDbViewer from './components/AdminDbViewer'
 import './App.css'
 
 function App() {
@@ -362,6 +363,15 @@ function MainApp() {
                 <AdminDashboard 
                   onPlayStory={handlePlayFromAdmin}
                   onBack={() => setStep('home')}
+                  onNavigateToDbViewer={() => setStep('db-viewer')}
+                />
+              </motion.div>
+            )}
+
+            {step === 'db-viewer' && (
+              <motion.div key="db-viewer" className="step-container">
+                <AdminDbViewer 
+                  onBack={() => setStep('admin')}
                 />
               </motion.div>
             )}

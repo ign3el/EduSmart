@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
 import './AdminDashboard.css'; // Assuming we will create this file for styling
 
-const AdminDashboard = ({ onPlayStory, onBack }) => {
+const AdminDashboard = ({ onPlayStory, onBack, onNavigateToDbViewer }) => {
   const [stories, setStories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -50,7 +50,10 @@ const AdminDashboard = ({ onPlayStory, onBack }) => {
     <div className="admin-dashboard">
       <div className="admin-header">
         <h2>Admin Dashboard</h2>
-        <button onClick={onBack} className="back-button">← Back to Home</button>
+        <div>
+          <button onClick={onNavigateToDbViewer} className="db-viewer-button">View Job State DB</button>
+          <button onClick={onBack} className="back-button">← Back to Home</button>
+        </div>
       </div>
       <p>Viewing all stories created by all users.</p>
       <div className="admin-table-container">
