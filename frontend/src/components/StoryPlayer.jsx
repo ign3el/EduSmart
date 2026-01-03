@@ -17,6 +17,7 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const audioRef = useRef(null);
+  const imageCache = useRef({});
 
   const scenes = storyData?.scenes || [];
   const scene = scenes[currentScene];
@@ -24,6 +25,47 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   const fullAudioUrl = scene?.audio_url ? `${API_DOMAIN}${scene.audio_url}` : '';
   const fullImageUrl = scene?.image_url ? `${API_DOMAIN}${scene.image_url}` : '';
   const uploadUrl = storyData?.upload_url ? `${API_DOMAIN}${storyData.upload_url}` : '';
+
+  // Preload all scene images when story loads
+  useEffect(() => {
+    scenes.forEach((scene, index) => {
+      const imageUrl = scene?.image_url ? `${API_DOMAIN}${scene.image_url}` : '';
+      if (imageUrl && !imageCache.current[imageUrl]) {
+        const img = new Image();
+        img.onload = () => {
+          imageCache.current[imageUrl] = true;
+        };
+        img.src = imageUrl;
+      }
+    });
+  }, [scenes]);
+
+  // Preload next scene's image and audio in background (for immediate next scene)
+  useEffect(() => {
+    if (currentScene < scenes.length - 1) {
+      const nextScene = scenes[currentScene + 1];
+      const nextImageUrl = nextScene?.image_url ? `${API_DOMAIN}${nextScene.image_url}` : '';
+      const nextAudioUrl = nextScene?.audio_url ? `${API_DOMAIN}${nextScene.audio_url}` : '';
+      
+      // Preload next image
+      if (nextImageUrl && !imageCache.current[nextImageUrl]) {
+        const img = new Image();
+        img.onload = () => {
+          imageCache.current[nextImageUrl] = true;
+        };
+        img.src = nextImageUrl;
+      }
+      
+      // Preload next audio
+      if (nextAudioUrl && !imageCache.current[nextAudioUrl]) {
+        const audio = new Audio();
+        audio.onloadeddata = () => {
+          imageCache.current[nextAudioUrl] = true;
+        };
+        audio.src = nextAudioUrl;
+      }
+    }
+  }, [currentScene, scenes]);
 
   useEffect(() => {
     
