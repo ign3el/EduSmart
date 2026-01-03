@@ -7,7 +7,7 @@ import io
 
 from routers.auth import get_current_user
 from database_models import User
-from ..services.piper_client import piper_tts, TTSConnectionError
+from services.piper_client import piper_tts, TTSConnectionError
 
 # Setup logging
 logger = logging.getLogger(__name__)
