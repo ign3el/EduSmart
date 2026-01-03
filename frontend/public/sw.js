@@ -1,15 +1,24 @@
 // Service Worker for EduSmart Stories
 // Implements App Shell architecture with offline-first strategy
 
-const CACHE_NAME = 'edusmart-v1';
-const APP_SHELL_CACHE = 'edusmart-shell-v1';
-const RUNTIME_CACHE = 'edusmart-runtime-v1';
+const CACHE_VERSION = 'v2';
+const APP_SHELL_CACHE = `edusmart-shell-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `edusmart-runtime-${CACHE_VERSION}`;
 
 // App Shell: Core files needed to render the UI
 const APP_SHELL_FILES = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/browserconfig.xml',
+  '/icon-72.png',
+  '/icon-96.png',
+  '/icon-128.png',
+  '/icon-144.png',
+  '/icon-152.png',
+  '/icon-192.png',
+  '/icon-384.png',
+  '/icon-512.png',
 ];
 
 // Install event: Pre-cache the app shell

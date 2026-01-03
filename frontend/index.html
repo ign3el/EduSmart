@@ -3,23 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
     
-    <!-- Theme color for mobile browsers -->
+    <!-- Theme colors for mobile browsers -->
     <meta name="theme-color" content="#7c3aed" />
+    <meta name="msapplication-TileColor" content="#7c3aed" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     
     <!-- PWA meta tags -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="EduSmart" />
+    <meta name="application-name" content="EduSmart" />
     <meta name="description" content="AI-powered educational storybook generator for students" />
     
-    <!-- iOS icons -->
-    <link rel="apple-touch-icon" href="/icon-192.svg" />
+    <!-- Icons for various platforms -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icon-72.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    
+    <!-- Windows tiles -->
+    <meta name="msapplication-TileImage" content="/icon-144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
     
     <title>EduSmart - Interactive Learning</title>
   </head>
