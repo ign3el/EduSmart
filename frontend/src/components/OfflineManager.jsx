@@ -76,11 +76,21 @@ function OfflineManager({ onLoadOffline, onBack }) {
         isOffline: true
       }
       
-      localStorage.setItem(`edusmart_story_${storyId}`, JSON.stringify(localStory))
+      const storyJson = JSON.stringify(localStory)
+      const sizeInMB = (new Blob([storyJson]).size / 1024 / 1024).toFixed(2)
+      
+      if (sizeInMB > 5) {
+        throw new Error(`Story too large (${sizeInMB}MB). LocalStorage limit is ~5MB.`)
+      }
+      
+      localStorage.setItem(`edusmart_story_${storyId}`, storyJson)
       setLocalStories(prev => [localStory, ...prev])
       
       return storyId
     } catch (error) {
+      if (error.name === 'QuotaExceededError') {
+        throw new Error('Storage quota exceeded. Story is too large for offline storage.')
+      }
       throw new Error('Failed to save locally: ' + error.message)
     }
   }
@@ -238,7 +248,22 @@ function OfflineManager({ onLoadOffline, onBack }) {
         isOffline: true
       }
       
-      localStorage.setItem(`edusmart_story_${localStoryId}`, JSON.stringify(localStory))
+      try {
+        const storyJson = JSON.stringify(localStory)
+        const sizeInMB = (new Blob([storyJson]).size / 1024 / 1024).toFixed(2)
+        
+        // Check if story is too large (>5MB can cause issues)
+        if (sizeInMB > 5) {
+          throw new Error(`Story is too large (${sizeInMB}MB). LocalStorage limit is ~5-10MB. Try downloading a smaller story or use online playback.`)
+        }
+        
+        localStorage.setItem(`edusmart_story_${localStoryId}`, storyJson)
+      } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
+          throw new Error('Storage quota exceeded. This story is too large for offline storage. Please use online playback instead.')
+        }
+        throw e
+      }
       
       setDownloadMessage('Complete! ✓')
       
