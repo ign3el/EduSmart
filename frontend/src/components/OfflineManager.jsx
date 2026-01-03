@@ -160,24 +160,34 @@ function OfflineManager({ onLoadOffline, onBack }) {
       const zip = new JSZip()
       const zipData = await zip.loadAsync(file)
       
-      // Read metadata.json
-      const metadataFile = zipData.file('metadata.json')
-      if (!metadataFile) {
-        throw new Error('Invalid story package: missing metadata.json')
+      // Try to read story.json (new format from export)
+      let storyData = null
+      const storyFile = zipData.file('story.json')
+      
+      if (storyFile) {
+        // New format: story.json with embedded structure
+        setDownloadMessage('Reading story data...')
+        const storyText = await storyFile.async('string')
+        storyData = JSON.parse(storyText)
+      } else {
+        // Old format: metadata.json + story_data.json
+        const metadataFile = zipData.file('metadata.json')
+        if (!metadataFile) {
+          throw new Error('Invalid story package: missing story.json or metadata.json')
+        }
+        
+        setDownloadMessage('Reading story data...')
+        const metadataText = await metadataFile.async('string')
+        const metadata = JSON.parse(metadataText)
+        
+        const storyDataFile = zipData.file('story_data.json')
+        if (!storyDataFile) {
+          throw new Error('Invalid story package: missing story_data.json')
+        }
+        
+        const storyDataText = await storyDataFile.async('string')
+        storyData = JSON.parse(storyDataText)
       }
-      
-      setDownloadMessage('Reading story data...')
-      const metadataText = await metadataFile.async('string')
-      const metadata = JSON.parse(metadataText)
-      
-      // Read story_data.json
-      const storyDataFile = zipData.file('story_data.json')
-      if (!storyDataFile) {
-        throw new Error('Invalid story package: missing story_data.json')
-      }
-      
-      const storyDataText = await storyDataFile.async('string')
-      const storyData = JSON.parse(storyDataText)
       
       setDownloadMessage('Converting media to base64...')
       
@@ -222,7 +232,7 @@ function OfflineManager({ onLoadOffline, onBack }) {
       const localStoryId = `local_${Date.now()}`
       const localStory = {
         id: localStoryId,
-        name: metadata.name || storyData.title || 'Imported Story',
+        name: storyData.title || 'Imported Story',
         storyData: storyData,
         savedAt: Date.now(),
         isOffline: true
