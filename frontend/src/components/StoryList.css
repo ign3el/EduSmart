@@ -1,0 +1,122 @@
+.story-list-controls {
+    margin-bottom: 1.5rem;
+}
+
+.filter-input {
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+    border-radius: 5px;
+    border: 1px solid #ced4da;
+    width: 300px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.story-table-container {
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.story-list table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.story-list th,
+.story-list td {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.story-list th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.story-list th:hover {
+    background-color: #e9ecef;
+}
+
+.story-list th.sorted-asc::after,
+.story-list th.sorted-desc::after {
+    content: '';
+    display: inline-block;
+    margin-left: 0.5em;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+}
+
+.story-list th.sorted-asc::after {
+    border-bottom: 5px solid #495057;
+}
+
+.story-list th.sorted-desc::after {
+    border-top: 5px solid #495057;
+}
+
+
+.story-list tr:hover {
+    background-color: #f1f3f5;
+}
+
+.story-list tr:last-child td {
+    border-bottom: none;
+}
+
+.story-list td {
+    color: #212529;
+}
+
+.story-id-cell {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.play-story-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  text-align: center;
+  font-size: 0.9rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.play-story-button:hover {
+  background-color: #0056b3;
+}
+
+.loading-message, .error-message {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #555;
+}
+
+.error-message {
+  color: #D8000C;
+  background-color: #FFD2D2;
+  border: 1px solid #D8000C;
+  padding: 1rem;
+  border-radius: 8px;
+}

@@ -16,8 +16,7 @@ import LoadStory from './components/LoadStory'
 import OfflineManager from './components/OfflineManager'
 import ReuploadConfirmModal from './components/ReuploadConfirmModal'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
-const AdminDashboard = lazy(() => import('./components/AdminDashboard'))
-const AdminDbViewer = lazy(() => import('./components/AdminDbViewer'))
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
 import './App.css'
 
 function App() {
@@ -323,12 +322,20 @@ function MainApp() {
     }
   }
 
-  const handlePlayFromAdmin = (storyData, storyName, storyId) => {
-    setStoryData(storyData);
-    setSelectedAvatar({ id: 'loaded', name: storyName });
-    setIsSaved(true); // Assume it's a saved story
-    setSavedStoryId(storyId);
-    setStep('playing');
+  const handlePlayStoryFromAdmin = async (storyId) => {
+    try {
+      const response = await apiClient.get(`/api/load-story/${storyId}`);
+      if (response.data) {
+          setStoryData(response.data.story_data);
+          setSelectedAvatar({ id: 'loaded', name: response.data.name });
+          setIsSaved(true);
+          setSavedStoryId(storyId);
+          setStep('playing');
+      }
+    } catch (err) {
+        setError(`Failed to load story ${storyId}. It may have been deleted.`);
+        console.error(err);
+    }
   }
 
   return (
@@ -341,7 +348,7 @@ function MainApp() {
         {isAuthenticated && (
           <div className="header-user-actions">
             {user && user.is_admin && (
-              <button className="admin-btn" onClick={() => setStep('admin')}>Admin Dashboard</button>
+              <button className="admin-btn" onClick={() => setStep('admin')}>Admin Panel</button>
             )}
             <button className="logout-btn" onClick={logout}>Logout</button>
           </div>
@@ -358,25 +365,16 @@ function MainApp() {
           )}
           
           <AnimatePresence mode="wait">
-            <Suspense fallback={<div className="loading-message">Loading Admin Tools...</div>}>
-              {step === 'admin' && (
-                <motion.div key="admin" className="step-container">
-                  <AdminDashboard 
-                    onPlayStory={handlePlayFromAdmin}
+            {step === 'admin' && (
+              <Suspense fallback={<div className="loading-message">Loading Admin Panel...</div>}>
+                <motion.div key="admin-panel" className="step-container">
+                  <AdminPanel 
+                    onPlayStory={handlePlayStoryFromAdmin}
                     onBack={() => setStep('home')}
-                    onNavigateToDbViewer={() => setStep('db-viewer')}
                   />
                 </motion.div>
-              )}
-
-              {step === 'db-viewer' && (
-                <motion.div key="db-viewer" className="step-container">
-                  <AdminDbViewer 
-                    onBack={() => setStep('admin')}
-                  />
-                </motion.div>
-              )}
-            </Suspense>
+              </Suspense>
+            )}
 
             {step === 'home' && (
               <motion.div key="home" className="home-container">

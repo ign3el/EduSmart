@@ -1,0 +1,39 @@
+import React, { useState } from 'react';
+import './AdminPanel.css';
+import StoryList from './StoryList'; // We will create this
+import JobStatusViewer from './JobStatusViewer'; // We will create this
+
+const AdminPanel = ({ onPlayStory, onBack }) => {
+    const [activeTab, setActiveTab] = useState('stories');
+
+    return (
+        <div className="admin-panel">
+            <header className="admin-panel-header">
+                <div className="admin-panel-header-top">
+                    <h1>Admin Panel</h1>
+                    <button onClick={onBack} className="admin-back-button">← Back to Home</button>
+                </div>
+                <nav className="admin-panel-nav">
+                    <button 
+                        className={`admin-nav-button ${activeTab === 'stories' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('stories')}
+                    >
+                        User Stories
+                    </button>
+                    <button 
+                        className={`admin-nav-button ${activeTab === 'jobs' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('jobs')}
+                    >
+                        Job Status
+                    </button>
+                </nav>
+            </header>
+            <main className="admin-panel-content">
+                {activeTab === 'stories' && <StoryList onPlayStory={onPlayStory} />}
+                {activeTab === 'jobs' && <JobStatusViewer />}
+            </main>
+        </div>
+    );
+};
+
+export default AdminPanel;

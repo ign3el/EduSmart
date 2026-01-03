@@ -3,18 +3,18 @@ import { FiCheck, FiFile, FiEdit2 } from 'react-icons/fi'
 import './FileConfirmation.css'
 
 function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onEditGrade }) {
-  const [selectedVoice, setSelectedVoice] = useState('Ana Florence')
+  const [selectedVoice, setSelectedVoice] = useState('Standard Female')
   const [showGradeSelector, setShowGradeSelector] = useState(false)
 
   const voices = [
-    { id: 'Ana Florence', name: 'Ana Florence', description: 'High-energy, bright, and youthful. The Hero/Lead Character.' },
-    { id: 'Abrahan Mack', name: 'Abrahan Mack', description: 'Deep, gravelly, and very warm. The Wise Narrator.' },
-    { id: 'Claribel Dervla', name: 'Claribel Dervla', description: 'Soft, melodic, and soothing. The Fairy/Mother.' },
-    { id: 'Lidiya Szekeres', name: 'Lidiya Szekeres', description: 'Very animated and rhythmic. The Villain/Funny Character.' },
-    { id: 'Damien Black', name: 'Damien Black', description: 'Smooth, mysterious, and cool. The Mystery/Antagonist.' },
-    { id: 'Daisy Studious', name: 'Daisy Studious', description: 'Clear, intelligent, and cheerful. The Teacher/Explainer.' },
-    { id: 'Viktor Eka', name: 'Viktor Eka', description: 'Rugged and stout. The Giant/Troll.' },
-    { id: 'Nova Hogarth', name: 'Nova Hogarth', description: 'Whimsical and airy. The Dreamer.' },
+    { id: 'Standard Female', name: 'Standard Female', description: 'A clear, standard female narrator.' },
+    { id: 'Gentle Female', name: 'Gentle Female', description: 'A soft-spoken, soothing female voice.' },
+    { id: 'Youthful Female', name: 'Youthful Female', description: 'An expressive and energetic female voice.' },
+    { id: 'Warm Female', name: 'Warm Female', description: 'A pleasant and warm female narrator.' },
+    { id: 'Clear Male', name: 'Clear Male', description: 'A standard, clear male narrator.' },
+    { id: 'Deep Male', name: 'Deep Male', description: 'A deep and resonant male voice for narration.' },
+    { id: 'Versatile Male', name: 'Versatile Male', description: 'A lower-pitched, versatile male voice.' },
+    { id: 'Scottish Male', name: 'Scottish Male', description: 'A clear, energetic male voice with a Scottish accent.' },
   ]
 
   const gradeLabels = {

@@ -39,28 +39,18 @@ except Exception as e:
     logger.error(f"❌ Failed to load TTS model: {e}")
     tts = None
 
-# Maps friendly names from the frontend to VCTK speaker IDs
+# Maps new descriptive names to high-quality VCTK speaker IDs
 VOICE_MAPPING = {
-    # Top-tier expressive voices
-    "Ana Florence": "p232",  # Female, clear, youthful
-    "Abrahan Mack": "p236",  # Male, deep, warm
-    "Claribel Dervla": "p225",  # Female, soft, soothing
-    "Lidiya Szekeres": "p230",  # Female, animated
-    "Damien Black": "p243",  # Male, mysterious
-    "Daisy Studious": "p228",  # Female, clear, intelligent
-    "Viktor Eka": "p254",  # Male, rugged
-    "Nova Hogarth": "p229",  # Female, whimsical
-    # Adventure Group
-    "Chandra MacFarland": "p231",
-    "Royston Min": "p244",
-    # Calm & Cozy Group
-    "Alison Dietlinde": "p226",
-    "Gitta Nikolina": "p227",
-    # Character Actors
-    "Craig Gutsy": "p239",
-    "Badr Odhiambo": "p251",
+    "Gentle Female": "p225",      # Soft-spoken, Scottish accent
+    "Clear Male": "p226",         # Standard, clear male
+    "Standard Female": "p228",    # Standard, clear female
+    "Youthful Female": "p232",    # Expressive, youthful female
+    "Deep Male": "p236",          # Deep and resonant male
+    "Versatile Male": "p243",     # Lower-pitched male
+    "Warm Female": "p307",        # Warm, pleasant female tone
+    "Scottish Male": "p292",      # Clear, energetic Scottish accent
 }
-DEFAULT_SPEAKER = "p232"  # Default to Ana Florence
+DEFAULT_SPEAKER = "p228"  # Default to Standard Female
 
 
 @app.route('/health', methods=['GET'])

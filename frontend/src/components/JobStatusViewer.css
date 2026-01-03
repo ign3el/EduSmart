@@ -1,0 +1,110 @@
+.job-table-container {
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.job-status-viewer table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.job-status-viewer th,
+.job-status-viewer td {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.job-status-viewer th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.job-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.job-row:hover {
+    background-color: #f1f3f5;
+}
+
+.job-row:last-child td,
+.scene-details-row:last-child td {
+    border-bottom: none;
+}
+
+.job-id-cell {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.status-pill {
+    padding: 0.25em 0.6em;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-radius: 10px;
+    text-transform: uppercase;
+    color: #fff;
+}
+
+.status-completed { background-color: #28a745; }
+.status-processing { background-color: #007bff; }
+.status-failed { background-color: #dc3545; }
+.status-initializing { background-color: #6c757d; }
+
+.progress-bar-container {
+    width: 100px;
+    height: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    overflow: hidden;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.progress-bar-inner {
+    height: 100%;
+    background-color: #28a745;
+    border-radius: 5px;
+    transition: width 0.3s ease-in-out;
+}
+
+.scene-details-row td {
+    padding: 0;
+    background-color: #f8f9fa;
+}
+
+.scene-details-container {
+    padding: 1.5rem;
+}
+
+.scene-details-container h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #343a40;
+}
+
+.scene-details-container ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.scene-details-container li {
+    font-size: 0.95rem;
+}
+
+.scene-status {
+    margin-left: 1.5rem;
+}
