@@ -42,210 +42,83 @@ class GeminiService:
                     raise
 
     def process_file_to_story(self, file_path: str, grade_level: str) -> Optional[dict]:
-        """Generates the story JSON structure with exponential backoff."""
+        """Generates the story JSON structure with a single, consolidated prompt."""
         try:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # PHASE 1: Deep Analysis - Extract Learning Objectives & Key Concepts
-            analysis_prompt = f"""You are an Expert Instructional Designer analyzing this educational document for {grade_level} students.
+            # A single, consolidated prompt that instructs the AI to "think" first
+            # and then produce the JSON output.
+            unified_prompt = f"""
+You are an expert instructional designer and creative storyteller for {grade_level} students.
+Your task is to transform the provided document into a high-engagement, interactive learning story.
 
-PHASE 1: DEEP ANALYSIS
-Perform a thorough reading and extract:
+**INTERNAL THOUGHT PROCESS (Follow these steps first, before generating the final output):**
 
-1. LEARNING OBJECTIVES (LOs):
-   - What are the core concepts students must understand?
-   - What skills should they develop?
+1.  **DEEP ANALYSIS:** Perform a thorough analysis of the document to extract:
+    - Core learning objectives and key concepts.
+    - Specific facts, data points, and essential vocabulary.
+    - The logical progression of topics.
 
-2. EXPECTED LEARNING OUTCOMES (ELOs):
-   - What should students be able to DO after this lesson?
-   - What real-world applications connect to these concepts?
+2.  **STORY ARCHITECTURE:** Based on your analysis, design a story with:
+    - A clear narrative arc (Introduction, Exploration, Application, Conclusion).
+    - Characters and plot points that are direct metaphors for the learning objectives.
+    - A structure of 6-10 scenes, with each scene introducing a new concept.
 
-3. KEY FACTS & DATA POINTS:
-   - List every specific fact, number, formula, or critical detail
-   - Note any vocabulary terms that MUST be included
+**FINAL JSON OUTPUT (Your entire response must be ONLY the single JSON object):**
 
-4. CONCEPT HIERARCHY:
-   - Which concepts are foundational (must teach first)?
-   - Which concepts build upon others?
-   - What is the logical teaching progression?
+Based on your internal analysis, generate a single, valid JSON object with the exact structure below.
 
-5. LANGUAGE & TONE:
-   - Identify the document's original language
-   - Note any cultural context or examples
+**CRITICAL JSON FORMATTING RULES:**
+- Ensure the entire output is a single JSON object, starting with `{{` and ending with `}}`.
+- Do not include any text, notes, or markdown (like ```json) before or after the JSON object.
+- Ensure every object in an array is followed by a comma, except for the last one.
+- Double-check that all strings are properly enclosed in double quotes.
 
-Be exhaustive and specific. Your analysis will guide the story creation to ensure NO key content is missed."""
-
-            def _analyze_document():
-                return self.client.models.generate_content(
-                    model=self.text_model,
-                    contents=[
-                        types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
-                        analysis_prompt
-                    ]
-                )
-            
-            analysis_response = self._call_with_exponential_backoff(_analyze_document)
-            learning_objectives = analysis_response.text if analysis_response else ""
-
-            # PHASE 2 & 3: Story Architecture + Multi-Media Integration
-            teacher_prompt = f"""ROLE: You are an Expert Instructional Designer and Creative Storyteller specializing in {grade_level} education.
-
-TASK: Transform the uploaded document into a high-engagement interactive learning story following this strict 3-phase workflow:
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PHASE 1 RESULTS (Your Analysis - USE THIS AS YOUR BLUEPRINT):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{learning_objectives}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PHASE 2: STORY ARCHITECTURE (Follow This Structure)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. NARRATIVE STRUCTURE:
-   Follow this logical arc:
-   • Introduction (Set the Scene) - Introduce characters and context
-   • Exploration (Present Concepts) - Begin teaching foundational ideas
-   • Understanding (Deep Dive) - Explain complex relationships
-   • Application (Real-world Connection) - Show practical use
-   • Conclusion (Reinforcement) - Summarize and celebrate learning
-
-2. ACCURACY REQUIREMENT:
-   • Every story event MUST be a direct metaphor or application of a key concept from Phase 1
-   • Use the SPECIFIC facts, numbers, and vocabulary extracted above
-   • Each scene introduces NEW information—never repeat without adding new perspective
-
-3. VARIETY REQUIREMENT:
-   • Vary sentence structures and narration styles
-   • Each scene must advance BOTH plot AND pedagogy
-   • Use conversational, age-appropriate dialogue
-   • Include interactive elements (questions, choices, discoveries)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PHASE 3: INTERACTIVE MULTI-MEDIA INTEGRATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-For EACH scene, provide:
-
-A) NARRATIVE TEXT:
-   • Engaging, {grade_level}-appropriate story prose
-   • Must directly teach a Learning Objective from Phase 1
-   • Natural dialogue and relatable characters
-
-B) INTERACTIVE IMAGE PROMPT (CRITICAL - READ CAREFULLY):
-   • Detailed description for AI image generator (Flux/SDXL)
-   • MUST visually reinforce the concept taught in this scene
-   • Images MUST be consistent in style throughout story
-   • Required style: "3D Pixar-style children's book illustration"
-   • Each description must include:
-     * Character names, ages, clothing, expressions
-     * Specific actions happening in the scene
-     * Objects with colors, sizes, textures
-     * Setting details (location, time of day, weather)
-     * Educational elements being visualized
-
-C) CHECK FOR UNDERSTANDING:
-   • Brief question or prompt to ensure comprehension
-   • Must align with the scene's Learning Objective
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GUIDELINES & CONSTRAINTS (Strict Adherence Required)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✓ NO OFF-TOPIC CONTENT: Every plot point must serve a Learning Objective
-✓ PRESERVE LANGUAGE: Output must match the source document's language exactly
-✓ REAL-WORLD LINK: Every abstract concept must connect to real-world scenarios
-✓ SAFETY FIRST: Content must be family-friendly and age-appropriate for {grade_level}
-✓ NO REPETITION: Each scene teaches something NEW or adds depth
-
-CRITICAL REQUIREMENTS:
-
-1. STORY ACCURACY & RELEVANCE:
-   - Story MUST directly teach the extracted learning objectives
-   - Every scene MUST reinforce key concepts from the analysis
-   - Story events must logically flow from the educational content
-   - Include specific facts, numbers, or details from the document
-   - Focus on the exact topic - don't go off-topic
-   - Make connections between story narrative and real-world learning
-   - AVOID REPETITION: Each scene should introduce NEW information or perspective
-   - Vary sentence structures and narration style across scenes
-   - Progress logically from introduction → exploration → understanding → application → conclusion
-
-2. LANGUAGE: Keep the original document language throughout (Arabic stays Arabic, English stays English, etc).
-
-3. SAFETY & AGE-APPROPRIATENESS:
-   - ALL content MUST be family-friendly for {grade_level}
-   - NO nudity, violence, drugs, alcohol, or inappropriate themes
-   - Characters must be fully clothed
-   - Educational and positive tone
-
-4. STORY STRUCTURE:
-   - Hook students with relatable characters
-   - Use conversational tone with natural dialogue
-   - Include interactive elements/choices
-   - Build toward satisfying conclusion
-   - Generate 6-10 scenes (more for complex topics)
-   - Each scene advances the plot AND teaches something new
-   - NO repetitive phrases or recycled descriptions
-
-5. IMAGE DESCRIPTIONS (MOST CRITICAL - MUST MATCH NARRATION EXACTLY):
-   - Each scene MUST have detailed, specific image_description (4-5 sentences minimum)
-   - Image description MUST EXACTLY MATCH what happens in scene "text" field
-   - If text says "Sarah picked up a red apple", image MUST show "young girl named Sarah holding a bright red apple in her hand"
-   - Include ALL key visual elements mentioned in the scene text
-   - Specify character names, actions, objects, colors, settings, expressions
-   - REQUIREMENT: Image description should be like a detailed painting instruction
-   - Examples of GOOD descriptions:
-     * "Wide shot of a yellow school bus with large black letters 'SCHOOL BUS' on side, five children with backpacks waving from open windows, red octagonal stop sign extended from driver side, bright sunny day with puffy white clouds and blue sky, green trees in background"
-     * "Medium shot of smiling chef named Marco wearing tall white chef hat and white apron with 'CHEF' written on it, stirring large silver pot on gas stove with wooden spoon, white steam rising, modern kitchen with wooden shelves full of glass jars containing colorful spices and ingredients"
-     * "Scientific illustration showing cross-section of green plant: brown root system spreading underground in dark soil, thick green stem rising up, broad green leaves with visible veins, small water droplets glistening on leaf surface, bright yellow sun rays coming from top right corner"
-   - Examples of BAD descriptions (too vague):
-     * "A school scene"
-     * "A cooking scene"  
-     * "A plant"
-   - BAD EXAMPLE: Text says "three friends exploring forest" but image says "children playing"
-   - GOOD EXAMPLE: Text says "three friends exploring forest" and image says "three children aged 8-10 wearing backpacks and holding flashlights, walking between tall pine trees with brown bark, sunlight filtering through green leaves, forest floor covered with brown pine needles"
-
-6. QUIZ (MINIMUM 10 QUESTIONS):
-   - Questions MUST test understanding of the extracted learning objectives
-   - Include ALL exercise/test questions from document if present
-   - For simple topics: 10-12 questions
-   - For moderate topics: 12-15 questions
-   - For complex topics: 15-20+ questions
-   - Always add extra practice questions beyond document exercises
-   - Match {grade_level} difficulty and vocabulary
-   - Provide clear explanations
-   - One correct answer per question with 3-4 plausible options
-   - For {grade_level}:
-     * KG-Grade 2: Simple yes/no, basic recall, picture-based thinking
-     * Grade 3-4: Concepts, cause-effect, vocabulary in context
-     * Grade 5-7: Analysis, "why", compare/contrast, application
-   - Question vocabulary must match {grade_level} reading level
-
-7. TONE: Warm, encouraging, an enthusiastic teacher voice that celebrates learning!
-
-**FINAL JSON CHECK (ABSOLUTELY CRITICAL):**
-- **Review your final output.** Before finishing, mentally parse the entire JSON to ensure it is 100% valid.
-- **Commas are mandatory** between objects in an array and between key-value pairs in an object.
-- **The last item** in an array or object must NOT have a trailing comma.
-- **All keys and string values** must be enclosed in double quotes (").
-- **Do not add any text, notes, or explanations** outside of the single, root JSON object. Your entire response must be only the JSON.
-
-Transform the document into JSON format with this exact structure:
+**JSON STRUCTURE:**
+```json
+{{
+  "title": "A creative, engaging title for the story",
+  "description": "A one-paragraph summary of the story's plot and educational goals.",
+  "grade_level": "{grade_level}",
+  "subject": "The main subject of the lesson (e.g., 'Science', 'History')",
+  "learning_outcome": "A sentence describing what the student will be able to do after the story.",
+  "scenes": [
+    {{
+      "scene_number": 1,
+      "narrative_text": "Engaging, age-appropriate story text for this scene. It must teach a specific concept from your analysis.",
+      "image_prompt": "A detailed, 4-5 sentence description for an AI image generator (3D Pixar style) that visually reinforces the concept in this scene. Must exactly match the narrative text.",
+      "check_for_understanding": "A brief question to check comprehension of this scene's topic."
+    }}
+  ],
+  "quiz": [
+    {{
+      "question_number": 1,
+      "question_text": "A multiple-choice question testing a key learning objective.",
+      "options": [
+        "A. Plausible incorrect option",
+        "B. The correct option",
+        "C. Another plausible incorrect option",
+        "D. A final plausible incorrect option"
+      ],
+      "correct_answer": "B",
+      "explanation": "A brief, clear explanation of why the correct answer is right."
+    }}
+  ]
+}}
+```
 """
 
-            def _generate_story():
+            def _generate_story_unified():
                 return self.client.models.generate_content(
                     model=self.text_model,
                     contents=[
                         types.Part.from_bytes(data=file_bytes, mime_type="application/pdf"),
-                        teacher_prompt,
-                        "Also include document analysis context in your story design. Return valid JSON only."
+                        unified_prompt
                     ]
                 )
             
-            response = self._call_with_exponential_backoff(_generate_story)
+            response = self._call_with_exponential_backoff(_generate_story_unified)
             
             if response and response.text:
                 cleaned_text = response.text.strip()
@@ -270,8 +143,9 @@ Transform the document into JSON format with this exact structure:
             print("STORY ERROR: Received empty or invalid response from GenAI model.")
             return None
         except Exception as e:
-            print(f"STORY ERROR: {e}")
+            print(f"STORY ERROR: {{e}}")
             return None
+
 
     def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None) -> Optional[bytes]:
         """Image generation via RunPod ComfyUI FLUX.1-dev with enhanced quality prompting. Uses story_seed for character consistency."""
