@@ -208,11 +208,25 @@ function OfflineManager({ onLoadOffline, onBack }) {
           const imagePath = scene.image_url.replace('/media/', '')
           const imageFile = zipData.file(imagePath)
           if (imageFile) {
+            // Detect image MIME type from file extension
+            const imageExt = imagePath.split('.').pop().toLowerCase()
+            const mimeTypes = {
+              'jpg': 'image/jpeg',
+              'jpeg': 'image/jpeg',
+              'png': 'image/png',
+              'gif': 'image/gif',
+              'webp': 'image/webp',
+              'svg': 'image/svg+xml'
+            }
+            const imageMimeType = mimeTypes[imageExt] || 'image/png'
+            
             const imageBlob = await imageFile.async('blob')
+            // Create blob with correct MIME type
+            const typedImageBlob = new Blob([imageBlob], { type: imageMimeType })
             const imageDataUrl = await new Promise((resolve) => {
               const reader = new FileReader()
               reader.onloadend = () => resolve(reader.result)
-              reader.readAsDataURL(imageBlob)
+              reader.readAsDataURL(typedImageBlob)
             })
             scene.image_url = imageDataUrl
           }
@@ -223,11 +237,25 @@ function OfflineManager({ onLoadOffline, onBack }) {
           const audioPath = scene.audio_url.replace('/media/', '')
           const audioFile = zipData.file(audioPath)
           if (audioFile) {
+            // Detect audio MIME type from file extension
+            const audioExt = audioPath.split('.').pop().toLowerCase()
+            const mimeTypes = {
+              'mp3': 'audio/mpeg',
+              'wav': 'audio/wav',
+              'ogg': 'audio/ogg',
+              'webm': 'audio/webm',
+              'm4a': 'audio/mp4',
+              'aac': 'audio/aac'
+            }
+            const audioMimeType = mimeTypes[audioExt] || 'audio/mpeg'
+            
             const audioBlob = await audioFile.async('blob')
+            // Create blob with correct MIME type
+            const typedAudioBlob = new Blob([audioBlob], { type: audioMimeType })
             const audioDataUrl = await new Promise((resolve) => {
               const reader = new FileReader()
               reader.onloadend = () => resolve(reader.result)
-              reader.readAsDataURL(audioBlob)
+              reader.readAsDataURL(typedAudioBlob)
             })
             scene.audio_url = audioDataUrl
           }
