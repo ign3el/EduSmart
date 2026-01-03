@@ -7,7 +7,7 @@ import io
 
 from routers.auth import get_current_user
 from database_models import User
-from services.piper_client import piper_tts
+from ..services.piper_client import piper_tts, TTSConnectionError
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -54,6 +54,8 @@ async def test_tts(request: TtsTestRequest):
             raise HTTPException(status_code=500, detail="TTS generation failed, received no audio data.")
 
         return StreamingResponse(io.BytesIO(audio_bytes), media_type="audio/wav")
+    except TTSConnectionError as e:
+        raise HTTPException(status_code=503, detail=f"TTS Service Unavailable: {e}")
     except Exception as e:
         logger.error(f"Error in TTS test endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))

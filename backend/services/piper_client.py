@@ -9,10 +9,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+class TTSConnectionError(Exception):
+    """Custom exception for when the TTS service cannot be reached."""
+    pass
+
 class PiperClient:
     def __init__(self):
         # Piper TTS endpoint (self-hosted)
-        self.base_url = os.getenv("PIPER_URL", "http://localhost:5000")
+        self.base_url = os.getenv("PIPER_URL", "http://piper-tts:5000")
         self.api_key = os.getenv("PIPER_API_KEY", None) # For future use if API is secured
         self.timeout = 90  # Increased timeout for potentially longer generations
 
@@ -28,6 +32,9 @@ class PiperClient:
         
         Returns:
             Audio bytes (WAV) or None on failure.
+        
+        Raises:
+            TTSConnectionError: If the service cannot be reached.
         """
         try:
             # Prepare headers
@@ -60,6 +67,9 @@ class PiperClient:
                 print(f"✗ Piper TTS failed: {response.status_code} - {response.text}")
                 return None
                 
+        except requests.exceptions.ConnectionError as e:
+            print(f"✗ Piper TTS connection failed: {e}")
+            raise TTSConnectionError(f"Could not connect to Piper TTS at {self.base_url}. Please ensure the service is running.")
         except requests.exceptions.Timeout:
             print("✗ Piper TTS timeout")
             return None

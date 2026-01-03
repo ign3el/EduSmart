@@ -1,3 +1,9 @@
+networks:
+  web_network:
+    external: true
+  ai-services:
+    driver: bridge
+
 services:
   backend:
     build:
@@ -17,6 +23,8 @@ services:
       - RUNPOD_SEED=${RUNPOD_SEED:-20240601}
       - RUNPOD_MONTHLY_CAP_AED=${RUNPOD_MONTHLY_CAP_AED:-25}
       - RUNPOD_COST_AED_PER_IMAGE=${RUNPOD_COST_AED_PER_IMAGE:-0.02}
+      # Piper TTS Configuration
+      - PIPER_URL=http://piper-tts:5000 
       # Database Configuration
       - MYSQL_HOST=${MYSQL_HOST:-10.0.0.147}
       - MYSQL_PORT=${MYSQL_PORT:-3306}
@@ -35,8 +43,6 @@ services:
       - MAIL_STARTTLS=${MAIL_STARTTLS:-True}
       - MAIL_SSL_TLS=${MAIL_SSL_TLS:-False}
       - APP_URL=${APP_URL:-https://edusmart.ign3el.com}
-      # Chatterbox TTS Configuration
-      - CHATTERBOX_URL=http://chatterbox-tts:5000
     volumes:
       - ./backend:/app
       - ./backend/outputs:/app/outputs
@@ -45,8 +51,8 @@ services:
     user: "0:0"
     restart: unless-stopped
     networks:
-      - edusmart-network
-      - chatterbox-public
+      - web_network
+      - ai-services
 
   frontend:
     build:
@@ -59,16 +65,32 @@ services:
       - backend
     restart: unless-stopped
     networks:
-      - edusmart-network
+      - web_network
+      
+  piper-tts:
+    image: rhasspy/wyoming-piper
+    container_name: piper-tts
+    ports:
+      - "5002:5000" # Exposing Piper's internal port 5000 on host port 5002
+    command: >
+      --voice en_female_pro 
+      --voice en_male_pro 
+      --voice en_female_gb 
+      --voice en_male_clear
+      --voice ar_female_emirati
+      --voice ar_male_formal
+      --voice ar_male_fast
+      --voice hi_male_natural
+      --voice hi_female_friendly
+      --voice hi_male_deep
+      --uri 'tcp://0.0.0.0:5000' # Custom Piper API server, not the default Wyoming protocol
+    volumes:
+      - ./piper_models:/app/models # Assuming models are stored here
+    restart: unless-stopped
+    networks:
+      - ai-services
 
 volumes:
   uploads:
   outputs:
   saved_stories:
-
-networks:
-  edusmart-network:
-    name: edusmart-network
-    driver: bridge
-  chatterbox-public:
-    external: true
