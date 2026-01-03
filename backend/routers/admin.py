@@ -4,8 +4,8 @@ Admin-only API endpoints for inspecting application state.
 import sqlite3
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Response
-from ..routers.auth import get_current_user
-from ..database_models import User
+from routers.auth import get_current_user
+from database_models import User
 
 # Setup logging
 logger = logging.getLogger(__name__)

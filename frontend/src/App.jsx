@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from './context/AuthContext'
@@ -16,8 +16,8 @@ import LoadStory from './components/LoadStory'
 import OfflineManager from './components/OfflineManager'
 import ReuploadConfirmModal from './components/ReuploadConfirmModal'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
-import AdminDashboard from './components/AdminDashboard'
-import AdminDbViewer from './components/AdminDbViewer'
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'))
+const AdminDbViewer = lazy(() => import('./components/AdminDbViewer'))
 import './App.css'
 
 function App() {
@@ -358,23 +358,25 @@ function MainApp() {
           )}
           
           <AnimatePresence mode="wait">
-            {step === 'admin' && (
-              <motion.div key="admin" className="step-container">
-                <AdminDashboard 
-                  onPlayStory={handlePlayFromAdmin}
-                  onBack={() => setStep('home')}
-                  onNavigateToDbViewer={() => setStep('db-viewer')}
-                />
-              </motion.div>
-            )}
+            <Suspense fallback={<div className="loading-message">Loading Admin Tools...</div>}>
+              {step === 'admin' && (
+                <motion.div key="admin" className="step-container">
+                  <AdminDashboard 
+                    onPlayStory={handlePlayFromAdmin}
+                    onBack={() => setStep('home')}
+                    onNavigateToDbViewer={() => setStep('db-viewer')}
+                  />
+                </motion.div>
+              )}
 
-            {step === 'db-viewer' && (
-              <motion.div key="db-viewer" className="step-container">
-                <AdminDbViewer 
-                  onBack={() => setStep('admin')}
-                />
-              </motion.div>
-            )}
+              {step === 'db-viewer' && (
+                <motion.div key="db-viewer" className="step-container">
+                  <AdminDbViewer 
+                    onBack={() => setStep('admin')}
+                  />
+                </motion.div>
+              )}
+            </Suspense>
 
             {step === 'home' && (
               <motion.div key="home" className="home-container">

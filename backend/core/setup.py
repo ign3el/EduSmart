@@ -11,8 +11,8 @@ dotenv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'
 if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path=dotenv_path)
 
-from ..database import get_db_cursor, initialize_database
-from ..auth import get_password_hash
+from database import get_db_cursor, initialize_database
+from auth import get_password_hash
 
 logger = logging.getLogger(__name__)
 
