@@ -1,6 +1,6 @@
 networks:
   web_network:
-    external: true
+    driver: bridge
   ai-services:
     driver: bridge
 
