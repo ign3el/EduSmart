@@ -77,42 +77,71 @@ class GeminiService:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # Token-optimized prompt (reduced from 650 to ~350 tokens)
-            unified_prompt = f"""Transform this document into an interactive educational story for {grade_level} students.
+            # Enhanced pedagogically-sound prompt for precise learning objectives
+            unified_prompt = f"""You are an expert educational content designer. Transform this document into a highly effective interactive learning story for {grade_level} students.
 
-OUTPUT: Valid JSON object only (no markdown, no extra text).
+CRITICAL PEDAGOGICAL REQUIREMENTS:
+1. EXTRACT core learning objectives from the document - identify what students MUST understand
+2. SEQUENCE concepts in logical order (simple → complex, foundational → advanced)
+3. CREATE narrative that makes abstract concepts concrete through relatable scenarios
+4. ENSURE each scene builds on previous understanding (scaffolded learning)
+5. USE age-appropriate language, examples, and cognitive complexity for {grade_level}
 
-STRUCTURE:
+GRADE-LEVEL GUIDELINES:
+- KG-Grade 2: Simple sentences, familiar objects, repetition, basic cause-effect
+- Grade 3-4: Short paragraphs, introduce vocabulary, compare/contrast, problem-solving
+- Grade 5-7: Complex narratives, abstract thinking, critical analysis, real-world applications
+
+OUTPUT: Valid JSON object ONLY (no markdown, no extra text).
+
 {{
-  "title": "Story title",
-  "description": "Plot summary and goals",
+  "title": "Engaging title that hints at the learning goal",
+  "description": "2-sentence summary: plot hook + educational value",
   "grade_level": "{grade_level}",
-  "subject": "Main subject area",
-  "learning_outcome": "What student learns",
+  "subject": "Primary subject area (Science/Math/History/Language/etc.)",
+  "learning_outcome": "After this story, students will be able to [specific measurable skill]",
   "scenes": [
     {{
       "scene_number": 1,
-      "narrative_text": "Age-appropriate story teaching one concept (2-3 sentences)",
-      "image_prompt": "3D Pixar-style visual description (2-3 sentences) matching narrative",
-      "check_for_understanding": "Comprehension question"
+      "narrative_text": "3-4 sentences teaching ONE key concept. Use storytelling elements (character emotions, dialogue, conflict/resolution) while embedding factual learning. End with a discovery or realization that reinforces the concept.",
+      "image_prompt": "Detailed 3D Pixar-style scene description: [Setting with specific details], [Character doing specific action], [Visual elements that reinforce the learning concept]. Use vibrant colors, expressive characters, educational props visible in scene.",
+      "check_for_understanding": "Question testing comprehension of THIS scene's concept (not general knowledge)"
     }}
   ],
   "quiz": [
     {{
       "question_number": 1,
-      "question_text": "Multiple-choice question",
-      "options": ["A. Option", "B. Option", "C. Option", "D. Option"],
+      "question_text": "Clear question testing a CORE learning objective from the story",
+      "options": ["A. Plausible distractor based on common misconception", "B. Correct answer with specific detail", "C. Plausible distractor with partial truth", "D. Clearly incorrect option"],
       "correct_answer": "B",
-      "explanation": "Why correct"
+      "explanation": "Brief explanation connecting answer to story events and reinforcing the concept"
     }}
   ]
 }}
 
-RULES:
-- 6-10 scenes with clear narrative arc
-- Each scene = 1 concept
-- Engaging characters as learning metaphors
-- Valid JSON only (no ```json markers)"""
+SCENE DEVELOPMENT STRATEGY:
+Scene 1: Hook + introduce problem/question related to learning goal
+Scenes 2-3: Present foundational concepts through character exploration
+Scenes 4-6: Build complexity, introduce challenges that require applying concepts
+Scenes 7-8: Demonstrate mastery through problem-solving or real-world application
+Final Scene: Synthesis and celebration of learning with clear takeaway
+
+NARRATIVE_TEXT REQUIREMENTS:
+✓ Use active voice and vivid verbs
+✓ Include character names and dialogue when appropriate
+✓ Embed vocabulary naturally with context clues
+✓ Show don't tell: demonstrate concepts through action
+✓ Connect to students' lived experiences
+✓ End each scene with mini-conclusion or question to ponder
+
+IMAGE_PROMPT REQUIREMENTS:
+✓ Specify character expressions that convey emotion/understanding
+✓ Include visual metaphors for abstract concepts
+✓ Describe educational elements clearly visible (diagrams, labels, demonstrations)
+✓ Set appropriate environment (classroom, nature, laboratory, historical setting)
+✓ Use composition that focuses attention on learning elements
+
+Generate 6-10 scenes. Output ONLY the JSON object.
 
             def _generate_story_unified():
                 return self.client.models.generate_content(
