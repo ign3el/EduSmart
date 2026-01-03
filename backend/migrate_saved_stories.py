@@ -43,6 +43,22 @@ def scan_and_migrate_stories():
     story_folders = [f for f in saved_stories_path.iterdir() if f.is_dir()]
     print(f"Found {len(story_folders)} story folders\n")
     
+    # Get admin user ID
+    admin_user_id = None
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT id FROM users WHERE is_admin = 1 LIMIT 1")
+            admin = cursor.fetchone()
+            if admin:
+                admin_user_id = admin['id']
+                print(f"✓ Found admin user (ID: {admin_user_id}) - will assign orphaned stories to admin\n")
+            else:
+                print("⚠️  No admin user found - stories will fail to migrate\n")
+                return
+    except Exception as e:
+        print(f"❌ Failed to get admin user: {e}\n")
+        return
+    
     migrated_count = 0
     skipped_count = 0
     error_count = 0
@@ -79,7 +95,7 @@ def scan_and_migrate_stories():
                 # Insert into database with NULL user_id (orphaned)
                 query = """
                     INSERT INTO user_stories (story_id, user_id, name, story_data, created_at, updated_at)
-                    VALUES (%s, NULL, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s)
                 """
                 
                 now = datetime.now()
@@ -88,6 +104,7 @@ def scan_and_migrate_stories():
                 
                 cursor.execute(query, (
                     story_id,
+                    admin_user_id,  # Assign to admin instead of NULL
                     story_name,
                     json.dumps(story_data),
                     created_at,

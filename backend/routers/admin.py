@@ -167,6 +167,26 @@ async def migrate_saved_stories():
     
     story_folders = [f for f in saved_stories_path.iterdir() if f.is_dir()]
     
+    # Get admin user ID
+    admin_user_id = None
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT id FROM users WHERE is_admin = 1 LIMIT 1")
+            admin = cursor.fetchone()
+            if admin:
+                admin_user_id = admin['id']
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to get admin user: {str(e)}"
+        }
+    
+    if not admin_user_id:
+        return {
+            "success": False,
+            "message": "No admin user found in database"
+        }
+    
     migrated = []
     skipped = []
     errors = []
@@ -200,7 +220,7 @@ async def migrate_saved_stories():
                 # Insert into database with NULL user_id (orphaned)
                 query = """
                     INSERT INTO user_stories (story_id, user_id, name, story_data, created_at, updated_at)
-                    VALUES (%s, NULL, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s)
                 """
                 
                 now = datetime.now()
@@ -208,6 +228,7 @@ async def migrate_saved_stories():
                 
                 cursor.execute(query, (
                     story_id,
+                    admin_user_id,  # Assign to admin instead of NULL
                     story_name,
                     json.dumps(story_data),
                     created_at,
