@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     resendVerificationEmail,
-  }), [user, token, isLoading, signup, login, logout, resendVerificationEmail]);
+  }), [user, token, isLoading]);
 
   return (
     <AuthContext.Provider value={authContextValue}>
