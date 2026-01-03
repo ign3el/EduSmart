@@ -16,7 +16,9 @@ class GeminiService:
     def __init__(self) -> None:
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         # Recommended models for cost efficiency and high-volume usage
-        self.text_model = "gemini-2.5-flash"  # Available model with higher rate limits than lite version
+        self.text_model = "gemini-2.5-flash"  # Primary text model
+        self.text_model_fallback = "gemini-2.5-flash-lite"  # Fallback when quota exceeded
+        self.using_fallback = False  # Track if using fallback model
         self.image_model = "gemini-2.5-flash-image"  # Best balance for mass users
         self.audio_model = "gemini-2.5-flash-preview-tts"  # Optimized TTS
         # Exponential backoff configuration
@@ -31,20 +33,30 @@ class GeminiService:
         return self.base_delay * (2 ** attempt)
 
     def _call_with_exponential_backoff(self, func, *args, **kwargs):
-        """Execute API call with exponential backoff retry logic."""
+        """Execute API call with exponential backoff retry logic with automatic fallback."""
         for attempt in range(self.max_retries + 1):
             try:
                 return func(*args, **kwargs)
             except Exception as e:
                 error_str = str(e)
                 
-                # Detect quota exhaustion (don't retry indefinitely)
+                # Detect quota exhaustion and switch to fallback model
                 if "429" in error_str and "RESOURCE_EXHAUSTED" in error_str:
                     # Check if it's quota vs TPM limit
                     if "quota" in error_str.lower():
-                        if attempt >= 2:  # Stop after 2 attempts for quota issues
-                            print(f"❌ Gemini API quota exhausted. Please upgrade API tier or wait for reset.")
-                            raise Exception("AI Service quota exceeded. Please try again later or contact support.")
+                        if not self.using_fallback:
+                            # Switch to fallback model
+                            print(f"🔄 Primary model quota exceeded. Switching to fallback: {self.text_model_fallback}")
+                            self.text_model = self.text_model_fallback
+                            self.using_fallback = True
+                            # Retry immediately with fallback model
+                            time.sleep(2)  # Brief pause before fallback attempt
+                            continue
+                        else:
+                            # Fallback model also exhausted
+                            if attempt >= 2:
+                                print(f"❌ All models quota exhausted. Please upgrade API tier or wait for reset.")
+                                raise Exception("AI Service quota exceeded. Please try again later or contact support.")
                     elif "tokens per minute" in error_str.lower() or "tpm" in error_str.lower():
                         if attempt >= 1:  # TPM limits usually resolve faster
                             print(f"⚠️  TPM limit hit. Consider shortening document or waiting 60 seconds.")
