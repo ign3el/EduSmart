@@ -91,6 +91,26 @@
   box-shadow: 0 5px 20px rgba(168, 85, 247, 0.4);
 }
 
+.admin-btn {
+  padding: 0.6rem 1.2rem;
+  background: transparent;
+  color: var(--ink-2);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  margin-right: 1rem;
+}
+
+.admin-btn:hover {
+  background: var(--panel);
+  color: var(--ink-1);
+  border-color: var(--accent-1);
+}
+
 .app-header h1 {
   font-size: clamp(1.6rem, 2.6vw, 2.3rem);
   letter-spacing: -0.02em;

@@ -343,13 +343,13 @@ class StoryOperations:
 
                 query = """
 
-                    SELECT s.id, s.story_id, s.name, s.created_at, s.updated_at, u.username
+                                        SELECT s.id, s.story_id, s.name, s.created_at, s.updated_at, u.username
 
-                    FROM user_stories s
+                                        FROM user_stories s
 
-                    JOIN users u ON s.user_id = u.id
+                                        LEFT JOIN users u ON s.user_id = u.id
 
-                    ORDER BY s.updated_at DESC
+                                        ORDER BY s.updated_at DESC
 
                 """
 

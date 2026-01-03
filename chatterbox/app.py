@@ -39,18 +39,20 @@ except Exception as e:
     logger.error(f"❌ Failed to load TTS model: {e}")
     tts = None
 
-# Maps new descriptive names to high-quality VCTK speaker IDs
+# Maps new descriptive names to the Top 10 most expressive VCTK speaker IDs
 VOICE_MAPPING = {
-    "Gentle Female": "p225",      # Soft-spoken, Scottish accent
-    "Clear Male": "p226",         # Standard, clear male
-    "Standard Female": "p228",    # Standard, clear female
-    "Youthful Female": "p232",    # Expressive, youthful female
-    "Deep Male": "p236",          # Deep and resonant male
-    "Versatile Male": "p243",     # Lower-pitched male
-    "Warm Female": "p307",        # Warm, pleasant female tone
-    "Scottish Male": "p292",      # Clear, energetic Scottish accent
+    "The Wise Elder": "p232",           # 5-Star
+    "The Curious Child": "p273",        # 5-Star
+    "The Fairy Godmother": "p311",    # 5-Star
+    "The Storyteller": "p243",        # 4-Star
+    "The Bold Knight": "p280",          # 4-Star
+    "The Helpful Guide": "p228",        # 4-Star
+    "The Magical Spirit": "p330",       # 4-Star
+    "The Fast Rabbit": "p236",          # 4-Star
+    "The Giant": "p376",                # 4-Star
+    "The Classic Narrator": "p225",     # 3-Star
 }
-DEFAULT_SPEAKER = "p228"  # Default to Standard Female
+DEFAULT_SPEAKER = "p232"  # Default to the most expressive voice
 
 
 @app.route('/health', methods=['GET'])

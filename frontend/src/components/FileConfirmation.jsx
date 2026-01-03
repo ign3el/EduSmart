@@ -3,18 +3,20 @@ import { FiCheck, FiFile, FiEdit2 } from 'react-icons/fi'
 import './FileConfirmation.css'
 
 function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onEditGrade }) {
-  const [selectedVoice, setSelectedVoice] = useState('Standard Female')
+  const [selectedVoice, setSelectedVoice] = useState('The Wise Elder')
   const [showGradeSelector, setShowGradeSelector] = useState(false)
 
   const voices = [
-    { id: 'Standard Female', name: 'Standard Female', description: 'A clear, standard female narrator.' },
-    { id: 'Gentle Female', name: 'Gentle Female', description: 'A soft-spoken, soothing female voice.' },
-    { id: 'Youthful Female', name: 'Youthful Female', description: 'An expressive and energetic female voice.' },
-    { id: 'Warm Female', name: 'Warm Female', description: 'A pleasant and warm female narrator.' },
-    { id: 'Clear Male', name: 'Clear Male', description: 'A standard, clear male narrator.' },
-    { id: 'Deep Male', name: 'Deep Male', description: 'A deep and resonant male voice for narration.' },
-    { id: 'Versatile Male', name: 'Versatile Male', description: 'A lower-pitched, versatile male voice.' },
-    { id: 'Scottish Male', name: 'Scottish Male', description: 'A clear, energetic male voice with a Scottish accent.' },
+    { id: 'The Wise Elder', name: 'The Wise Elder (M)', description: '⭐⭐⭐⭐⭐ Deep, slow, and gravelly; perfect for wizards or kings.' },
+    { id: 'The Curious Child', name: 'The Curious Child (F)', description: '⭐⭐⭐⭐⭐ High pitch, energetic, and slightly breathless.' },
+    { id: 'The Fairy Godmother', name: 'The Fairy Godmother (F)', description: '⭐⭐⭐⭐⭐ Very soft, breathy, and soothing; ideal for bedtime.' },
+    { id: 'The Storyteller', name: 'The Storyteller (M)', description: '⭐⭐⭐⭐ Very rhythmic with a pleasant lilt; keeps attention well.' },
+    { id: 'The Bold Knight', name: 'The Bold Knight (M)', description: '⭐⭐⭐⭐ Authoritative and strong; good for action sequences.' },
+    { id: 'The Helpful Guide', name: 'The Helpful Guide (F)', description: '⭐⭐⭐⭐ Bright, friendly, and very high energy.' },
+    { id: 'The Magical Spirit', name: 'The Magical Spirit (F)', description: '⭐⭐⭐⭐ Airy and resonant; sounds slightly ethereal.' },
+    { id: 'The Fast Rabbit', name: 'The Fast Rabbit (F)', description: '⭐⭐⭐⭐ Rapid cadence; great for energetic or nervous characters.' },
+    { id: 'The Giant', name: 'The Giant (M)', description: '⭐⭐⭐⭐ Very deep and slow; one of the lowest male voices.' },
+    { id: 'The Classic Narrator', name: 'The Classic Narrator (F)', description: '⭐⭐⭐ Standard Southern English; very clear and articulate.' },
   ]
 
   const gradeLabels = {
