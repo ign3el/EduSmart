@@ -6,6 +6,17 @@ import Quiz from './Quiz';
 
 const API_DOMAIN = "https://edusmart.ign3el.com";
 
+// Helper function to build full URL, handling absolute URLs and data URLs
+const buildFullUrl = (url) => {
+  if (!url) return '';
+  // Check if already absolute (http/https) or data URL
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  // Relative path, prepend domain
+  return `${API_DOMAIN}${url}`;
+};
+
 function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null, totalScenes = 0, completedSceneCount = 0 }) {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -24,14 +35,14 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   const actualTotalScenes = totalScenes > 0 ? totalScenes : scenes.length;
   const scene = scenes[currentScene];
 
-  const fullAudioUrl = scene?.audio_url ? `${API_DOMAIN}${scene.audio_url}` : '';
-  const fullImageUrl = scene?.image_url ? `${API_DOMAIN}${scene.image_url}` : '';
-  const uploadUrl = storyData?.upload_url ? `${API_DOMAIN}${storyData.upload_url}` : '';
+  const fullAudioUrl = buildFullUrl(scene?.audio_url);
+  const fullImageUrl = buildFullUrl(scene?.image_url);
+  const uploadUrl = buildFullUrl(storyData?.upload_url);
 
   // Preload all scene images when story loads
   useEffect(() => {
     scenes.forEach((scene, index) => {
-      const imageUrl = scene?.image_url ? `${API_DOMAIN}${scene.image_url}` : '';
+      const imageUrl = buildFullUrl(scene?.image_url);
       if (imageUrl && !imageCache.current[imageUrl]) {
         const img = new Image();
         img.onload = () => {
@@ -46,8 +57,8 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   useEffect(() => {
     if (currentScene < scenes.length - 1) {
       const nextScene = scenes[currentScene + 1];
-      const nextImageUrl = nextScene?.image_url ? `${API_DOMAIN}${nextScene.image_url}` : '';
-      const nextAudioUrl = nextScene?.audio_url ? `${API_DOMAIN}${nextScene.audio_url}` : '';
+      const nextImageUrl = buildFullUrl(nextScene?.image_url);
+      const nextAudioUrl = buildFullUrl(nextScene?.audio_url);
       
       // Preload next image
       if (nextImageUrl && !imageCache.current[nextImageUrl]) {
