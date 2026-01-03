@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import JSZip from 'jszip'
 import apiClient from '../services/api'
 import * as storyStorage from '../utils/storyStorage'
+import { isStandalone } from '../utils/serviceWorkerRegistration'
 import './OfflineManager.css'
 
 function OfflineManager({ onLoadOffline, onBack }) {
@@ -12,6 +13,8 @@ function OfflineManager({ onLoadOffline, onBack }) {
   const [downloading, setDownloading] = useState(null)
   const [downloadMessage, setDownloadMessage] = useState('')
   const [storageInfo, setStorageInfo] = useState(null)
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false)
+  const [isPWA, setIsPWA] = useState(false)
 
   const loadLocalStories = async () => {
     try {
@@ -31,6 +34,13 @@ function OfflineManager({ onLoadOffline, onBack }) {
     if (isOnline) {
       loadOnlineStories()
     }
+    
+    // Check if running as PWA
+    setIsPWA(isStandalone())
+    
+    // Check if install prompt is available
+    setShowInstallPrompt(typeof window.showInstallPrompt === 'function')
+    
     const handleStorage = (event) => {
       if (event.key?.startsWith('edusmart_story_')) {
         loadLocalStories()
@@ -106,6 +116,16 @@ function OfflineManager({ onLoadOffline, onBack }) {
       await loadLocalStories() // Refresh storage info
     } catch (error) {
       alert('Failed to delete story: ' + error.message)
+    }
+  }
+
+  const handleInstallPWA = async () => {
+    if (window.showInstallPrompt) {
+      const accepted = await window.showInstallPrompt()
+      if (accepted) {
+        setShowInstallPrompt(false)
+        setIsPWA(true)
+      }
     }
   }
 
@@ -315,6 +335,14 @@ function OfflineManager({ onLoadOffline, onBack }) {
             <div className="storage-info">
               💾 {storageInfo.usage}MB / {storageInfo.quota}MB used
             </div>
+          )}
+          {showInstallPrompt && !isPWA && (
+            <button className="install-pwa-btn" onClick={handleInstallPWA}>
+              📲 Install App
+            </button>
+          )}
+          {isPWA && (
+            <div className="pwa-badge">✓ Installed</div>
           )}
         </div>
       </div>
