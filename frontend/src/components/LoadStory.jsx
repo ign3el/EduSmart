@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import apiClient from '../services/api'
 import './LoadStory.css'
 
 function LoadStory({ onLoad, onBack }) {
@@ -14,10 +15,8 @@ function LoadStory({ onLoad, onBack }) {
 
   const fetchStories = async () => {
     try {
-      const response = await fetch('/api/list-stories')
-      if (!response.ok) throw new Error('Failed to fetch stories')
-      const data = await response.json()
-      setStories(data)
+      const response = await apiClient.get('/api/list-stories')
+      setStories(response.data)
     } catch (error) {
       console.error('Error fetching stories:', error)
     } finally {
@@ -27,10 +26,8 @@ function LoadStory({ onLoad, onBack }) {
 
   const handleLoad = async (storyId) => {
     try {
-      const response = await fetch(`/api/load-story/${storyId}`)
-      if (!response.ok) throw new Error('Failed to load story')
-      const data = await response.json()
-      onLoad(data.story_data, data.name, storyId)
+      const response = await apiClient.get(`/api/load-story/${storyId}`)
+      onLoad(response.data.story_data, response.data.name, storyId)
     } catch (error) {
       alert('Failed to load story: ' + error.message)
     }
@@ -40,11 +37,7 @@ function LoadStory({ onLoad, onBack }) {
     if (!confirm(`Delete "${storyName}"? This cannot be undone.`)) return
     
     try {
-      const response = await fetch(`/api/delete-story/${storyId}`, {
-        method: 'DELETE'
-      })
-      if (!response.ok) throw new Error('Failed to delete story')
-      
+      await apiClient.delete(`/api/delete-story/${storyId}`)
       setStories(stories.filter(s => s.id !== storyId))
     } catch (error) {
       alert('Failed to delete story: ' + error.message)
@@ -56,18 +49,14 @@ function LoadStory({ onLoad, onBack }) {
     setDownloadMessage('Zipping file...')
     
     try {
-      // Step 1: Request ZIP creation
-      const response = await fetch(`/api/export-story/${storyId}`)
+      // Step 1: Request ZIP creation and download
+      const response = await apiClient.get(`/api/export-story/${storyId}`, {
+        responseType: 'blob'
+      })
       
-      if (!response.ok) throw new Error('Failed to download story')
-      
-      // Step 2: Download
-      setDownloadMessage('Downloading...')
-      const blob = await response.blob()
-      
-      // Step 3: Save
+      // Step 2: Save
       setDownloadMessage('Saving file...')
-      const url = window.URL.createObjectURL(blob)
+      const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
       link.download = `${storyName.replace(/\s+/g, '_')}_${storyId.substring(0, 8)}.zip`
@@ -77,7 +66,7 @@ function LoadStory({ onLoad, onBack }) {
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       
-      // Step 4: Complete
+      // Step 3: Complete
       setDownloadMessage('Complete! ✓')
       
       // Clear message after delay
