@@ -48,6 +48,8 @@ function MainApp() {
   
   const [storyData, setStoryData] = useState(null)
   const [progress, setProgress] = useState(0)
+  const [totalScenes, setTotalScenes] = useState(0) // Track total scenes from backend
+  const [completedSceneCount, setCompletedSceneCount] = useState(0) // Track completed scenes
   const [error, setError] = useState(null)
   const [gradeLevel, setGradeLevel] = useState(3)
   const [currentJobId, setCurrentJobId] = useState(null)
@@ -257,6 +259,12 @@ function MainApp() {
           if (job.status === 'processing') {
             setProgress((prev) => Math.max(prev, job.progress ?? prev))
             
+            // Update total scenes count when available
+            if (job.total_scenes > 0) {
+              setTotalScenes(job.total_scenes)
+              setCompletedSceneCount(job.completed_scene_count || 0)
+            }
+            
             // Show story immediately when first scene is ready
             if (job.result && job.result.scenes && job.result.scenes.length > 0) {
               if (!storyData || storyData.scenes.length === 0) {
@@ -272,6 +280,10 @@ function MainApp() {
             clearInterval(pollTimer)
             setStoryData(job.result)
             setProgress(100)
+            if (job.total_scenes > 0) {
+              setTotalScenes(job.total_scenes)
+              setCompletedSceneCount(job.total_scenes)
+            }
             setStep('playing')
           } else if (job.status === 'failed') {
             clearInterval(pollTimer)
@@ -306,6 +318,8 @@ function MainApp() {
     setStoryData(null)
     setError(null)
     setProgress(0)
+    setTotalScenes(0)
+    setCompletedSceneCount(0)
     setCurrentJobId(null)
     setIsSaved(false)
     setSavedStoryId(null)
@@ -517,6 +531,11 @@ function MainApp() {
                   />
                 </div>
                 <p>{progress}% Complete</p>
+                {totalScenes > 0 && (
+                  <p className="scene-progress">
+                    {completedSceneCount} of {totalScenes} scenes ready
+                  </p>
+                )}
               </div>
               
               <p className="small-text">Generating custom images and voiceovers...</p>

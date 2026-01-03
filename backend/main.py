@@ -353,6 +353,8 @@ async def get_status(job_id: str):
         return {
             "status": status["status"],
             "progress": actual_progress,
+            "total_scenes": status["total_scenes"],  # Always include total count
+            "completed_scene_count": len(completed_scenes),  # Number of completed scenes
             "result": {
                 "title": status["title"],
                 "scenes": completed_scenes

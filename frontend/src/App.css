@@ -329,6 +329,13 @@
   box-shadow: 0 0 20px rgba(109, 228, 255, 0.55);
 }
 
+.scene-progress {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--accent-3);
+  font-weight: 500;
+}
+
 .small-text {
   color: var(--ink-2);
   font-size: 0.95rem;
