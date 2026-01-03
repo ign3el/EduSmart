@@ -78,6 +78,8 @@ const StoryList = ({ onPlayStory }) => {
             <div className="story-list-controls">
                 <input
                     type="text"
+                    id="filter-username"
+                    name="filter-username"
                     placeholder="Filter by username..."
                     value={filterUser}
                     onChange={(e) => setFilterUser(e.target.value)}

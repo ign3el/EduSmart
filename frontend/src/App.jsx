@@ -590,6 +590,8 @@ function MainApp() {
           <input
             ref={fileInputRef}
             type="file"
+            id="file-reupload"
+            name="file-reupload"
             accept=".pdf,.docx,.doc"
             onChange={handleFileInputChange}
             style={{ display: 'none' }}

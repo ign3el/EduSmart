@@ -150,6 +150,8 @@ export default function Login({ onSwitchToSignup, onSuccess }) {
               <div className="resend-input-group">
                 <input
                   type="email"
+                  id="resend-email"
+                  name="resend-email"
                   placeholder="Enter your email"
                   value={resendEmail}
                   onChange={(e) => setResendEmail(e.target.value)}

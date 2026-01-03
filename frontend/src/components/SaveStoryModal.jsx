@@ -71,6 +71,8 @@ function SaveStoryModal({ jobId, onSave, onCancel }) {
         <p className="modal-description">Give your adventure a name so you can find it later.</p>
         <input
           type="text"
+          id="story-name"
+          name="story-name"
           placeholder="Enter story name..."
           value={storyName}
           onChange={(e) => setStoryName(e.target.value)}
