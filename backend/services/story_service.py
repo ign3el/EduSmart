@@ -241,7 +241,22 @@ Transform the document into JSON format with this exact structure:
             response = self._call_with_exponential_backoff(_generate_story)
             
             if response and response.text:
-                return json.loads(response.text)
+                cleaned_text = response.text.strip()
+                if cleaned_text:
+                    # Handle the case where the model wraps the JSON in markdown backticks
+                    if cleaned_text.startswith("```json"):
+                        cleaned_text = cleaned_text[7:-3].strip()
+                    elif cleaned_text.startswith("```"):
+                        cleaned_text = cleaned_text[3:-3].strip()
+                    
+                    try:
+                        return json.loads(cleaned_text)
+                    except json.JSONDecodeError as e:
+                        print(f"STORY JSON DECODE ERROR: {e}")
+                        print(f"Received malformed text (first 500 chars): {cleaned_text[:500]}")
+                        return None
+            
+            print("STORY ERROR: Received empty or invalid response from GenAI model.")
             return None
         except Exception as e:
             print(f"STORY ERROR: {e}")

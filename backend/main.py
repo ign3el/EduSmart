@@ -282,7 +282,7 @@ async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = Fil
     
     # Use progressive workflow
     background_tasks.add_task(run_ai_workflow_progressive, story_id, upload_path, grade_level, voice)
-    return {"story_id": story_id}
+    return {"job_id": story_id}
 
 
 # Progressive endpoints for scene-by-scene loading
