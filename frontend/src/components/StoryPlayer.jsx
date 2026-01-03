@@ -6,7 +6,7 @@ import Quiz from './Quiz';
 
 const API_DOMAIN = "https://edusmart.ign3el.com";
 
-function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null }) {
+function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null, totalScenes = 0, completedSceneCount = 0 }) {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
@@ -16,10 +16,12 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [generatingMessage, setGeneratingMessage] = useState('');
   const audioRef = useRef(null);
   const imageCache = useRef({});
 
   const scenes = storyData?.scenes || [];
+  const actualTotalScenes = totalScenes > 0 ? totalScenes : scenes.length;
   const scene = scenes[currentScene];
 
   const fullAudioUrl = scene?.audio_url ? `${API_DOMAIN}${scene.audio_url}` : '';
@@ -149,6 +151,11 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
         audioRef.current.currentTime = 0;
       }
       setCurrentScene(currentScene + 1);
+      setGeneratingMessage('');
+    } else if (currentScene < actualTotalScenes - 1) {
+      // Trying to go to a scene that hasn't been generated yet
+      setGeneratingMessage(`Scene ${currentScene + 2} is still being generated. Please wait...`);
+      setTimeout(() => setGeneratingMessage(''), 3000);
     } else {
       setIsPlaying(false);
       setShowQuiz(true);
@@ -163,6 +170,7 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
         audioRef.current.currentTime = 0;
       }
       setCurrentScene(currentScene - 1);
+      setGeneratingMessage('');
     }
   };
 
@@ -187,12 +195,20 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   };
 
   const handleDotClick = (index) => {
+    // Check if scene is available
+    if (index >= scenes.length) {
+      setGeneratingMessage(`Scene ${index + 1} is still being generated. Please wait...`);
+      setTimeout(() => setGeneratingMessage(''), 3000);
+      return;
+    }
+    
     // Stop current audio before changing scene
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
     setCurrentScene(index);
+    setGeneratingMessage('');
   };
 
   const togglePlay = () => {
@@ -347,11 +363,15 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
 
               <div className="player-controls inline-controls">
                 <div className="scene-counter">
-                  Scene {currentScene + 1} of {scenes.length}
-                  {currentJobId && scenes.length < 8 && (
-                    <span className="generating-indicator"> • More scenes generating...</span>
+                  Scene {currentScene + 1} of {actualTotalScenes}
+                  {currentJobId && completedSceneCount < actualTotalScenes && (
+                    <span className="generating-indicator"> • {completedSceneCount} scenes ready</span>
                   )}
                 </div>
+                
+                {generatingMessage && (
+                  <div className="generating-message">{generatingMessage}</div>
+                )}
                 
                 <div className="control-buttons">
                   <button 
@@ -372,13 +392,20 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
                 </div>
 
                 <div className="scene-dots">
-                  {scenes.map((_, index) => (
-                    <button
-                      key={`dot-${index}`}
-                      className={`dot ${index === currentScene ? 'active' : ''} ${index < currentScene ? 'completed' : ''}`}
-                      onClick={() => handleDotClick(index)}
-                    />
-                  ))}
+                  {Array.from({ length: actualTotalScenes }, (_, index) => {
+                    const isAvailable = index < scenes.length;
+                    const isActive = index === currentScene;
+                    const isCompleted = index < currentScene;
+                    
+                    return (
+                      <button
+                        key={`dot-${index}`}
+                        className={`dot ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${!isAvailable ? 'unavailable' : ''}`}
+                        onClick={() => handleDotClick(index)}
+                        title={!isAvailable ? `Scene ${index + 1} is still generating` : `Go to scene ${index + 1}`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             </div>

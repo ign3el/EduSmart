@@ -553,6 +553,8 @@ function MainApp() {
                 isOffline={isOfflineMode}
                 savedStoryId={savedStoryId}
                 currentJobId={currentJobId}
+                totalScenes={totalScenes}
+                completedSceneCount={completedSceneCount}
               />
             </motion.div>
           )}
