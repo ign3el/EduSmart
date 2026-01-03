@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+requests
+python-dotenv
+google-genai
+langdetect
+python-multipart
+pydantic[email]
+mysql-connector-python
+sendgrid

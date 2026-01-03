@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 from database import initialize_database
 from routers.auth import router as auth_router, get_current_user
 from routers.admin import router as admin_router
+from routers.upload import router as upload_router
 from core.setup import create_admin_user
 from database_models import User, StoryOperations
 from services.story_service import GeminiService
@@ -107,6 +108,7 @@ async def startup_event():
 # Include the new authentication router, which contains /signup, /token, /me
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(upload_router)
 
 
 # --- Non-Auth related application logic ---

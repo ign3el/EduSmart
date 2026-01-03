@@ -1,13 +1,14 @@
 import logging
 import sqlite3
+import requests
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import io
 
-from routers.auth import get_current_user
+from .auth import get_current_user
 from database_models import User
-from services.tts_service import kokoro_tts, TTSConnectionError
+from services.kokoro_client import generate_tts
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -37,23 +38,34 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 
 # --- TTS Test Endpoint ---
 @router.post("/tts/test", dependencies=[Depends(get_admin_user)])
-async def test_tts(request: TtsTestRequest):
+def test_tts(request: TtsTestRequest):
     """
     Allows admins to test the Kokoro TTS service with custom text and settings.
     Streams back a WAV audio file.
     """
     try:
-        audio_bytes = await kokoro_tts.generate_audio(
-            text=request.text,
-            voice=request.voice,
-            speed=request.speed
-        )
+        if request.voice == "ar_teacher":
+            # Route to Piper TTS (Secure External Endpoint) for Arabic
+            piper_url = "https://tts.ign3el.com/tts"
+            headers = {"TTS_API_KEY": "TTS_AHTE_2026!"}
+            # Piper typically accepts GET requests with text param
+            resp = requests.get(piper_url, params={"text": request.text}, headers=headers, timeout=10)
+            
+            if resp.status_code != 200:
+                raise Exception(f"Piper TTS Error {resp.status_code}: {resp.text}")
+            audio_bytes = resp.content
+        else:
+            # Route to Kokoro TTS (Port 8880) for others
+            audio_bytes = generate_tts(
+                text=request.text,
+                voice=request.voice,
+                speed=request.speed
+            )
+            
         if not audio_bytes:
             raise HTTPException(status_code=500, detail="TTS generation failed, received no audio data.")
 
         return StreamingResponse(io.BytesIO(audio_bytes), media_type="audio/wav")
-    except TTSConnectionError as e:
-        raise HTTPException(status_code=503, detail=f"TTS Service Unavailable: {e}")
     except Exception as e:
         logger.error(f"Error in TTS test endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))

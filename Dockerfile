@@ -11,16 +11,11 @@ WORKDIR /app
 # System dependencies required for various packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    build-essential \
-    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt ./
-RUN pip install --upgrade pip setuptools && pip install -r requirements.txt
-
-# Verify imports
-RUN python -c "import PyPDF2; import docx; from langdetect import detect; print('All specified modules imported successfully during build.')"
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy application code
 COPY . .
