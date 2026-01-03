@@ -8,6 +8,7 @@ const StoryList = ({ onPlayStory }) => {
     const [error, setError] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'descending' });
     const [filterUser, setFilterUser] = useState('');
+    const [playingStoryId, setPlayingStoryId] = useState(null);
 
     useEffect(() => {
         const fetchAllStories = async () => {
@@ -112,13 +113,17 @@ const StoryList = ({ onPlayStory }) => {
                                     <td>
                                         <button 
                                             className="play-story-button"
+                                            disabled={playingStoryId === story.story_id}
                                             onClick={() => {
+                                                console.log('=== BUTTON CLICKED ===');
                                                 console.log('Play clicked for story:', story);
                                                 console.log('Story ID:', story.story_id);
+                                                console.log('Story name:', story.name);
+                                                setPlayingStoryId(story.story_id);
                                                 onPlayStory(story.story_id);
                                             }}
                                         >
-                                            Play
+                                            {playingStoryId === story.story_id ? 'Loading...' : 'Play'}
                                         </button>
                                     </td>
                                 </tr>
