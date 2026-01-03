@@ -379,16 +379,47 @@ async def save_story(job_id: str, story_name: str = Form(...), user: User = Depe
         story_id = str(uuid.uuid4())
         scenes = job_manager.get_all_scenes(job_id)
         
+        # Create permanent storage directory for this story
+        story_dir = os.path.join("saved_stories", story_id)
+        os.makedirs(story_dir, exist_ok=True)
+        logger.info(f"Created story directory: {story_dir}")
+        
+        # Copy files from outputs to saved_stories and update URLs
+        updated_scenes = []
+        for s in scenes:
+            scene_data = {
+                "text": s["text"],
+                "image_url": s["image_url"],
+                "audio_url": s["audio_url"]
+            }
+            
+            # Copy image file if it exists
+            if s.get("image_url") and s["image_url"].startswith("/api/outputs/"):
+                old_image_path = s["image_url"].replace("/api/outputs/", "outputs/")
+                if os.path.exists(old_image_path):
+                    new_image_filename = os.path.basename(old_image_path).replace(f"{job_id}_", "")
+                    new_image_path = os.path.join(story_dir, new_image_filename)
+                    import shutil
+                    shutil.copy2(old_image_path, new_image_path)
+                    scene_data["image_url"] = f"/api/saved-stories/{story_id}/{new_image_filename}"
+                    logger.info(f"Copied image: {old_image_path} -> {new_image_path}")
+            
+            # Copy audio file if it exists
+            if s.get("audio_url") and s["audio_url"].startswith("/api/outputs/"):
+                old_audio_path = s["audio_url"].replace("/api/outputs/", "outputs/")
+                if os.path.exists(old_audio_path):
+                    new_audio_filename = os.path.basename(old_audio_path).replace(f"{job_id}_", "")
+                    new_audio_path = os.path.join(story_dir, new_audio_filename)
+                    import shutil
+                    shutil.copy2(old_audio_path, new_audio_path)
+                    scene_data["audio_url"] = f"/api/saved-stories/{story_id}/{new_audio_filename}"
+                    logger.info(f"Copied audio: {old_audio_path} -> {new_audio_path}")
+            
+            updated_scenes.append(scene_data)
+        
         story_data = {
             "title": status["title"],
-            "scenes": [
-                {
-                    "text": s["text"],
-                    "image_url": s["image_url"],
-                    "audio_url": s["audio_url"]
-                }
-                for s in scenes
-            ]
+            "scenes": updated_scenes
         }
         
         success = StoryOperations.save_story(
@@ -401,6 +432,7 @@ async def save_story(job_id: str, story_name: str = Form(...), user: User = Depe
         if not success:
             raise HTTPException(status_code=500, detail="Failed to save story to the database.")
         
+        logger.info(f"Story {story_id} saved successfully with {len(updated_scenes)} scenes")
         return {"story_id": story_id, "message": "Story saved successfully"}
     
     # Fall back to old system
