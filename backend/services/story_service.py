@@ -223,7 +223,14 @@ CRITICAL REQUIREMENTS:
      * Grade 5-7: Analysis, "why", compare/contrast, application
    - Question vocabulary must match {grade_level} reading level
 
-7. TONE: Warm, encouraging, enthusiastic teacher voice that celebrates learning!
+7. TONE: Warm, encouraging, an enthusiastic teacher voice that celebrates learning!
+
+**FINAL JSON CHECK (ABSOLUTELY CRITICAL):**
+- **Review your final output.** Before finishing, mentally parse the entire JSON to ensure it is 100% valid.
+- **Commas are mandatory** between objects in an array and between key-value pairs in an object.
+- **The last item** in an array or object must NOT have a trailing comma.
+- **All keys and string values** must be enclosed in double quotes (").
+- **Do not add any text, notes, or explanations** outside of the single, root JSON object. Your entire response must be only the JSON.
 
 Transform the document into JSON format with this exact structure:
 """

@@ -50,6 +50,7 @@ class UserResponse(BaseModel):
     username: str
     is_verified: bool
     is_premium: bool
+    is_admin: bool
 
     class Config:
         from_attributes = True # Allows mapping from ORM models or dicts
