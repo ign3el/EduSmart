@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from './context/AuthContext'
 import Login from './components/Login'
 import Signup from './components/Signup'
+import VerifyEmail from './components/VerifyEmail'
+import ForgotPassword from './components/ForgotPassword'
+import ResetPassword from './components/ResetPassword'
 import FileUpload from './components/FileUpload'
 import FileConfirmation from './components/FileConfirmation'
 import AvatarSelector from './components/AvatarSelector'
@@ -15,6 +19,18 @@ import UploadProgressOverlay from './components/UploadProgressOverlay'
 import './App.css'
 
 function App() {
+  // Use Routes to handle verification and password reset pages
+  return (
+    <Routes>
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/*" element={<MainApp />} />
+    </Routes>
+  )
+}
+
+function MainApp() {
   const { isLoggedIn, isLoading, logout } = useAuth()
   const [authStep, setAuthStep] = useState('login') // 'login' or 'signup'
   const [signupSuccess, setSignupSuccess] = useState(false)
