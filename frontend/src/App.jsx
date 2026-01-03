@@ -53,6 +53,20 @@ function MainApp() {
   const [showUploadProgress, setShowUploadProgress] = useState(false)
   const fileInputRef = useRef(null)
 
+  // Handle browser back button to navigate within app steps
+  useEffect(() => {
+    const handlePopState = (event) => {
+      event.preventDefault()
+      const prev = previousStep(step)
+      setStep(prev)
+      window.history.pushState({ step: prev }, '')
+    }
+
+    window.history.pushState({ step }, '')
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [step])
+
   // If not logged in and not loading, show auth screen
   if (isLoading) {
     return (
@@ -133,20 +147,6 @@ function MainApp() {
         return 'home'
     }
   }
-
-  // Handle browser back button to navigate within app steps
-  useEffect(() => {
-    const handlePopState = (event) => {
-      event.preventDefault()
-      const prev = previousStep(step)
-      setStep(prev)
-      window.history.pushState({ step: prev }, '')
-    }
-
-    window.history.pushState({ step }, '')
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [step])
 
   const handleFileUpload = (file) => {
     setUploadedFile(file)
