@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 
 # Import the new, clean refactored modules
 from database import initialize_database
-from routers.auth import router as auth_router
+from routers.auth import router as auth_router, get_current_user
+from database_models import User, StoryOperations
 from services.story_service import GeminiService
 from services.chatterbox_client import chatterbox
 from job_state import job_manager
@@ -360,81 +361,112 @@ async def get_status(job_id: str):
     return jobs[job_id]
 
 @app.post("/api/save-story/{job_id}")
-async def save_story(job_id: str, story_name: str = Form(...)):
-    if job_id not in jobs or jobs[job_id]["status"] != "completed":
-        raise HTTPException(status_code=404, detail="Story not found or not completed")
+async def save_story(job_id: str, story_name: str = Form(...), user: User = Depends(get_current_user)):
+    """
+    Saves a generated story to the database, associating it with the current user.
+    This also moves the story's assets from temporary storage to permanent storage.
+    """
+    # This endpoint is still tied to the old 'jobs' dictionary system.
+    if job_id not in jobs or jobs[job_id].get("status") != "completed":
+        raise HTTPException(status_code=404, detail="Story generation job not found or not completed.")
     
     try:
         story_data = jobs[job_id]["result"]
+        # Generate a new, permanent ID for the story.
         story_id = str(uuid.uuid4())
+        
+        # Save story to the database, associated with the user
+        success = StoryOperations.save_story(
+            user_id=user['id'],
+            story_id=story_id,
+            name=story_name,
+            story_data=story_data
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save story to the database.")
+
+        # --- File System Operations ---
+        # Create a safe directory name for the story assets
         folder_name = _safe_story_dirname(story_name, story_id)
         story_dir = os.path.join("saved_stories", folder_name)
         os.makedirs(story_dir, exist_ok=True)
 
+        # Move the original uploaded document, if it exists
         upload_path = jobs[job_id].get("upload_path")
         if upload_path and os.path.exists(upload_path):
             upload_filename = os.path.basename(upload_path).replace(f"{job_id}_", "", 1)
             import shutil
             shutil.move(upload_path, os.path.join(story_dir, upload_filename))
         
-        metadata = {
-            "id": folder_name, "name": story_name, "job_id": job_id,
-            "saved_at": datetime.utcnow().isoformat(), "story_data": story_data
-        }
-        with open(os.path.join(story_dir, "metadata.json"), "w") as f:
-            json.dump(metadata, f, indent=2)
-        
+        # Move all generated media (images, audio) for this job
         for filename in os.listdir("outputs"):
             if filename.startswith(job_id):
                 import shutil
                 shutil.move(os.path.join("outputs", filename), os.path.join(story_dir, filename.replace(f"{job_id}_", "", 1)))
         
-        return {"story_id": folder_name, "message": "Story saved successfully"}
+        # We don't save metadata to a JSON file anymore since it's in the DB.
+        
+        # Clean up the in-memory job
+        del jobs[job_id]
+
+        return {"story_id": story_id, "message": "Story saved successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save story: {str(e)}")
+        logger.error(f"Failed to save story for job {job_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while saving the story.")
 
 @app.get("/api/list-stories")
-async def list_stories():
-    stories = []
+async def list_stories(user: User = Depends(get_current_user)):
+    """
+    List stories. Admins see all stories, regular users see only their own.
+    """
     try:
-        for story_id in os.listdir("saved_stories"):
-            metadata_path = os.path.join("saved_stories", story_id, "metadata.json")
-            if os.path.exists(metadata_path):
-                with open(metadata_path, "r") as f:
-                    metadata = json.load(f)
-                    stories.append({"id": metadata["id"], "name": metadata["name"], "saved_at": metadata["saved_at"]})
-        return sorted(stories, key=lambda x: x.get("saved_at", ""), reverse=True)
+        if user.get('is_admin'):
+            stories = StoryOperations.get_all_stories()
+        else:
+            stories = StoryOperations.get_user_stories(user['id'])
+        return stories
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list stories: {str(e)}")
+        logger.error(f"Failed to list stories: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list stories.")
 
 @app.get("/api/load-story/{story_id}")
-async def load_story(story_id: str):
-    story_dir = os.path.join("saved_stories", story_id)
-    metadata_path = os.path.join(story_dir, "metadata.json")
-    if not os.path.exists(metadata_path):
-        raise HTTPException(status_code=404, detail="Story not found")
-    try:
-        with open(metadata_path, "r") as f:
-            metadata = json.load(f)
-        story_data = metadata["story_data"]
-        # URLs need to be updated to the saved stories path
-        for scene in story_data.get("scenes", []):
-            if "image_url" in scene and scene["image_url"]:
-                scene["image_url"] = scene["image_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
-            if "audio_url" in scene and scene["audio_url"]:
-                scene["audio_url"] = scene["audio_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
-        return {"name": metadata["name"], "story_data": story_data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load story: {str(e)}")
+async def load_story(story_id: str, user: User = Depends(get_current_user)):
+    """
+    Load a specific story. Enforces ownership rules (users can only load their own
+    stories, unless they are an admin).
+    """
+    story = StoryOperations.get_story(story_id, user)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found or you do not have permission to view it.")
+    
+    # The 'story_data' from the DB needs to have its URLs updated to point to the correct static path
+    # This logic seems to be missing from the new DB operation, so we add it back here.
+    story_data = story.get("story_data", {})
+    for scene in story_data.get("scenes", []):
+        if scene.get("image_url"):
+            scene["image_url"] = scene["image_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+        if scene.get("audio_url"):
+            scene["audio_url"] = scene["audio_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+            
+    return {"name": story["name"], "story_data": story_data}
 
 @app.delete("/api/delete-story/{story_id}")
-async def delete_story(story_id: str):
+async def delete_story(story_id: str, user: User = Depends(get_current_user)):
+    """
+    Deletes a specific story. Enforces ownership (users can only delete their own
+    stories, unless they are an admin).
+    """
+    # The StoryOperations.delete_story now handles the permission logic.
+    was_deleted = StoryOperations.delete_story(story_id, user)
+    
+    if not was_deleted:
+        raise HTTPException(status_code=404, detail="Story not found or you do not have permission to delete it.")
+        
+    # Also delete the story from the file system
     story_dir = os.path.join("saved_stories", story_id)
-    if not os.path.exists(story_dir):
-        raise HTTPException(status_code=404, detail="Story not found")
-    try:
+    if os.path.exists(story_dir):
         import shutil
         shutil.rmtree(story_dir)
-        return {"message": "Story deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete story: {str(e)}")
+
+    return {"message": "Story deleted successfully"}

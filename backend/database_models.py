@@ -250,70 +250,229 @@ class UserOperations:
             return 0
 
 class StoryOperations:
+
     @staticmethod
+
     def save_story(user_id: int, story_id: str, name: str, story_data: dict) -> bool:
-        """Save a story for a user"""
+
+        """Save a story for a specific user."""
+
         try:
+
             with get_db_cursor(commit=True) as cursor:
+
                 cursor.execute(
+
                     """INSERT INTO user_stories (user_id, story_id, name, story_data) 
+
                        VALUES (%s, %s, %s, %s)
+
                        ON DUPLICATE KEY UPDATE name = VALUES(name), story_data = VALUES(story_data), updated_at = CURRENT_TIMESTAMP""",
+
                     (user_id, story_id, name, json.dumps(story_data))
+
                 )
+
                 return True
+
         except mysql.connector.Error as e:
-            logger.error(f"Error saving story: {e}")
+
+            logger.error(f"Error saving story for user {user_id}: {e}")
+
             return False
+
     
+
     @staticmethod
-    def get_user_stories(user_id: int):
-        """Get all stories for a user"""
-        with get_db_cursor() as cursor:
-            cursor.execute(
-                """SELECT id, story_id, name, created_at, updated_at 
-                   FROM user_stories WHERE user_id = %s 
-                   ORDER BY updated_at DESC""",
-                (user_id,)
-            )
-            stories = cursor.fetchall()
-            # Convert timestamp to string for JSON serialization
-            for story in stories:
-                if 'created_at' in story and story['created_at']:
-                    story['saved_at'] = str(int(story['created_at'].timestamp() * 1000))
-                if 'updated_at' in story and story['updated_at']:
-                    story['updated_at'] = story['updated_at'].isoformat() if story['updated_at'] else None
-                if 'created_at' in story:
-                    story['created_at'] = story['created_at'].isoformat() if story['created_at'] else None
-            return stories
-    
-    @staticmethod
-    def get_story(user_id: int, story_id: str) -> Optional[Dict[str, Any]]:
-        """Get a specific story"""
-        with get_db_cursor() as cursor:
-            cursor.execute(
-                """SELECT story_id as id, name, story_data, created_at 
-                   FROM user_stories 
-                   WHERE user_id = %s AND story_id = %s""",
-                (user_id, story_id)
-            )
-            story = cursor.fetchone()
-            if story and 'story_data' in story:
-                story['story_data'] = json.loads(story['story_data']) if isinstance(story['story_data'], str) else story['story_data']
-                if 'created_at' in story and story['created_at']:
-                    story['saved_at'] = str(int(story['created_at'].timestamp() * 1000))
-            return story
-    
-    @staticmethod
-    def delete_story(user_id: int, story_id: str) -> bool:
-        """Delete a story"""
+
+    def get_user_stories(user_id: int) -> list:
+
+        """Get all stories for a specific user."""
+
         try:
-            with get_db_cursor(commit=True) as cursor:
-                cursor.execute(
-                    "DELETE FROM user_stories WHERE user_id = %s AND story_id = %s",
-                    (user_id, story_id)
-                )
-                return cursor.rowcount > 0
+
+            with get_db_cursor() as cursor:
+
+                query = """
+
+                    SELECT id, story_id, name, created_at, updated_at 
+
+                    FROM user_stories 
+
+                    WHERE user_id = %s 
+
+                    ORDER BY updated_at DESC
+
+                """
+
+                cursor.execute(query, (user_id,))
+
+                stories = cursor.fetchall()
+
+                for story in stories:
+
+                    if story.get('created_at'):
+
+                        story['saved_at'] = str(int(story['created_at'].timestamp() * 1000))
+
+                        story['created_at'] = story['created_at'].isoformat()
+
+                    if story.get('updated_at'):
+
+                        story['updated_at'] = story['updated_at'].isoformat()
+
+                return stories
+
         except mysql.connector.Error as e:
-            logger.error(f"Error deleting story: {e}")
+
+            logger.error(f"Error getting stories for user {user_id}: {e}")
+
+            return []
+
+
+
+    @staticmethod
+
+    def get_all_stories() -> list:
+
+        """(Admin only) Gets all stories from all users, including the creator's username."""
+
+        try:
+
+            with get_db_cursor() as cursor:
+
+                query = """
+
+                    SELECT s.id, s.story_id, s.name, s.created_at, s.updated_at, u.username
+
+                    FROM user_stories s
+
+                    JOIN users u ON s.user_id = u.id
+
+                    ORDER BY s.updated_at DESC
+
+                """
+
+                cursor.execute(query)
+
+                stories = cursor.fetchall()
+
+                for story in stories:
+
+                    if story.get('created_at'):
+
+                        story['saved_at'] = str(int(story['created_at'].timestamp() * 1000))
+
+                        story['created_at'] = story['created_at'].isoformat()
+
+                    if story.get('updated_at'):
+
+                        story['updated_at'] = story['updated_at'].isoformat()
+
+                return stories
+
+        except mysql.connector.Error as e:
+
+            logger.error(f"Error getting all stories for admin: {e}")
+
+            return []
+
+    
+
+    @staticmethod
+
+    def get_story(story_id: str, user: User) -> Optional[Dict[str, Any]]:
+
+        """
+
+        Gets a specific story. Admins can get any story, while regular users can only get their own.
+
+        """
+
+        try:
+
+            with get_db_cursor() as cursor:
+
+                query = "SELECT us.* FROM user_stories us WHERE us.story_id = %s"
+
+                params = [story_id]
+
+                
+
+                if not user.get('is_admin'):
+
+                    query += " AND us.user_id = %s"
+
+                    params.append(user['id'])
+
+                    
+
+                cursor.execute(query, tuple(params))
+
+                story = cursor.fetchone()
+
+                
+
+                if not story:
+
+                    return None
+
+                    
+
+                if story.get('story_data') and isinstance(story['story_data'], str):
+
+                    story['story_data'] = json.loads(story['story_data'])
+
+                if story.get('created_at'):
+
+                    story['saved_at'] = str(int(story['created_at'].timestamp() * 1000))
+
+
+
+                return story
+
+        except mysql.connector.Error as e:
+
+            logger.error(f"Error getting story {story_id}: {e}")
+
+            return None
+
+    
+
+    @staticmethod
+
+    def delete_story(story_id: str, user: User) -> bool:
+
+        """
+
+        Deletes a story. Admins can delete any story, while regular users can only delete their own.
+
+        """
+
+        try:
+
+            with get_db_cursor(commit=True) as cursor:
+
+                query = "DELETE FROM user_stories WHERE story_id = %s"
+
+                params = [story_id]
+
+
+
+                if not user.get('is_admin'):
+
+                    query += " AND user_id = %s"
+
+                    params.append(user['id'])
+
+
+
+                cursor.execute(query, tuple(params))
+
+                return cursor.rowcount > 0
+
+        except mysql.connector.Error as e:
+
+            logger.error(f"Error deleting story {story_id}: {e}")
+
             return False

@@ -91,6 +91,7 @@ TABLES['users'] = """
         password_hash VARCHAR(255) NOT NULL,
         is_verified BOOLEAN DEFAULT FALSE,
         is_premium BOOLEAN DEFAULT FALSE,
+        is_admin BOOLEAN DEFAULT FALSE,
         last_verification_sent TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -16,6 +16,7 @@ import LoadStory from './components/LoadStory'
 import OfflineManager from './components/OfflineManager'
 import ReuploadConfirmModal from './components/ReuploadConfirmModal'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
+import AdminDashboard from './components/AdminDashboard'
 import './App.css'
 
 function App() {
@@ -31,7 +32,7 @@ function App() {
 }
 
 function MainApp() {
-  const { isAuthenticated, isLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading, logout } = useAuth()
   const [authStep, setAuthStep] = useState('login') // 'login' or 'signup'
   const [signupSuccess, setSignupSuccess] = useState(false)
   const [step, setStep] = useState('home') 
@@ -321,6 +322,14 @@ function MainApp() {
     }
   }
 
+  const handlePlayFromAdmin = (storyData, storyName, storyId) => {
+    setStoryData(storyData);
+    setSelectedAvatar({ id: 'loaded', name: storyName });
+    setIsSaved(true); // Assume it's a saved story
+    setSavedStoryId(storyId);
+    setStep('playing');
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -329,7 +338,12 @@ function MainApp() {
           <p>Transform your PDFs or DOCX files into animated, voice-guided adventures tailored for every grade.</p>
         </div>
         {isAuthenticated && (
-          <button className="logout-btn" onClick={logout}>Logout</button>
+          <div className="header-user-actions">
+            {user && user.is_admin && (
+              <button className="admin-btn" onClick={() => setStep('admin')}>Admin Dashboard</button>
+            )}
+            <button className="logout-btn" onClick={logout}>Logout</button>
+          </div>
         )}
       </header>
 
@@ -343,6 +357,15 @@ function MainApp() {
           )}
           
           <AnimatePresence mode="wait">
+            {step === 'admin' && (
+              <motion.div key="admin" className="step-container">
+                <AdminDashboard 
+                  onPlayStory={handlePlayFromAdmin}
+                  onBack={() => setStep('home')}
+                />
+              </motion.div>
+            )}
+
             {step === 'home' && (
               <motion.div key="home" className="home-container">
                 <div className="home-topline">
