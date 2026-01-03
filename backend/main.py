@@ -458,10 +458,15 @@ async def list_stories(user: User = Depends(get_current_user)):
     List stories. Admins see all stories, regular users see only their own.
     """
     try:
+        logger.info(f"User requesting stories - ID: {user.get('id')}, Email: {user.get('email')}, Is Admin: {user.get('is_admin')}")
         if user.get('is_admin'):
+            logger.info(f"Admin user - fetching all stories")
             stories = StoryOperations.get_all_stories()
+            logger.info(f"Admin retrieved {len(stories)} stories")
         else:
+            logger.info(f"Regular user - fetching only their stories")
             stories = StoryOperations.get_user_stories(user['id'])
+            logger.info(f"User retrieved {len(stories)} stories")
         return stories
     except Exception as e:
         logger.error(f"Failed to list stories: {e}")

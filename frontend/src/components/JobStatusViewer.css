@@ -17,10 +17,15 @@
     vertical-align: middle;
 }
 
+.job-status-viewer td {
+    color: #212529;
+    font-size: 0.95rem;
+}
+
 .job-status-viewer th {
-    background-color: #f8f9fa;
+    background-color: #2563eb;
     font-weight: 600;
-    color: #495057;
+    color: #ffffff;
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
