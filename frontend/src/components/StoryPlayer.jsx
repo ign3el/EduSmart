@@ -302,6 +302,9 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
               <div className="player-controls inline-controls">
                 <div className="scene-counter">
                   Scene {currentScene + 1} of {scenes.length}
+                  {currentJobId && scenes.length < 8 && (
+                    <span className="generating-indicator"> • More scenes generating...</span>
+                  )}
                 </div>
                 
                 <div className="control-buttons">

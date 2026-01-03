@@ -336,19 +336,26 @@ async def get_status(job_id: str):
     status = job_manager.get_story_status(job_id)
     if status:
         scenes = job_manager.get_all_scenes(job_id)
+        # Filter to only include completed scenes (both image and audio ready)
+        completed_scenes = [
+            {
+                "text": s["text"],
+                "image_url": s["image_url"],
+                "audio_url": s["audio_url"]
+            }
+            for s in scenes
+            if s["image_status"] == "completed" and s["audio_status"] == "completed"
+        ]
+        
+        # Calculate real progress based on completed scenes
+        actual_progress = int((len(completed_scenes) / status["total_scenes"]) * 100) if status["total_scenes"] > 0 else 0
+        
         return {
             "status": status["status"],
-            "progress": int((status["completed_scenes"] / status["total_scenes"]) * 100) if status["total_scenes"] > 0 else 0,
+            "progress": actual_progress,
             "result": {
                 "title": status["title"],
-                "scenes": [
-                    {
-                        "text": s["text"],
-                        "image_url": s["image_url"],
-                        "audio_url": s["audio_url"]
-                    }
-                    for s in scenes
-                ]
+                "scenes": completed_scenes
             }
         }
     

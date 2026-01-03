@@ -151,6 +151,17 @@
   font-weight: 600;
 }
 
+.generating-indicator {
+  color: var(--accent-1);
+  font-size: 0.85em;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 .control-buttons {
   display: flex;
   align-items: center;

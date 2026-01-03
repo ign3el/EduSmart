@@ -256,6 +256,18 @@ function MainApp() {
 
           if (job.status === 'processing') {
             setProgress((prev) => Math.max(prev, job.progress ?? prev))
+            
+            // Show story immediately when first scene is ready
+            if (job.result && job.result.scenes && job.result.scenes.length > 0) {
+              if (!storyData || storyData.scenes.length === 0) {
+                // First scene is ready - show it immediately
+                setStoryData(job.result)
+                setStep('playing')
+              } else {
+                // Update story data with newly completed scenes
+                setStoryData(job.result)
+              }
+            }
           } else if (job.status === 'completed') {
             clearInterval(pollTimer)
             setStoryData(job.result)
