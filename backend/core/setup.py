@@ -17,7 +17,7 @@ from ..auth import get_password_hash
 logger = logging.getLogger(__name__)
 
 # --- Admin User Configuration ---
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "aedusmart@ign3el.com")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "edusmart@ign3el.com")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "Bhilai-9") # IMPORTANT: Change this in a production environment via .env
 
