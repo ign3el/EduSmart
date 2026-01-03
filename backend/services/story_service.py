@@ -77,20 +77,38 @@ class GeminiService:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # Enhanced pedagogically-sound prompt for precise learning objectives
-            unified_prompt = f"""You are an expert educational content designer. Transform this document into a highly effective interactive learning story for {grade_level} students.
+            # Enhanced pedagogically-sound prompt with explicit document analysis
+            unified_prompt = f"""You are an expert educational content designer. Your task: analyze the uploaded document thoroughly, extract its EXACT learning objectives, and create a story that teaches those specific goals to {grade_level} students.
 
-CRITICAL PEDAGOGICAL REQUIREMENTS:
-1. EXTRACT core learning objectives from the document - identify what students MUST understand
-2. SEQUENCE concepts in logical order (simple → complex, foundational → advanced)
-3. CREATE narrative that makes abstract concepts concrete through relatable scenarios
-4. ENSURE each scene builds on previous understanding (scaffolded learning)
-5. USE age-appropriate language, examples, and cognitive complexity for {grade_level}
+STEP 1 - DOCUMENT ANALYSIS (Internal - do this first):
+📄 READ the entire document carefully
+🎯 IDENTIFY explicit learning objectives (look for: "Students will...", "By the end...", "Objectives:", "Goals:", "Learning outcomes:")
+📚 If no explicit objectives found, INFER the teaching intent from:
+   - Main topics and subtopics
+   - Key vocabulary and definitions
+   - Examples and explanations provided
+   - Questions or exercises included
+   - Concepts emphasized or repeated
+🔍 EXTRACT: What specific knowledge/skills should students gain from THIS document?
+📝 LIST the 3-5 most important concepts the document teaches
+
+STEP 2 - STORY DESIGN (Use extracted objectives):
+✓ Each scene MUST teach one concept you extracted from the document
+✓ Use the document's examples, terminology, and explanations as your source material
+✓ If document includes specific facts/data/dates, incorporate them accurately
+✓ Match the document's subject depth (don't oversimplify or add unrelated content)
+
+CRITICAL REQUIREMENTS:
+1. FIDELITY: Story must align 100% with document's teaching goals (not generic education)
+2. SEQUENCE: Present concepts in the same logical order as the document
+3. ACCURACY: Use exact terminology, definitions, and examples from the document
+4. COVERAGE: Address ALL major concepts from the document (don't skip topics)
+5. AGE-ADAPTATION: Translate document's content for {grade_level} comprehension level
 
 GRADE-LEVEL GUIDELINES:
-- KG-Grade 2: Simple sentences, familiar objects, repetition, basic cause-effect
-- Grade 3-4: Short paragraphs, introduce vocabulary, compare/contrast, problem-solving
-- Grade 5-7: Complex narratives, abstract thinking, critical analysis, real-world applications
+- KG-Grade 2: Simple sentences, familiar analogies, hands-on scenarios, repetition
+- Grade 3-4: Clear paragraphs, introduce vocabulary with definitions, compare/contrast
+- Grade 5-7: Complex narratives, abstract concepts, critical thinking, real-world applications
 
 OUTPUT: Valid JSON object ONLY (no markdown, no extra text).
 
