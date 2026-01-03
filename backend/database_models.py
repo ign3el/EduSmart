@@ -335,14 +335,15 @@ class StoryOperations:
 
     def get_all_stories() -> list:
 
-        """(Admin only) Gets all stories from all users, including the creator's username."""
+        """(Admin only) Gets all stories from all users, including orphaned stories without owners."""
 
         try:
 
             with get_db_cursor() as cursor:
 
                 query = """
-                    SELECT s.id, s.story_id, s.name, s.created_at, s.updated_at, u.username
+                    SELECT s.id, s.story_id, s.name, s.created_at, s.updated_at, 
+                           COALESCE(u.username, 'Unknown User') as username
                     FROM user_stories s
                     LEFT JOIN users u ON s.user_id = u.id
                     ORDER BY s.updated_at DESC
