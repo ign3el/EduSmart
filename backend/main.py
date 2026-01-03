@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 from database import initialize_database
 from routers.auth import router as auth_router, get_current_user
 from routers.admin import router as admin_router
+from core.setup import create_admin_user
 from database_models import User, StoryOperations
 from services.story_service import GeminiService
 from services.chatterbox_client import chatterbox
@@ -89,6 +90,11 @@ async def startup_event():
         logger.info("Initializing database...")
         initialize_database()
         logger.info("Database initialization successful.")
+        
+        logger.info("Performing initial user setup (admin check)...")
+        create_admin_user()
+        logger.info("Initial user setup complete.")
+        
     except Exception as e:
         logger.critical(f"FATAL: Could not initialize database on startup. Error: {e}")
         # In a real app, you might want the app to fail fast if the DB is unavailable.

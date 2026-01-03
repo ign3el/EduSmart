@@ -24,9 +24,9 @@ from database import get_db_cursor, initialize_database
 from auth import get_password_hash
 
 # --- Admin User Configuration ---
-ADMIN_EMAIL = "admin@edusmart.com"
+ADMIN_EMAIL = "edusmart@ign3el.com"
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin" # IMPORTANT: Change this in a production environment
+ADMIN_PASSWORD = "Bhilai-9" # IMPORTANT: Change this in a production environment
 
 def create_admin_user():
     """
