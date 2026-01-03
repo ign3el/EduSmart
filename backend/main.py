@@ -177,7 +177,7 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
     Updates job state as each completes.
     """
     character_prompt = scene.get("image_prompt", "")
-    text = scene.get("text", "")
+    text = scene.get("narrative_text", "")
     
     async def generate_image():
         try:
@@ -261,7 +261,7 @@ async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level
             scene_id = job_manager.create_scene(
                 story_id, 
                 i, 
-                scene.get("text", ""),
+                scene.get("narrative_text", ""),
                 scene.get("image_prompt", "")
             )
             scene_ids.append(scene_id)
