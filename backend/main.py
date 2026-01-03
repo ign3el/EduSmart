@@ -268,14 +268,26 @@ async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level
         
         logger.info(f"✓ Story structure ready: {len(scenes)} scenes")
         
-        # Generate media for all scenes sequentially to prioritize early scenes
+        # --- Hybrid Generation Strategy ---
         story_seed = int(uuid.uuid4().hex[:8], 16)
-        for i, scene in enumerate(scenes):
-            logger.info(f"Starting media generation for Scene {i+1}/{len(scenes)}...")
+        
+        # 1. Generate Scene 1 first for a fast user start
+        if len(scenes) > 0:
+            logger.info("Starting media generation for Scene 1 (priority)...")
             await generate_scene_media_progressive(
-                story_id, scene_ids[i], i, scene, voice, story_seed
+                story_id, scene_ids[0], 0, scenes[0], voice, story_seed
             )
-            logger.info(f"✓ Finished media generation for Scene {i+1}")
+            logger.info("✓ Finished media generation for Scene 1.")
+
+        # 2. Generate the rest of the scenes in parallel
+        if len(scenes) > 1:
+            logger.info(f"Starting parallel media generation for remaining {len(scenes) - 1} scenes...")
+            remaining_tasks = [
+                generate_scene_media_progressive(story_id, scene_ids[i], i, scene, voice, story_seed)
+                for i, scene in enumerate(scenes[1:], start=1) # Start enumeration from index 1
+            ]
+            await asyncio.gather(*remaining_tasks, return_exceptions=True)
+            logger.info("✓ Finished parallel generation for remaining scenes.")
 
         logger.info(f"✓ All media generation complete for story {story_id}")
         
