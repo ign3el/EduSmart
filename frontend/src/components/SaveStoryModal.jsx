@@ -23,6 +23,9 @@ function SaveStoryModal({ jobId, onSave, onCancel }) {
       
       const response = await fetch(`/api/save-story/${jobId}`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: formData
       })
       

@@ -11,7 +11,7 @@ import logging
 from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
@@ -370,7 +370,38 @@ async def save_story(job_id: str, story_name: str = Form(...), user: User = Depe
     Saves a generated story to the database, associating it with the current user.
     This also moves the story's assets from temporary storage to permanent storage.
     """
-    # This endpoint is still tied to the old 'jobs' dictionary system.
+    # Check if it's a progressive story
+    status = job_manager.get_story_status(job_id)
+    if status and status["status"] == "completed":
+        # Progressive story system
+        story_id = str(uuid.uuid4())
+        scenes = job_manager.get_all_scenes(job_id)
+        
+        story_data = {
+            "title": status["title"],
+            "scenes": [
+                {
+                    "text": s["text"],
+                    "image_url": s["image_url"],
+                    "audio_url": s["audio_url"]
+                }
+                for s in scenes
+            ]
+        }
+        
+        success = StoryOperations.save_story(
+            user_id=user['id'],
+            story_id=story_id,
+            name=story_name,
+            story_data=story_data
+        )
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save story to the database.")
+        
+        return {"story_id": story_id, "message": "Story saved successfully"}
+    
+    # Fall back to old system
     if job_id not in jobs or jobs[job_id].get("status") != "completed":
         raise HTTPException(status_code=404, detail="Story generation job not found or not completed.")
     

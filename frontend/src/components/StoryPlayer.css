@@ -59,14 +59,27 @@
 .scene-content {
   width: 100%;
   display: grid;
-  gap: 1rem;
+  gap: 1.5rem;
   grid-template-columns: 1fr;
   background: linear-gradient(145deg, rgba(12, 21, 40, 0.65), rgba(12, 21, 40, 0.45));
   border: 1px solid var(--edge);
   border-radius: var(--radius-lg);
-  padding: clamp(1rem, 2vw, 1.4rem);
+  padding: clamp(1rem, 2vw, 1.8rem);
   box-shadow: var(--shadow-soft);
-  min-height: 60vh;
+  min-height: 70vh;
+}
+
+/* Desktop: Side-by-side layout */
+@media (min-width: 1024px) {
+  .scene-content {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 2rem;
+  }
+  
+  .scene-image {
+    min-height: 500px;
+  }
 }
 
 .scene-right {
@@ -80,15 +93,26 @@
   background: linear-gradient(120deg, rgba(109, 228, 255, 0.08), rgba(12, 21, 40, 0.9));
   border: 1px solid var(--edge);
   overflow: hidden;
-  display: grid;
-  place-items: center;
-  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 350px;
+  max-height: 600px;
 }
 
 .scene-image img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+/* Mobile: Smaller image */
+@media (max-width: 768px) {
+  .scene-image {
+    min-height: 250px;
+    max-height: 400px;
+  }
 }
 
 .placeholder-image {
@@ -102,18 +126,27 @@
 }
 
 .scene-narration {
-  padding: 1rem 1.1rem;
+  padding: 1.5rem;
   background: rgba(255, 255, 255, 0.03);
   border-radius: var(--radius-md);
   border: 1px solid var(--edge);
-  max-height: 160px;
+  max-height: none;
   overflow: auto;
+}
+
+/* Desktop: Fixed height for narration */
+@media (min-width: 1024px) {
+  .scene-narration {
+    max-height: 450px;
+    display: flex;
+    align-items: center;
+  }
 }
 
 .narration-text {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: clamp(1rem, 2vw, 1.1rem);
+  line-height: 1.8;
 }
 
 .progress-bar {

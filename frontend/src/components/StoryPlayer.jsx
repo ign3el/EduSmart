@@ -195,7 +195,11 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
 
     try {
       const endpoint = isJobExport ? `/api/export-job/${exportId}` : `/api/export-story/${exportId}`;
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
       if (!response.ok) throw new Error('Failed to download story');
 
       setDownloadMessage('Downloading...');
