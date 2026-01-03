@@ -67,7 +67,7 @@ export default function VerifyEmail() {
               <p>{message}</p>
               <button
                 className="auth-button"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/')}
                 style={{ marginTop: '20px' }}
               >
                 Go to Login
