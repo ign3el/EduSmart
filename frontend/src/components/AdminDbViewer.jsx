@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getJobStateDbTables, getJobStateTableData } from '../../services/api';
+import { getJobStateDbTables, getJobStateTableData } from '../services/api';
 import './AdminDbViewer.css';
 
 const AdminDbViewer = ({ onBack }) => {

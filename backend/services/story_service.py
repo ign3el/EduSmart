@@ -243,17 +243,21 @@ Transform the document into JSON format with this exact structure:
             if response and response.text:
                 cleaned_text = response.text.strip()
                 if cleaned_text:
-                    # Handle the case where the model wraps the JSON in markdown backticks
-                    if cleaned_text.startswith("```json"):
-                        cleaned_text = cleaned_text[7:-3].strip()
-                    elif cleaned_text.startswith("```"):
-                        cleaned_text = cleaned_text[3:-3].strip()
+                    # Find the start and end of the JSON object
+                    start_index = cleaned_text.find('{')
+                    end_index = cleaned_text.rfind('}')
                     
-                    try:
-                        return json.loads(cleaned_text)
-                    except json.JSONDecodeError as e:
-                        print(f"STORY JSON DECODE ERROR: {e}")
-                        print(f"Received malformed text (first 500 chars): {cleaned_text[:500]}")
+                    if start_index != -1 and end_index != -1 and end_index > start_index:
+                        json_str = cleaned_text[start_index:end_index + 1]
+                        try:
+                            return json.loads(json_str)
+                        except json.JSONDecodeError as e:
+                            print(f"STORY JSON DECODE ERROR: {e}")
+                            print(f"Received malformed text (first 500 chars): {json_str[:500]}")
+                            return None
+                    else:
+                        print(f"STORY ERROR: Could not find a valid JSON object in the response.")
+                        print(f"Received (first 500 chars): {cleaned_text[:500]}")
                         return None
             
             print("STORY ERROR: Received empty or invalid response from GenAI model.")
