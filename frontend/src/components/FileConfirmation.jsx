@@ -3,22 +3,18 @@ import { FiCheck, FiFile, FiEdit2 } from 'react-icons/fi'
 import './FileConfirmation.css'
 
 function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onEditGrade }) {
-  const [selectedVoice, setSelectedVoice] = useState('en-US-JennyNeural')
+  const [selectedVoice, setSelectedVoice] = useState('Ana Florence')
   const [showGradeSelector, setShowGradeSelector] = useState(false)
 
   const voices = [
-    { id: 'en-US-JennyNeural', name: 'Jenny (Female)', description: 'Natural, expressive storytelling' },
-    { id: 'en-US-AriaNeural', name: 'Aria (Female)', description: 'Warm, clear, friendly tone' },
-    { id: 'en-US-SaraNeural', name: 'Sara (Female)', description: 'Professional, engaging narrator' },
-    { id: 'en-US-MichelleNeural', name: 'Michelle (Female)', description: 'Energetic, youthful storyteller' },
-    { id: 'en-US-GuyNeural', name: 'Guy (Male)', description: 'Friendly, clear male voice' },
-    { id: 'en-US-AndrewNeural', name: 'Andrew (Male)', description: 'Strong storytelling voice' },
-    { id: 'en-US-BrianNeural', name: 'Brian (Male)', description: 'Deep, confident narrator' },
-    { id: 'en-US-ChristopherNeural', name: 'Christopher (Male)', description: 'Smooth, professional voice' },
-    { id: 'en-GB-SoniaNeural', name: 'Sonia (British Female)', description: 'Clear British accent' },
-    { id: 'en-GB-RyanNeural', name: 'Ryan (British Male)', description: 'Distinguished British narrator' },
-    { id: 'en-AU-NatashaNeural', name: 'Natasha (Australian)', description: 'Friendly Australian accent' },
-    { id: 'en-IN-NeerjaNeural', name: 'Neerja (Indian Female)', description: 'Clear Indian English accent' },
+    { id: 'Ana Florence', name: 'Ana Florence', description: 'High-energy, bright, and youthful. The Hero/Lead Character.' },
+    { id: 'Abrahan Mack', name: 'Abrahan Mack', description: 'Deep, gravelly, and very warm. The Wise Narrator.' },
+    { id: 'Claribel Dervla', name: 'Claribel Dervla', description: 'Soft, melodic, and soothing. The Fairy/Mother.' },
+    { id: 'Lidiya Szekeres', name: 'Lidiya Szekeres', description: 'Very animated and rhythmic. The Villain/Funny Character.' },
+    { id: 'Damien Black', name: 'Damien Black', description: 'Smooth, mysterious, and cool. The Mystery/Antagonist.' },
+    { id: 'Daisy Studious', name: 'Daisy Studious', description: 'Clear, intelligent, and cheerful. The Teacher/Explainer.' },
+    { id: 'Viktor Eka', name: 'Viktor Eka', description: 'Rugged and stout. The Giant/Troll.' },
+    { id: 'Nova Hogarth', name: 'Nova Hogarth', description: 'Whimsical and airy. The Dreamer.' },
   ]
 
   const gradeLabels = {
