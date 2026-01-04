@@ -64,6 +64,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
         setShowInstallPrompt(false)
       }
       deferredPromptRef.current = null
+    } else {
+      alert('Install prompt is not available yet. Please use the browser menu to install or revisit after a bit of usage.');
     }
   }
 
@@ -280,7 +282,7 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                       <span className="menu-icon">{isCheckingUpdate ? '⏳' : '🔄'}</span>
                       <span>Check for Updates</span>
                     </button>
-                    {showInstallPrompt && !isPWA && (
+                    {!isPWA && (
                       <button onClick={() => {
                         handleInstallPWA();
                         setIsMobileOpen(false);

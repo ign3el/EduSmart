@@ -90,6 +90,5 @@ export function promptInstall() {
   // Track successful installation
   window.addEventListener('appinstalled', () => {
     console.log('✅ PWA installed successfully');
-    deferredPrompt = null;
   });
 }
