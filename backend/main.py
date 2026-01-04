@@ -126,6 +126,35 @@ mimetypes.add_type('image/png', '.png')
 # --- Static File Serving ---
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
+
+@app.get("/api/saved-stories/{story_id}/{filename}")
+async def serve_story_file(story_id: str, filename: str):
+    """
+    Serve story files with smart UUID prefix matching.
+    If the exact filename doesn't exist, search for files with UUID prefix.
+    """
+    import glob
+    from pathlib import Path
+    
+    story_dir = Path("saved_stories") / story_id
+    exact_path = story_dir / filename
+    
+    # Try exact match first
+    if exact_path.exists() and exact_path.is_file():
+        from fastapi.responses import FileResponse
+        return FileResponse(exact_path)
+    
+    # If not found, try to find file with UUID prefix (e.g., uuid_scene_0.png)
+    # Extract the scene pattern (e.g., scene_0.png)
+    pattern = str(story_dir / f"*_{filename}")
+    matches = glob.glob(pattern)
+    
+    if matches:
+        from fastapi.responses import FileResponse
+        return FileResponse(matches[0])
+    
+    # Still not found, raise 404
+    raise HTTPException(status_code=404, detail=f"File not found: {filename}")
 app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 def _safe_story_dirname(story_name: str, story_id: str) -> str:
