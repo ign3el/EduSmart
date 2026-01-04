@@ -236,6 +236,12 @@
   backdrop-filter: blur(10px);
 }
 
+@media (min-width: 900px) {
+  .home-btn {
+    max-width: none !important; /* Remove width restriction on desktop */
+  }
+}
+
 .home-btn span {
   grid-column: 2 / 3;
   color: var(--ink-2);
