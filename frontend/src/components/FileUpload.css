@@ -42,6 +42,12 @@
   background-size: 0.75em;
 }
 
+.grade-selector select option {
+  background: #ffffff;
+  color: #000000;
+  padding: 0.5rem;
+}
+
 .grade-selector select:hover,
 .grade-selector select:focus {
   border-color: var(--accent-1);

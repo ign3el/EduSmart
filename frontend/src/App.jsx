@@ -160,8 +160,6 @@ function MainApp() {
     switch (current) {
       case 'playing':
       case 'generating':
-        return 'avatar'
-      case 'avatar':
         return 'confirm'
       case 'confirm':
         return 'upload'
@@ -416,7 +414,7 @@ function MainApp() {
             user={user}
             isAdmin={user?.is_admin}
             onHome={() => navigateTo('home')}
-            onNewStory={step === 'playing' ? handleRestart : null}
+            onNewStory={step === 'playing' ? () => navigateTo('upload') : null}
             onLoadStories={() => navigateTo('load')}
             onOfflineManager={() => navigateTo('offline')}
             onAdminClick={() => navigateTo('admin')}
