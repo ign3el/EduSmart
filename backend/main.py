@@ -26,6 +26,7 @@ from database_models import User, StoryOperations
 from services.story_service import GeminiService
 from services.tts_service import kokoro_tts
 from job_state import job_manager
+from story_storage import storage_manager, cleanup_scheduler_task, database_cleanup_scheduler_task
 from typing import Optional
 
 # Load environment variables from .env file
@@ -49,37 +50,7 @@ app.add_middleware(
 )
 
 # --- Background Tasks ---
-
-CLEAN_PATHS = ["outputs", "uploads"]
-CLEAN_AGE_SECONDS = 60 * 60  # 1 hour
-
-async def cleanup_old_files():
-    """Periodically cleans up old files from temporary directories."""
-    now = time.time()
-    removed = 0
-    logger.info("Running scheduled cleanup of old files...")
-    for path in CLEAN_PATHS:
-        if not os.path.exists(path):
-            continue
-        for fname in os.listdir(path):
-            fpath = os.path.join(path, fname)
-            try:
-                if os.path.isfile(fpath) and (now - os.path.getmtime(fpath) > CLEAN_AGE_SECONDS):
-                    os.remove(fpath)
-                    removed += 1
-            except Exception as e:
-                logger.warning(f"Could not process file for cleanup '{fpath}': {e}")
-    if removed > 0:
-        logger.info(f"Cleanup task removed {removed} stale files.")
-
-async def cleanup_scheduler():
-    """Scheduler that runs the cleanup task every hour."""
-    while True:
-        await asyncio.sleep(3600)  # Sleep for 1 hour
-        try:
-            await cleanup_old_files()
-        except Exception as e:
-            logger.error(f"Error in cleanup scheduler: {e}")
+# Note: Old cleanup system removed. Now using story_storage.py with 24-hour TTL cleanup
 
 # --- Startup Event ---
 @app.on_event("startup")
@@ -101,8 +72,14 @@ async def startup_event():
         logger.critical(f"FATAL: Could not initialize database on startup. Error: {e}")
         # In a real app, you might want the app to fail fast if the DB is unavailable.
     
-    logger.info("Starting background cleanup task...")
-    asyncio.create_task(cleanup_scheduler())
+    logger.info("Initializing story storage manager...")
+    # Storage manager auto-initializes on import
+    
+    logger.info("Starting story cleanup scheduler (24-hour TTL)...")
+    asyncio.create_task(cleanup_scheduler_task())
+    
+    logger.info("Starting database cleanup scheduler (runs every 2 days)...")
+    asyncio.create_task(database_cleanup_scheduler_task())
 
 
 # --- API Routers ---
@@ -117,15 +94,21 @@ app.include_router(upload_router)
 gemini = GeminiService()
 jobs = {}
 
-os.makedirs("outputs", exist_ok=True)
+# Note: generated_stories and saved_stories directories created by storage_manager
+# Keeping uploads folder for backward compatibility during migration
 os.makedirs("uploads", exist_ok=True)
-os.makedirs("saved_stories", exist_ok=True)
 
 mimetypes.add_type('audio/mpeg', '.mp3')
 mimetypes.add_type('image/png', '.png')
 
 # --- Static File Serving ---
-app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
+# Old outputs directory kept temporarily for backward compatibility
+if os.path.exists("outputs"):
+    app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
+
+# Mount generated_stories for temporary/in-progress stories
+app.mount("/api/generated-stories", StaticFiles(directory="generated_stories"), name="generated_stories")
+
 # Custom endpoint handles saved-stories with UUID prefix matching (see below)
 # app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
 
@@ -184,6 +167,39 @@ async def serve_story_file(story_id: str, filename: str):
     logger.error(f"❌ File not found. Available files: {[f.name for f in all_files]}")
     raise HTTPException(status_code=404, detail=f"File not found: {filename}")
 
+@app.api_route("/api/generated-stories/{story_id}/{filename:path}", methods=["GET", "HEAD"])
+async def serve_generated_story_file(story_id: str, filename: str):
+    """
+    Serve files from generated_stories folder.
+    Similar to saved-stories endpoint but for in-progress/temporary stories.
+    """
+    import glob
+    import os
+    from pathlib import Path
+    from fastapi.responses import FileResponse
+    
+    logger.info(f"📁 Generated story file request: story_id={story_id}, filename={filename}")
+    
+    story_dir = Path("generated_stories") / story_id
+    logger.info(f"📂 Looking in directory: {story_dir}")
+    
+    if not story_dir.exists():
+        logger.error(f"❌ Generated story directory does not exist: {story_dir}")
+        raise HTTPException(status_code=404, detail=f"Generated story directory not found: {story_id}")
+    
+    exact_path = story_dir / filename
+    logger.info(f"🔍 Checking exact path: {exact_path}")
+    
+    # Try exact match first
+    if exact_path.exists() and exact_path.is_file():
+        logger.info(f"✅ Found exact match: {exact_path}")
+        return FileResponse(exact_path)
+    
+    # List all files in directory for debugging
+    all_files = list(story_dir.iterdir())
+    logger.error(f"❌ File not found. Available files: {[f.name for f in all_files]}")
+    raise HTTPException(status_code=404, detail=f"File not found: {filename}")
+
 app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 def _safe_story_dirname(story_name: str, story_id: str) -> str:
@@ -226,12 +242,14 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
             
             if img_bytes:
                 img_name = f"scene_{scene_index}.png"
-                img_path = os.path.join("outputs", story_id, img_name)
-                os.makedirs(os.path.dirname(img_path), exist_ok=True)
-                with open(img_path, "wb") as f:
-                    f.write(img_bytes)
-                job_manager.update_scene_image(scene_id, "completed", f"/api/outputs/{story_id}/{img_name}")
-                logger.info(f"✓ Scene {scene_index} image complete")
+                # Use new storage manager
+                try:
+                    img_url = storage_manager.save_file(story_id, img_name, img_bytes, in_saved=False)
+                    job_manager.update_scene_image(scene_id, "completed", img_url)
+                    logger.info(f"✓ Scene {scene_index} image complete: {img_url}")
+                except Exception as save_error:
+                    logger.error(f"Failed to save image: {save_error}")
+                    job_manager.update_scene_image(scene_id, "failed")
             else:
                 job_manager.update_scene_image(scene_id, "failed")
                 logger.error(f"✗ Scene {scene_index} image failed")
@@ -250,12 +268,14 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
             
             if audio_bytes:
                 aud_name = f"scene_{scene_index}.wav" # Kokoro provides WAV audio
-                aud_path = os.path.join("outputs", story_id, aud_name)
-                os.makedirs(os.path.dirname(aud_path), exist_ok=True)
-                with open(aud_path, "wb") as f:
-                    f.write(audio_bytes)
-                job_manager.update_scene_audio(scene_id, "completed", f"/api/outputs/{story_id}/{aud_name}")
-                logger.info(f"✓ Scene {scene_index} audio complete")
+                # Use new storage manager
+                try:
+                    aud_url = storage_manager.save_file(story_id, aud_name, audio_bytes, in_saved=False)
+                    job_manager.update_scene_audio(scene_id, "completed", aud_url)
+                    logger.info(f"✓ Scene {scene_index} audio complete: {aud_url}")
+                except Exception as save_error:
+                    logger.error(f"Failed to save audio: {save_error}")
+                    job_manager.update_scene_audio(scene_id, "failed")
             else:
                 job_manager.update_scene_audio(scene_id, "failed")
                 logger.error(f"✗ Scene {scene_index} audio failed")
@@ -269,11 +289,21 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
 async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level: str, voice: str, speed: float):
     """
     Progressive story generation workflow:
-    1. Generate story structure
-    2. Create scene records immediately
-    3. Process scenes in parallel (images + audio per scene)
+    1. Create story folder in generated_stories
+    2. Generate story structure
+    3. Create scene records immediately
+    4. Process scenes in parallel (images + audio per scene)
     """
     try:
+        # Create story folder with metadata
+        storage_manager.create_story_folder(story_id, {
+            "grade_level": grade_level,
+            "voice": voice,
+            "speed": speed,
+            "file_path": file_path
+        })
+        logger.info(f"📁 Created story folder: generated_stories/{story_id}")
+        
         # Generate story structure
         story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
         
@@ -494,45 +524,40 @@ async def save_story(job_id: str, story_name: str = Form(...), user: User = Depe
     # Check if it's a progressive story
     status = job_manager.get_story_status(job_id)
     if status and status["status"] == "completed":
-        # Progressive story system
-        story_id = str(uuid.uuid4())
+        # Progressive story system - move folder from generated_stories to saved_stories
+        saved_story_id = str(uuid.uuid4())
         scenes = job_manager.get_all_scenes(job_id)
         
-        # Create permanent storage directory for this story
-        story_dir = os.path.join("saved_stories", story_id)
-        os.makedirs(story_dir, exist_ok=True)
-        logger.info(f"Created story directory: {story_dir}")
+        # Move the entire folder from generated_stories to saved_stories
+        try:
+            storage_manager.move_to_saved(job_id, saved_story_id)
+            logger.info(f"✅ Moved story folder: {job_id} -> saved_stories/{saved_story_id}")
+        except Exception as move_error:
+            logger.error(f"Failed to move story folder: {move_error}")
+            raise HTTPException(status_code=500, detail=f"Failed to move story files: {move_error}")
         
-        # Copy files from outputs to saved_stories and update URLs
+        # Update URLs from generated-stories to saved-stories
         updated_scenes = []
-        for s in scenes:
+        for idx, s in enumerate(scenes):
             scene_data = {
                 "text": s["text"],
-                "image_url": s["image_url"],
-                "audio_url": s["audio_url"]
+                "image_url": s.get("image_url", ""),
+                "audio_url": s.get("audio_url", "")
             }
             
-            # Copy image file if it exists
-            if s.get("image_url") and s["image_url"].startswith("/api/outputs/"):
-                old_image_path = s["image_url"].replace("/api/outputs/", "outputs/")
-                if os.path.exists(old_image_path):
-                    new_image_filename = os.path.basename(old_image_path).replace(f"{job_id}_", "")
-                    new_image_path = os.path.join(story_dir, new_image_filename)
-                    import shutil
-                    shutil.copy2(old_image_path, new_image_path)
-                    scene_data["image_url"] = f"/api/saved-stories/{story_id}/{new_image_filename}"
-                    logger.info(f"Copied image: {old_image_path} -> {new_image_path}")
+            # Update image URL
+            if scene_data["image_url"]:
+                scene_data["image_url"] = scene_data["image_url"].replace(
+                    f"/api/generated-stories/{job_id}/",
+                    f"/api/saved-stories/{saved_story_id}/"
+                )
             
-            # Copy audio file if it exists
-            if s.get("audio_url") and s["audio_url"].startswith("/api/outputs/"):
-                old_audio_path = s["audio_url"].replace("/api/outputs/", "outputs/")
-                if os.path.exists(old_audio_path):
-                    new_audio_filename = os.path.basename(old_audio_path).replace(f"{job_id}_", "")
-                    new_audio_path = os.path.join(story_dir, new_audio_filename)
-                    import shutil
-                    shutil.copy2(old_audio_path, new_audio_path)
-                    scene_data["audio_url"] = f"/api/saved-stories/{story_id}/{new_audio_filename}"
-                    logger.info(f"Copied audio: {old_audio_path} -> {new_audio_path}")
+            # Update audio URL
+            if scene_data["audio_url"]:
+                scene_data["audio_url"] = scene_data["audio_url"].replace(
+                    f"/api/generated-stories/{job_id}/",
+                    f"/api/saved-stories/{saved_story_id}/"
+                )
             
             updated_scenes.append(scene_data)
         
@@ -543,7 +568,7 @@ async def save_story(job_id: str, story_name: str = Form(...), user: User = Depe
         
         success = StoryOperations.save_story(
             user_id=user['id'],
-            story_id=story_id,
+            story_id=saved_story_id,
             name=story_name,
             story_data=story_data
         )
@@ -551,8 +576,8 @@ async def save_story(job_id: str, story_name: str = Form(...), user: User = Depe
         if not success:
             raise HTTPException(status_code=500, detail="Failed to save story to the database.")
         
-        logger.info(f"Story {story_id} saved successfully with {len(updated_scenes)} scenes")
-        return {"story_id": story_id, "message": "Story saved successfully"}
+        logger.info(f"Story {saved_story_id} saved successfully with {len(updated_scenes)} scenes")
+        return {"story_id": saved_story_id, "message": "Story saved successfully"}
     
     # Fall back to old system
     if job_id not in jobs or jobs[job_id].get("status") != "completed":
@@ -639,11 +664,25 @@ async def load_story(story_id: str, user: User = Depends(get_current_user)):
     # The 'story_data' from the DB needs to have its URLs updated to point to the correct static path
     story_data = story.get("story_data", {})
     
-    for scene in story_data.get("scenes", []):
+    # Log scenes info for debugging
+    scenes = story_data.get("scenes", [])
+    logger.info(f"Story has {len(scenes)} scenes")
+    
+    for idx, scene in enumerate(scenes):
+        # Log original URLs
+        orig_image = scene.get("image_url", "")
+        orig_audio = scene.get("audio_url", "")
+        logger.debug(f"Scene {idx} original - image: {orig_image[:50] if orig_image else 'EMPTY'}, audio: {orig_audio[:50] if orig_audio else 'EMPTY'}")
+        
         if scene.get("image_url"):
             scene["image_url"] = scene["image_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+        else:
+            logger.warning(f"Scene {idx} has no image_url!")
+            
         if scene.get("audio_url"):
             scene["audio_url"] = scene["audio_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+        else:
+            logger.warning(f"Scene {idx} has no audio_url!")
             
     return {"name": story["name"], "story_data": story_data}
 

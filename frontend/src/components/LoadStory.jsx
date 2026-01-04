@@ -88,6 +88,18 @@ function LoadStory({ onLoad, onBack }) {
       console.log('Full story object:', story)
       const response = await apiClient.get(`/api/load-story/${story.story_id}`)
       console.log('Story loaded successfully:', response.data.name)
+      console.log('Story data scenes:', response.data.story_data?.scenes?.length || 0)
+      
+      // Log first scene to verify URLs are present
+      if (response.data.story_data?.scenes?.length > 0) {
+        const firstScene = response.data.story_data.scenes[0]
+        console.log('First scene sample:', {
+          narration: firstScene.narration?.substring(0, 50) + '...',
+          audio_url: firstScene.audio_url || '⚠️ MISSING',
+          image_url: firstScene.image_url || '⚠️ MISSING'
+        })
+      }
+      
       onLoad(response.data.story_data, response.data.name, story.story_id)
     } catch (error) {
       console.error('Failed to load story:', error)
@@ -152,12 +164,14 @@ function LoadStory({ onLoad, onBack }) {
   }
 
   return (
-    <motion.div 
-      className="load-story-container"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <h2>📚 Your Saved Stories</h2>
+    <div className="load-story-modal-overlay">
+      <motion.div 
+        className="load-story-container"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2 }}
+      >
+        <h2>📚 Your Saved Stories</h2>
       
       {!isOnline && (
         <div className="offline-warning">
@@ -339,7 +353,8 @@ function LoadStory({ onLoad, onBack }) {
           </motion.div>
         </div>
       )}
-    </motion.div>
+      </motion.div>
+    </div>
   )
 }
 

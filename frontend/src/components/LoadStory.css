@@ -1,7 +1,23 @@
+/* Modal Overlay */
+.load-story-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 39, 0.85);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+/* Modal Container */
 .load-story-container {
   width: 100%;
   max-width: 1040px;
-  margin: 0 auto;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: auto;
   padding: clamp(1.2rem, 3vw, 1.8rem);
   color: var(--ink-1);
   display: grid;
