@@ -175,9 +175,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
-  max-height: 40vh;
-  aspect-ratio: 16/9;
+  min-height: 180px;
+  max-height: 35vh;
 }
 
 .scene-image img {
