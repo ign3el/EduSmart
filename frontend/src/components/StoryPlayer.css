@@ -400,9 +400,9 @@
 }
 
 .player-controls {
-  padding: 0.55rem 0.65rem;
+  padding: 0.35rem 0.65rem;
   display: grid;
-  gap: 0.33rem;
+  gap: 0.15rem;
   justify-items: center;
   background: rgba(12, 21, 40, 0.9);
   border: 1px solid var(--edge);
@@ -479,6 +479,7 @@
 .scene-counter {
   color: var(--ink-2);
   font-weight: 600;
+  font-size: 0.85rem;
 }
 
 .generating-indicator {
@@ -499,13 +500,13 @@
 }
 
 .control-btn {
-  width: 23px;
-  height: 23px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
   border: 1px solid var(--edge);
   background: rgba(255, 255, 255, 0.04);
   color: var(--ink-1);
-  font-size: 0.55rem;
+  font-size: 0.75rem;
   display: grid;
   place-items: center;
   transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
@@ -523,8 +524,8 @@
 }
 
 .play-btn {
-  width: 27px;
-  height: 27px;
+  width: 32px;
+  height: 32px;
   background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
   color: #04101f;
   border: none;
