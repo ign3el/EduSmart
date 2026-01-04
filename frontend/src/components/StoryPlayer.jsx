@@ -21,7 +21,7 @@ const buildFullUrl = (url) => {
   return `${API_DOMAIN}${url}`;
 };
 
-const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null, totalScenes = 0, completedSceneCount = 0 }, ref) => {
+const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownloadOffline, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null, totalScenes = 0, completedSceneCount = 0 }, ref) => {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
@@ -364,11 +364,18 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
       
       <div className="player-header">
         <h2>🎬 {storyData.title || "Story Time"}</h2>
-        {uploadUrl && (
-          <a className="upload-link" href={uploadUrl} target="_blank" rel="noreferrer">
-            See Your Uploaded File
-          </a>
-        )}
+        <div className="player-header-actions">
+          {!isSaved && !isOffline && onSave && (
+            <button onClick={onSave} className="action-btn save-btn" disabled={completedSceneCount < totalScenes}>
+              💾 Save Online
+            </button>
+          )}
+          {!isOffline && onDownloadOffline && (
+            <button onClick={onDownloadOffline} className="action-btn download-btn" disabled={completedSceneCount < totalScenes}>
+              📥 Download
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="scene-display">

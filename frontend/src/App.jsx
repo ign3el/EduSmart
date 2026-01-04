@@ -642,30 +642,22 @@ function MainApp() {
           )}
 
           {step === 'playing' && storyData && (
-            <>
-              <StoryActionsBar
-                onSaveOnline={!isSaved ? handleSaveStory : null}
+            <motion.div key="playing" className="player-container">
+              <StoryPlayer
+                ref={storyPlayerRef}
+                storyData={storyData} 
+                avatar={selectedAvatar} 
+                onRestart={handleRestart}
+                onSave={!isSaved ? handleSaveStory : null}
                 onDownloadOffline={storyPlayerRef.current ? () => storyPlayerRef.current.triggerDownload() : null}
                 isSaved={isSaved}
                 isOffline={isOfflineMode}
-                allScenesReady={completedSceneCount >= totalScenes && totalScenes > 0}
+                savedStoryId={savedStoryId}
+                currentJobId={currentJobId}
+                totalScenes={totalScenes}
+                completedSceneCount={completedSceneCount}
               />
-              <motion.div key="playing" className="player-container">
-                <StoryPlayer
-                  ref={storyPlayerRef}
-                  storyData={storyData} 
-                  avatar={selectedAvatar} 
-                  onRestart={handleRestart}
-                  onSave={handleSaveStory}
-                  isSaved={isSaved}
-                  isOffline={isOfflineMode}
-                  savedStoryId={savedStoryId}
-                  currentJobId={currentJobId}
-                  totalScenes={totalScenes}
-                  completedSceneCount={completedSceneCount}
-                />
-              </motion.div>
-            </>
+            </motion.div>
           )}
         </AnimatePresence>
 
