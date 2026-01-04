@@ -98,11 +98,6 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
             ✨ New Story
           </button>
         )}
-        {onProfile && (
-          <button onClick={() => handleAction(onProfile)} className="nav-item profile-avatar" title="Account">
-            {user?.email?.charAt(0).toUpperCase() || '👤'}
-          </button>
-        )}
         <button 
           onClick={handleCheckUpdate} 
           className="nav-item update-btn"
@@ -111,6 +106,11 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
         >
           {isCheckingUpdate ? '⏳' : '🔄'} Update
         </button>
+        {onProfile && (
+          <button onClick={() => handleAction(onProfile)} className="nav-item profile-avatar" title="Account">
+            {user?.email?.charAt(0).toUpperCase() || '👤'}
+          </button>
+        )}
         {onLogout && (
           <button onClick={() => handleAction(onLogout)} className="nav-item danger">
             🚪 Logout
