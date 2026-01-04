@@ -403,7 +403,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
             className="scene-content"
           >
             <div className="scene-image">
-              {fullImageUrl ? (
+              {fullImageUrl && !imageError ? (
                 <img 
                   src={fullImageUrl} 
                   alt={`Scene ${currentScene + 1}`}
@@ -412,6 +412,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
                     console.log('📍 Image dimensions:', e.target.naturalWidth, 'x', e.target.naturalHeight);
                     console.log('🔗 Image URL:', e.target.src);
                     if (!imageLoaded) setImageLoaded(true);
+                    if (imageError) setImageError(false);
                   }}
                   onError={(e) => {
                     console.error('❌ Image failed to load in DOM');
@@ -419,13 +420,13 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
                     console.error('📱 User Agent:', navigator.userAgent);
                     console.error('🌐 Online:', navigator.onLine);
                     console.error('📄 Image dimensions:', e.target?.naturalWidth, 'x', e.target?.naturalHeight);
-                    if (!imageError) setImageError(true);
+                    setImageError(true);
                   }}
                   crossOrigin="anonymous"
                 />
               ) : (
                 <div className="placeholder-image">
-                  <p>{scene?.image_description || "Loading image..."}</p>
+                  <p>{imageError ? 'Image unavailable' : (scene?.image_description || "Loading image...")}</p>
                 </div>
               )}
             </div>

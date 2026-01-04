@@ -698,6 +698,16 @@
   z-index: 1000;
   width: min(420px, 90vw);
   max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Mobile: Better positioning and padding */
+@media (max-width: 768px) {
+  .download-popup {
+    width: 95vw;
+    max-height: 85vh;
+  }
 }
 
 .download-popup-content {
@@ -710,6 +720,18 @@
   display: grid;
   gap: 0.9rem;
   text-align: center;
+}
+
+/* Mobile: Compact padding */
+@media (max-width: 768px) {
+  .download-popup-content {
+    padding: 1rem;
+    gap: 0.7rem;
+  }
+  
+  .download-popup-content p {
+    font-size: 0.9rem;
+  }
 }
 
 .download-popup-content > div:first-child {
