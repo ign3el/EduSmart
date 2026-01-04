@@ -300,8 +300,8 @@ Generate 6-10 scenes. Output ONLY the JSON object."""
             },
             "27": {
                 "inputs": {
-                    "width": 1024,
-                    "height": 1024,
+                    "width": 768,
+                    "height": 768,
                     "batch_size": 1
                 },
                 "class_type": "EmptyLatentImage"
