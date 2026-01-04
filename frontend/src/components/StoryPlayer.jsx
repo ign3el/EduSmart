@@ -31,6 +31,8 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadMessage, setDownloadMessage] = useState('');
   const [showActionMenu, setShowActionMenu] = useState(false);
@@ -225,7 +227,28 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
     if (audioRef.current && audioRef.current.duration) {
       const newProgress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
       setProgress(newProgress);
+      setCurrentTime(audioRef.current.currentTime);
+      setDuration(audioRef.current.duration);
     }
+  };
+  
+  const handleSeek = (e) => {
+    if (audioRef.current && audioRef.current.duration) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percentage = x / rect.width;
+      const newTime = percentage * audioRef.current.duration;
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+      setProgress(percentage * 100);
+    }
+  };
+  
+  const formatTime = (time) => {
+    if (isNaN(time)) return '0:00';
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
   
   const handleAudioEnded = () => {
@@ -436,6 +459,16 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
               </div>
 
               <div className="player-controls inline-controls">
+                {/* Audio Progress Bar */}
+                <div className="audio-progress-section">
+                  <span className="time-display">{formatTime(currentTime)}</span>
+                  <div className="audio-progress-bar" onClick={handleSeek}>
+                    <div className="audio-progress-fill" style={{ width: `${progress}%` }} />
+                    <div className="audio-progress-handle" style={{ left: `${progress}%` }} />
+                  </div>
+                  <span className="time-display">{formatTime(duration)}</span>
+                </div>
+
                 <div className="scene-counter">
                   Scene {currentScene + 1} of {actualTotalScenes}
                   {currentJobId && completedSceneCount < actualTotalScenes && (

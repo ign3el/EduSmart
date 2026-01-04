@@ -256,6 +256,67 @@
   border: 1px solid var(--edge);
 }
 
+/* Audio Progress Bar Section */
+.audio-progress-section {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.time-display {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  min-width: 40px;
+  text-align: center;
+}
+
+.audio-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.audio-progress-bar:hover {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.audio-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-3), var(--accent-1));
+  border-radius: 999px;
+  transition: width 0.1s linear;
+  position: relative;
+}
+
+.audio-progress-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.audio-progress-bar:hover .audio-progress-handle {
+  opacity: 1;
+}
+
 .scene-counter {
   color: var(--ink-2);
   font-weight: 600;
