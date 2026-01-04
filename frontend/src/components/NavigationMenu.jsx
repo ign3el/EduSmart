@@ -272,6 +272,14 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         <span>Install App</span>
                       </button>
                     )}
+                    {!showInstallPrompt && !isPWA && (
+                      <button onClick={() => {
+                        alert('📲 Install app feature is available on compatible devices (Chrome, Edge, Firefox on Android)');
+                      }} className="menu-item accent">
+                        <span className="menu-icon">📲</span>
+                        <span>Install App</span>
+                      </button>
+                    )}
                     {isPWA && (
                       <div className="menu-item" style={{opacity: 0.6}}>
                         <span className="menu-icon">✓</span>

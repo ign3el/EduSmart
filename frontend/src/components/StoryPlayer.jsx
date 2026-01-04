@@ -162,6 +162,11 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     }
   }, [currentScene, fullAudioUrl, fullImageUrl]);
 
+  const handleQuizClick = () => {
+    setIsPlaying(false);
+    setShowQuiz(true);
+  };
+
   const goToNextScene = () => {
     if (currentScene < scenes.length - 1) {
       // Stop current audio before changing scene
@@ -439,7 +444,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
                     {isPlaying ? <FiPause /> : <FiPlay />}
                   </button>
                   
-                  <button onClick={goToNextScene} className="control-btn next-btn" title={currentScene === scenes.length - 1 ? 'Take Quiz' : 'Next Scene'}>
+                  <button onClick={currentScene === scenes.length - 1 ? handleQuizClick : goToNextScene} className="control-btn next-btn" title={currentScene === scenes.length - 1 ? 'Take Quiz' : 'Next Scene'}>
                     {currentScene === scenes.length - 1 ? "📝" : <FiSkipForward />}
                   </button>
                 </div>
