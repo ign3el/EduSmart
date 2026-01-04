@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from './context/AuthContext'
 import apiClient from './services/api'
+import updateService from './services/updateService'
 import Login from './components/Login'
 import Signup from './components/Signup'
 import VerifyEmail from './components/VerifyEmail'
@@ -71,6 +72,29 @@ function MainApp() {
   const [uploadFileName, setUploadFileName] = useState('')
   const [showUploadProgress, setShowUploadProgress] = useState(false)
   const fileInputRef = useRef(null)
+  const [showUpdateNotification, setShowUpdateNotification] = useState(false)
+
+  // Initialize version tracking and check for updates
+  useEffect(() => {
+    updateService.initializeVersion();
+    
+    // Start checking for updates
+    updateService.startPeriodicCheck(() => {
+      setShowUpdateNotification(true);
+    });
+
+    return () => {
+      updateService.stopPeriodicCheck();
+    };
+  }, []);
+
+  const handleUpdateApp = () => {
+    updateService.applyUpdate();
+  };
+
+  const dismissUpdate = () => {
+    setShowUpdateNotification(false);
+  };
 
   // Handle browser back button to navigate within app steps
   useEffect(() => {
@@ -710,6 +734,71 @@ function MainApp() {
               fileName={uploadFileName}
               isVisible={showUploadProgress}
             />
+          )}
+
+          {/* Update notification */}
+          {showUpdateNotification && (
+            <motion.div
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50 }}
+              style={{
+                position: 'fixed',
+                top: '20px',
+                right: '20px',
+                zIndex: 10000,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                padding: '1rem 1.5rem',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                color: 'white',
+                maxWidth: '400px',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>🔄</span>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Update Available</h4>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.9rem', opacity: 0.9 }}>
+                    A new version is ready to install
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  onClick={handleUpdateApp}
+                  style={{
+                    flex: 1,
+                    padding: '0.65rem 1.2rem',
+                    background: 'white',
+                    color: '#667eea',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: '0.95rem'
+                  }}
+                >
+                  Update Now
+                </button>
+                <button
+                  onClick={dismissUpdate}
+                  style={{
+                    padding: '0.65rem 1.2rem',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    color: 'white',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: '0.95rem'
+                  }}
+                >
+                  Later
+                </button>
+              </div>
+            </motion.div>
           )}
 
           {/* Hidden file input for re-upload */}
