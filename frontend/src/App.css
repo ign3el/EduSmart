@@ -188,24 +188,29 @@
 }
 
 .home-buttons {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
-  align-items: stretch;
+  align-items: center;
+  width: 100%;
 }
 
 @media (min-width: 900px) {
   .home-buttons {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
     max-width: 1200px;
     margin: 0 auto;
     gap: 2rem;
+    flex-wrap: nowrap;
   }
 
   .home-btn {
     max-width: none;
     min-height: 180px;
+    flex: 1 1 0;
+    min-width: 280px;
   }
   
   .content-shell {

@@ -369,9 +369,22 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
       
       <div className="player-header">
         <h2>🎬 {storyData.title || "Story Time"}</h2>
-        <button className="restart-btn" onClick={onRestart}>
-          <FiRotateCw /> New Story
-        </button>
+        <div className="player-header-actions">
+          {!isSaved && !isOffline && onSave && (
+            <button className="action-btn save-btn" onClick={onSave}>
+              💾 Save Online
+            </button>
+          )}
+          {!isOffline && (
+            <button 
+              className="action-btn download-btn" 
+              onClick={handleOfflineDownload}
+              disabled={isDownloading}
+            >
+              📥 {isDownloading ? 'Downloading...' : 'Download Offline'}
+            </button>
+          )}
+        </div>
         {uploadUrl && (
           <a className="upload-link" href={uploadUrl} target="_blank" rel="noreferrer">
             See Your Uploaded File
@@ -390,7 +403,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
             className="scene-content"
           >
             <div className="scene-image">
-              {fullImageUrl && !imageError && imageLoaded ? (
+              {fullImageUrl ? (
                 <>
                   <img 
                     src={fullImageUrl} 
@@ -407,7 +420,13 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
                       if (!imageError) setImageError(true);
                     }}
                     crossOrigin="anonymous"
+                    style={{ display: imageError ? 'none' : 'block' }}
                   />
+                  {imageError && (
+                    <div className="placeholder-image">
+                      <p>Image unavailable - check console</p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
