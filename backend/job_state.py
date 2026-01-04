@@ -48,6 +48,22 @@ class JobStateManager:
                 )
             """)
             
+            # Migrate existing tables - add new columns if they don't exist
+            try:
+                # Check if file_hash column exists
+                cursor = conn.execute("PRAGMA table_info(stories)")
+                columns = [row[1] for row in cursor.fetchall()]
+                
+                if 'file_hash' not in columns:
+                    conn.execute("ALTER TABLE stories ADD COLUMN file_hash TEXT")
+                if 'user_id' not in columns:
+                    conn.execute("ALTER TABLE stories ADD COLUMN user_id INTEGER")
+                if 'username' not in columns:
+                    conn.execute("ALTER TABLE stories ADD COLUMN username TEXT")
+            except Exception as e:
+                # If migration fails, log it but continue (table might be new)
+                print(f"Migration info: {e}")
+            
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS scenes (
                     scene_id TEXT PRIMARY KEY,
@@ -70,10 +86,14 @@ class JobStateManager:
                 ON scenes(story_id, scene_index)
             """)
             
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_stories_file_hash 
-                ON stories(file_hash, created_at)
-            """)
+            # Only create index if file_hash column exists
+            try:
+                conn.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_stories_file_hash 
+                    ON stories(file_hash, created_at)
+                """)
+            except Exception as e:
+                print(f"Index creation skipped: {e}")
     
     def initialize_story(self, story_id: str, grade_level: str, file_hash: str = None, user_id: int = None, username: str = None):
         """Create a preliminary story job record."""
