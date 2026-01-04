@@ -108,7 +108,7 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
         </button>
         {onProfile && (
           <button onClick={() => handleAction(onProfile)} className="nav-item profile-avatar" title="Account">
-            {user?.email?.charAt(0).toUpperCase() || '👤'}
+            {user?.email?.split('@')[0] || '👤'}
           </button>
         )}
         {onLogout && (

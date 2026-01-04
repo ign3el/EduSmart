@@ -366,18 +366,6 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       
       <div className="player-header">
         <h2>🎬 {storyData.title || "Story Time"}</h2>
-        <div className="player-header-actions">
-          {!isSaved && onSave && (
-            <button onClick={onSave} className="action-btn save-btn" disabled={completedSceneCount < totalScenes}>
-              💾 Save
-            </button>
-          )}
-          {onDownloadOffline && (
-            <button onClick={onDownloadOffline} className="action-btn download-btn" disabled={completedSceneCount < totalScenes}>
-              📥 Download
-            </button>
-          )}
-        </div>
       </div>
 
       <div className="scene-display">

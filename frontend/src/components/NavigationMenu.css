@@ -76,18 +76,19 @@
 }
 
 .nav-item.profile-avatar {
-  width: 40px;
+  min-width: 40px;
   height: 40px;
-  border-radius: 50%;
-  padding: 0;
+  border-radius: 20px;
+  padding: 0 0.8rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
   font-weight: 700;
   background: linear-gradient(135deg, #a855f7, #ec4899);
   border: 2px solid rgba(255, 255, 255, 0.2);
   color: white;
+  white-space: nowrap;
 }
 
 .nav-item.profile-avatar:hover {
