@@ -128,10 +128,11 @@ app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 # Custom endpoint handles saved-stories with UUID prefix matching (see below)
 # app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
 
-@app.get("/api/saved-stories/{story_id}/{filename:path}")
+@app.api_route("/api/saved-stories/{story_id}/{filename:path}", methods=["GET", "HEAD"])
 async def serve_story_file(story_id: str, filename: str):
     """
     Serve story files with smart UUID prefix matching.
+    Handles both GET and HEAD requests.
     If the exact filename doesn't exist, search for files with UUID prefix.
     """
     import glob
