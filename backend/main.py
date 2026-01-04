@@ -128,32 +128,58 @@ app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
 # Custom endpoint handles saved-stories with UUID prefix matching (see below)
 # app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
 
-@app.get("/api/saved-stories/{story_id}/{filename}")
+@app.get("/api/saved-stories/{story_id}/{filename:path}")
 async def serve_story_file(story_id: str, filename: str):
     """
     Serve story files with smart UUID prefix matching.
     If the exact filename doesn't exist, search for files with UUID prefix.
     """
     import glob
+    import os
     from pathlib import Path
     from fastapi.responses import FileResponse
     
+    logger.info(f"📁 File request: story_id={story_id}, filename={filename}")
+    
     story_dir = Path("saved_stories") / story_id
+    logger.info(f"📂 Looking in directory: {story_dir}")
+    
+    if not story_dir.exists():
+        logger.error(f"❌ Story directory does not exist: {story_dir}")
+        raise HTTPException(status_code=404, detail=f"Story directory not found: {story_id}")
+    
     exact_path = story_dir / filename
+    logger.info(f"🔍 Checking exact path: {exact_path}")
     
     # Try exact match first
     if exact_path.exists() and exact_path.is_file():
+        logger.info(f"✅ Found exact match: {exact_path}")
         return FileResponse(exact_path)
     
     # If not found, try to find file with UUID prefix (e.g., uuid_scene_0.png)
-    # Extract the scene pattern (e.g., scene_0.png)
+    # Extract the base filename without UUID
     pattern = str(story_dir / f"*_{filename}")
+    logger.info(f"🔎 Searching with glob pattern: {pattern}")
     matches = glob.glob(pattern)
+    logger.info(f"📋 Glob matches: {matches}")
     
     if matches:
+        logger.info(f"✅ Found UUID-prefixed file: {matches[0]}")
         return FileResponse(matches[0])
     
-    # Still not found, raise 404
+    # Try without underscore separator (in case files are stored differently)
+    pattern2 = str(story_dir / f"*{filename}")
+    logger.info(f"🔎 Trying alternative pattern: {pattern2}")
+    matches2 = glob.glob(pattern2)
+    logger.info(f"📋 Alternative matches: {matches2}")
+    
+    if matches2:
+        logger.info(f"✅ Found file with alternative pattern: {matches2[0]}")
+        return FileResponse(matches2[0])
+    
+    # List all files in directory for debugging
+    all_files = list(story_dir.iterdir())
+    logger.error(f"❌ File not found. Available files: {[f.name for f in all_files]}")
     raise HTTPException(status_code=404, detail=f"File not found: {filename}")
 
 app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
