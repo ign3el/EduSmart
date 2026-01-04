@@ -361,14 +361,15 @@ function OfflineManager({ onLoadOffline, onBack }) {
         </div>
       </div>
 
-      <div className="offline-library">
-        <div className="library-header">
-          <div>
-            <h3>🎒 Offline Stories</h3>
-            <p>Play adventures you've saved for offline fun.</p>
+      <div className="offline-content">
+        <div className="offline-library">
+          <div className="library-header">
+            <div>
+              <h3>🎒 Offline Stories</h3>
+              <p>Play adventures you've saved for offline fun.</p>
+            </div>
+            <button className="refresh-btn" onClick={loadLocalStories}>↻ Refresh</button>
           </div>
-          <button className="refresh-btn" onClick={loadLocalStories}>↻ Refresh</button>
-        </div>
 
         {localStories.length === 0 ? (
           <div className="empty-state">
@@ -474,6 +475,22 @@ function OfflineManager({ onLoadOffline, onBack }) {
             })()}
           </>
         )}
+        </div>
+
+        <div className="quick-import-section">
+          <h3>📁 Import Saved Story</h3>
+          <p>Upload exported story packages</p>
+          <input
+            type="file"
+            accept=".zip"
+            onChange={importStory}
+            style={{ display: 'none' }}
+            id="quick-import-file"
+          />
+          <label htmlFor="quick-import-file" className="quick-import-btn">
+            📁 Choose File
+          </label>
+        </div>
       </div>
 
       <div className="offline-actions">
@@ -578,21 +595,6 @@ function OfflineManager({ onLoadOffline, onBack }) {
           ) : (
             <p className="no-export">No online stories to export</p>
           )}
-        </div>
-
-        <div className="action-section">
-          <h3>📥 Import Stories</h3>
-          <p>Upload exported story packages</p>
-          <input
-            type="file"
-            accept=".zip"
-            onChange={importStory}
-            style={{ display: 'none' }}
-            id="import-file"
-          />
-          <label htmlFor="import-file" className="action-btn import-btn">
-            📁 Import Story
-          </label>
         </div>
       </div>
 

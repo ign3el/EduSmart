@@ -81,9 +81,10 @@
   transition: all 0.3s ease;
 }
 
+/* Hide hamburger on desktop, show navigation menu instead */
 @media (min-width: 769px) {
   .mobile-menu-toggle {
-    display: none;
+    display: none !important;
   }
 }
 

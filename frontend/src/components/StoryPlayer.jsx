@@ -404,36 +404,29 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
           >
             <div className="scene-image">
               {fullImageUrl ? (
-                <>
-                  <img 
-                    src={fullImageUrl} 
-                    alt={`Scene ${currentScene + 1}`}
-                    onLoad={() => {
-                      console.log('✅ Image loaded successfully in DOM');
-                      if (!imageLoaded) setImageLoaded(true);
-                    }}
-                    onError={(e) => {
-                      console.error('❌ Image failed to load in DOM');
-                      console.error('Error event:', e);
-                      console.error('Image src:', e.target?.src);
-                      console.error('Natural dimensions:', e.target?.naturalWidth, 'x', e.target?.naturalHeight);
-                      if (!imageError) setImageError(true);
-                    }}
-                    crossOrigin="anonymous"
-                    style={{ display: imageError ? 'none' : 'block' }}
-                  />
-                  {imageError && (
-                    <div className="placeholder-image">
-                      <p>Image unavailable - check console</p>
-                    </div>
-                  )}
-                </>
+                <img 
+                  src={fullImageUrl} 
+                  alt={`Scene ${currentScene + 1}`}
+                  onLoad={(e) => {
+                    console.log('✅ Image loaded successfully in DOM');
+                    console.log('📍 Image dimensions:', e.target.naturalWidth, 'x', e.target.naturalHeight);
+                    console.log('🔗 Image URL:', e.target.src);
+                    if (!imageLoaded) setImageLoaded(true);
+                  }}
+                  onError={(e) => {
+                    console.error('❌ Image failed to load in DOM');
+                    console.error('🔗 Failed URL:', e.target?.src);
+                    console.error('📱 User Agent:', navigator.userAgent);
+                    console.error('🌐 Online:', navigator.onLine);
+                    console.error('📄 Image dimensions:', e.target?.naturalWidth, 'x', e.target?.naturalHeight);
+                    if (!imageError) setImageError(true);
+                  }}
+                  crossOrigin="anonymous"
+                />
               ) : (
-                <>
-                  <div className="placeholder-image">
-                    <p>{imageError ? 'Image unavailable - check console' : (scene?.image_description || "Loading image...")}</p>
-                  </div>
-                </>
+                <div className="placeholder-image">
+                  <p>{scene?.image_description || "Loading image..."}</p>
+                </div>
               )}
             </div>
             <div className="scene-right">
