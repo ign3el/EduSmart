@@ -1,5 +1,5 @@
 // Service to check for app updates
-const UPDATE_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
+const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000; // Check every 1 hour
 const CURRENT_VERSION = '1.0.0';
 
 class UpdateService {

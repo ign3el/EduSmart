@@ -1,10 +1,31 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import updateService from '../services/updateService'
 import './NavigationMenu.css'
 
 function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOfflineManager, onAdminClick, onProfile, onLogout }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
+
+  const handleCheckUpdate = async () => {
+    setIsCheckingUpdate(true)
+    try {
+      const hasUpdate = await updateService.checkForUpdates()
+      if (hasUpdate) {
+        if (confirm('🔄 A new version is available! Update now?')) {
+          await updateService.applyUpdate()
+        }
+      } else {
+        alert('✅ You are using the latest version!')
+      }
+    } catch (error) {
+      console.error('Update check failed:', error)
+      alert('❌ Failed to check for updates')
+    } finally {
+      setIsCheckingUpdate(false)
+    }
+  }
 
   const handleAction = (action) => {
     if (action) {
@@ -72,6 +93,14 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
             👤 {user?.email?.split('@')[0] || 'Profile'}
           </button>
         )}
+        <button 
+          onClick={handleCheckUpdate} 
+          className="nav-item update-btn"
+          disabled={isCheckingUpdate}
+          title="Check for updates"
+        >
+          {isCheckingUpdate ? '⏳' : '🔄'} Update
+        </button>
         {onLogout && (
           <button onClick={() => handleAction(onLogout)} className="nav-item danger">
             🚪 Logout
@@ -165,6 +194,17 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         <span>{user?.email?.split('@')[0] || 'Profile'}</span>
                       </button>
                     )}
+                    <button 
+                      onClick={() => {
+                        handleCheckUpdate();
+                        setIsMobileOpen(false);
+                      }} 
+                      className="menu-item"
+                      disabled={isCheckingUpdate}
+                    >
+                      <span className="menu-icon">{isCheckingUpdate ? '⏳' : '🔄'}</span>
+                      <span>Check for Updates</span>
+                    </button>
                     {onLogout ? (
                       <button onClick={() => handleAction(onLogout)} className="menu-item danger">
                         <span className="menu-icon">🚪</span>
