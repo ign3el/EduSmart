@@ -506,22 +506,6 @@
   color: var(--ink-2);
   font-size: 0.9rem;
 }
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.library-header h3 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.library-header p {
-  margin: 0;
-  color: var(--ink-2);
-}
 
 .refresh-btn {
   padding: 0.55rem 1rem;
