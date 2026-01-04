@@ -163,8 +163,9 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   }, [currentScene, fullAudioUrl, fullImageUrl]);
 
   const handleQuizClick = () => {
-    setIsPlaying(false);
-    setShowQuiz(true);
+    console.log('🎯 Quiz button clicked - starting quiz...')
+    setIsPlaying(false)
+    setShowQuiz(true)
   };
 
   const goToNextScene = () => {
@@ -341,11 +342,16 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   };
 
   if (showQuiz && storyData?.quiz) {
+    console.log('✅ Rendering Quiz - questions:', storyData.quiz.length)
     return (
       <div className="story-player">
         <Quiz questions={storyData.quiz} onComplete={onRestart} />
       </div>
     );
+  }
+
+  if (showQuiz && !storyData?.quiz) {
+    console.log('⚠️ Quiz mode but no quiz data available')
   }
 
   if (!scene) {
@@ -445,7 +451,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
                   </button>
                   
                   <button onClick={currentScene === scenes.length - 1 ? handleQuizClick : goToNextScene} className="control-btn next-btn" title={currentScene === scenes.length - 1 ? 'Take Quiz' : 'Next Scene'}>
-                    {currentScene === scenes.length - 1 ? "📝" : <FiSkipForward />}
+                    {currentScene === scenes.length - 1 ? "📝 Quiz" : <FiSkipForward />}
                   </button>
                 </div>
 
