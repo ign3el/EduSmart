@@ -134,10 +134,10 @@
 /* Landscape mobile: Side-by-side layout */
 @media (max-width: 1023px) and (orientation: landscape) {
   .scene-content {
-    grid-template-columns: minmax(200px, 0.6fr) 1.4fr;
+    grid-template-columns: minmax(200px, 0.5fr) 1.5fr;
     grid-template-rows: 1fr;
-    gap: 0.5rem;
-    padding: 0.5rem;
+    gap: 0.4rem;
+    padding: 0.4rem;
   }
   
   .scene-image {
@@ -145,21 +145,48 @@
   }
   
   .scene-image img {
-    max-height: 45vh;
+    max-height: 40vh;
   }
   
   .scene-narration {
-    max-height: 50vh;
+    max-height: 60vh;
+    padding: 0.7rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
   }
   
   .player-controls {
-    padding: 0.5rem;
-    gap: 0.3rem;
+    padding: 0.3rem 0.5rem;
+    gap: 0.2rem;
   }
   
   .control-btn {
-    width: 2.2rem;
-    height: 2.2rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .play-btn {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .audio-progress-section {
+    margin-bottom: 0.2rem;
+    padding-bottom: 0.3rem;
+  }
+  
+  .time-display {
+    font-size: 0.65rem;
+    min-width: 32px;
+  }
+  
+  .audio-progress-bar {
+    height: 5px;
+  }
+  
+  .scene-counter {
+    font-size: 0.7rem;
   }
 }
 
@@ -219,73 +246,86 @@
   }
   
   .player-header {
-    padding: 0.5rem 0.75rem;
-    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    gap: 0.4rem;
   }
   
   .player-header h2 {
-    font-size: 1rem;
-  }
-  
-  .action-btn {
-    padding: 0.4rem 0.7rem;
-    font-size: 0.75rem;
-  }
-  
-  .scene-display {
-    padding: 0.25rem;
-  }
-  
-  .scene-content {
-    padding: 0.5rem;
-    gap: 0.4rem;
-  }
-  
-  .scene-image img {
-    max-height: 30vh;
-  }
-  
-  .scene-narration {
-    max-height: 20vh;
-    padding: 0.6rem;
     font-size: 0.9rem;
   }
   
-  .player-controls {
-    padding: 0.6rem 0.75rem;
-    gap: 0.4rem;
+  .action-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.7rem;
   }
   
-  .audio-progress-section {
-    gap: 0.4rem;
+  .scene-display {
+    padding: 0.2rem;
   }
   
-  .time-display {
-    font-size: 0.75rem;
-  }
-  
-  .scene-counter {
-    font-size: 0.8rem;
-    padding: 0.3rem 0;
-  }
-  
-  .control-buttons {
-    gap: 0.5rem;
-  }
-  
-  .control-btn {
-    width: 2.5rem;
-    height: 2.5rem;
-    font-size: 1rem;
-  }
-  
-  .scene-dots {
+  .scene-content {
+    padding: 0.4rem;
     gap: 0.3rem;
   }
   
-  .dot {
-    width: 6px;
+  .scene-image img {
+    max-height: 28vh;
+  }
+  
+  .scene-narration {
+    max-height: 35vh;
+    padding: 0.7rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+  
+  .player-controls {
+    padding: 0.4rem 0.6rem;
+    gap: 0.3rem;
+  }
+  
+  .audio-progress-section {
+    gap: 0.3rem;
+    margin-bottom: 0.25rem;
+    padding-bottom: 0.4rem;
+  }
+  
+  .time-display {
+    font-size: 0.7rem;
+    min-width: 35px;
+  }
+  
+  .audio-progress-bar {
     height: 6px;
+  }
+  
+  .scene-counter {
+    font-size: 0.75rem;
+    padding: 0.2rem 0;
+  }
+  
+  .control-buttons {
+    gap: 0.4rem;
+  }
+  
+  .control-btn {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.9rem;
+  }
+  
+  .play-btn {
+    width: 2.3rem;
+    height: 2.3rem;
+  }
+  
+  .scene-dots {
+    gap: 0.25rem;
+  }
+  
+  .dot {
+    width: 5px;
+    height: 5px;
   }
 }
 
