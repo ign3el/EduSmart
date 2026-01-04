@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import './NavigationMenu.css'
 
@@ -73,20 +74,21 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
         )}
       </nav>
 
-      {/* Mobile Drawer */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <>
-            <motion.div
-              className="mobile-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileOpen(false)}
-            />
-            <motion.div
-              className="mobile-menu"
-              initial={{ x: '100%' }}
+      {/* Mobile Drawer - rendered via Portal outside app container */}
+      {createPortal(
+        <AnimatePresence>
+          {isMobileOpen && (
+            <>
+              <motion.div
+                className="mobile-overlay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileOpen(false)}
+              />
+              <motion.div
+                className="mobile-menu"
+                initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
@@ -165,8 +167,10 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
               </div>
             </motion.div>
           </>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   )
 }
