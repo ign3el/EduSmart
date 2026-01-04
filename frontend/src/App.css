@@ -133,8 +133,7 @@
 }
 
 .header-user-actions {
-  display: flex;
-  align-items: center;
+  display: none !important; /* Hidden - now using FloatingMenu */
   gap: 0.75rem;
 }
 
@@ -189,16 +188,16 @@
 }
 
 .home-buttons {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 1.25rem;
-  align-items: center;
+  align-items: stretch;
 }
 
 @media (min-width: 900px) {
   .home-buttons {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
     max-width: 1200px;
     margin: 0 auto;
     gap: 2rem;

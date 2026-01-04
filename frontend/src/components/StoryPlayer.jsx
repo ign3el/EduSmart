@@ -391,12 +391,14 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
                     alt={`Scene ${currentScene + 1}`}
                     onLoad={() => {
                       console.log('✅ Image loaded successfully in DOM');
+                      if (!imageLoaded) setImageLoaded(true);
                     }}
                     onError={(e) => {
                       console.error('❌ Image failed to load in DOM');
                       console.error('Error event:', e);
                       console.error('Image src:', e.target?.src);
                       console.error('Natural dimensions:', e.target?.naturalWidth, 'x', e.target?.naturalHeight);
+                      if (!imageError) setImageError(true);
                     }}
                     crossOrigin="anonymous"
                   />

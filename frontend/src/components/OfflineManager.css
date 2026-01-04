@@ -135,8 +135,17 @@
 
 .offline-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+/* Desktop: Side by side */
+@media (min-width: 900px) {
+  .offline-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
 }
 
 .action-section {
