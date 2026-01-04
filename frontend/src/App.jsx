@@ -18,6 +18,7 @@ import OfflineManager from './components/OfflineManager'
 import ReuploadConfirmModal from './components/ReuploadConfirmModal'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
 import TeacherCard from './components/TeacherCard'
+import FloatingMenu from './components/FloatingMenu'
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 import './App.css'
 
@@ -403,10 +404,23 @@ function MainApp() {
 
   return (
     <div className="app">
+      <FloatingMenu
+        user={user}
+        isAdmin={user?.is_admin}
+        onHome={() => navigateTo('home')}
+        onNewStory={step === 'playing' ? handleRestart : null}
+        onLoadStories={() => navigateTo('load')}
+        onOfflineManager={() => navigateTo('offline')}
+        onSaveOnline={step === 'playing' && !isSaved ? handleSaveStory : null}
+        onDownloadOffline={null}
+        onAdminClick={() => navigateTo('admin')}
+        onLogout={logout}
+        showStoryActions={step === 'playing'}
+      />
       <header className="app-header">
         <div className="app-header-content">
-          <h1>EduSmart — AI Storymaker</h1>
-          <p>Transform your PDFs or DOCX files into animated, voice-guided adventures tailored for every grade.</p>
+          <h1>EduSmart</h1>
+          <p className="header-subtitle">AI-Powered Storymaker</p>
         </div>
         {isAuthenticated && (
           <div className="header-user-actions">

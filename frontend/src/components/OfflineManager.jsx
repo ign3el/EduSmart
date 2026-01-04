@@ -20,7 +20,7 @@ function OfflineManager({ onLoadOffline, onBack }) {
   const [importPage, setImportPage] = useState(1)
   const [exportSearchQuery, setExportSearchQuery] = useState('')
   const [importSearchQuery, setImportSearchQuery] = useState('')
-  const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage(window.innerWidth))
+  const [itemsPerPage, setItemsPerPage] = useState(5) // Fixed 5 items per page
 
   const loadLocalStories = async () => {
     try {
@@ -49,7 +49,7 @@ function OfflineManager({ onLoadOffline, onBack }) {
     
     // Handle window resize for responsive pagination
     const handleResize = () => {
-      setItemsPerPage(getItemsPerPage(window.innerWidth))
+      // Fixed 5 items per page for offline manager
     }
     
     const handleStorage = (event) => {
