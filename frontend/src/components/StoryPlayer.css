@@ -427,10 +427,10 @@
 }
 
 .time-display {
-  font-size: 0.43rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--ink-2);
-  min-width: 20px;
+  min-width: 30px;
   text-align: center;
 }
 

@@ -180,6 +180,18 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         <span>New Story</span>
                       </button>
                     ) : null}
+                    {isPlayingStory && onSaveStory ? (
+                      <button onClick={() => handleAction(onSaveStory)} className="menu-item accent">
+                        <span className="menu-icon">💾</span>
+                        <span>Save Story</span>
+                      </button>
+                    ) : null}
+                    {isPlayingStory && onDownloadStory ? (
+                      <button onClick={() => handleAction(onDownloadStory)} className="menu-item accent">
+                        <span className="menu-icon">📥</span>
+                        <span>Download Story</span>
+                      </button>
+                    ) : null}
                   </div>
 
                   {isAdmin && onAdminClick ? (
