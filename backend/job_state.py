@@ -10,9 +10,12 @@ from datetime import datetime
 from contextlib import contextmanager
 
 class JobStateManager:
-    def __init__(self, db_path: str = "job_state.db"):
+    def __init__(self, db_path: str = "db_data/job_state.db"):
         self.db_path = db_path
         self._local = threading.local()
+        # Ensure directory exists
+        import os
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self._init_db()
     
     @contextmanager

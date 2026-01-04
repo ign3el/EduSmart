@@ -108,7 +108,7 @@
 
 .scene-display {
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.25rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -119,13 +119,13 @@
   width: 100%;
   flex: 1;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.5rem;
   grid-template-columns: 1fr;
   grid-template-rows: auto 1fr;
   background: linear-gradient(145deg, rgba(12, 21, 40, 0.65), rgba(12, 21, 40, 0.45));
   border: 1px solid var(--edge);
   border-radius: var(--radius-lg);
-  padding: 0.75rem;
+  padding: 0.5rem;
   box-shadow: var(--shadow-soft);
   overflow: auto;
   min-height: 0;
@@ -154,10 +154,10 @@
 /* Desktop: Side-by-side layout */
 @media (min-width: 1024px) {
   .scene-content {
-    grid-template-columns: minmax(300px, 0.8fr) 1.2fr;
+    grid-template-columns: minmax(280px, 0.7fr) 1.3fr;
     grid-template-rows: 1fr;
-    gap: 1rem;
-    padding: 1rem;
+    gap: 0.75rem;
+    padding: 0.75rem;
   }
   
   .scene-image {
@@ -165,14 +165,14 @@
   }
   
   .scene-image img {
-    max-height: 60vh;
+    max-height: 55vh;
   }
 }
 
 .scene-right {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
   min-height: 0;
   overflow: auto;
   flex: 1;
@@ -218,11 +218,11 @@
 }
 
 .scene-narration {
-  padding: 0.75rem;
+  padding: 0.65rem;
   background: rgba(255, 255, 255, 0.03);
   border-radius: var(--radius-md);
   border: 1px solid var(--edge);
-  max-height: 12vh;
+  max-height: 10vh;
   overflow-y: auto;
   display: flex;
   align-items: center;
@@ -232,7 +232,7 @@
 /* Desktop: Fixed height for narration */
 @media (min-width: 1024px) {
   .scene-narration {
-    max-height: 18vh;
+    max-height: 15vh;
   }
 }
 

@@ -48,6 +48,8 @@ services:
       - ./backend/outputs:/app/outputs
       - ./backend/uploads:/app/uploads
       - ./backend/saved_stories:/app/saved_stories
+      - ./backend/generated_stories:/app/generated_stories
+      - backend_db:/app/db_data
     user: "0:0"
     restart: unless-stopped
     networks:
@@ -70,4 +72,5 @@ services:
 volumes:
   uploads:
   outputs:
+  backend_db:
   saved_stories:
