@@ -33,7 +33,8 @@ const StoryList = ({ onPlayStory }) => {
         let sortableItems = [...stories];
         if (filterUser) {
             sortableItems = sortableItems.filter(story =>
-                story.username.toLowerCase().includes(filterUser.toLowerCase())
+                story.username.toLowerCase().includes(filterUser.toLowerCase()) ||
+                story.name.toLowerCase().includes(filterUser.toLowerCase())
             );
         }
         if (sortConfig.key !== null) {
@@ -81,7 +82,7 @@ const StoryList = ({ onPlayStory }) => {
                     type="text"
                     id="filter-username"
                     name="filter-username"
-                    placeholder="Filter by username..."
+                    placeholder="Filter by username or story name..."
                     value={filterUser}
                     onChange={(e) => setFilterUser(e.target.value)}
                     className="filter-input"

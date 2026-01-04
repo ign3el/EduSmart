@@ -40,7 +40,7 @@
 }
 
 .story-list th {
-    background-color: #2563eb;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     font-weight: 600;
     color: #ffffff;
     font-size: 0.9rem;
@@ -48,11 +48,20 @@
     letter-spacing: 0.5px;
     cursor: pointer;
     user-select: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transition: background-color 0.2s;
 }
 
 .story-list th:hover {
-    background-color: #1d4ed8;
+    background: linear-gradient(135deg, #5568d3 0%, #5d3e85 100%);
+}
+
+.story-list tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.story-list tbody tr:nth-child(odd) {
+    background-color: #ffffff;
 }
 
 .story-list th.sorted-asc::after,
@@ -76,7 +85,8 @@
 
 
 .story-list tr:hover {
-    background-color: #f1f3f5;
+    background: linear-gradient(90deg, #f1f3f5 0%, #e9ecef 100%) !important;
+    transition: background 0.2s ease;
 }
 
 .story-list tr:last-child td {

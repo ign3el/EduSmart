@@ -26,12 +26,13 @@
 }
 
 .job-status-viewer th {
-    background-color: #2563eb;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     font-weight: 600;
     color: #ffffff;
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .job-row {
@@ -39,8 +40,17 @@
     transition: background-color 0.2s;
 }
 
+.job-status-viewer tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.job-status-viewer tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
 .job-row:hover {
-    background-color: #f1f3f5;
+    background: linear-gradient(90deg, #f1f3f5 0%, #e9ecef 100%) !important;
+    transition: background 0.2s ease;
 }
 
 .job-row:last-child td,
