@@ -2,10 +2,13 @@
     overflow-x: auto;
     border: 1px solid #dee2e6;
     border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
 }
 
 .job-status-viewer table {
     width: 100%;
+    min-width: 900px;
     border-collapse: collapse;
     text-align: left;
 }

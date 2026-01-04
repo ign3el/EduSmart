@@ -31,10 +31,13 @@
 
 .admin-table-container {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .admin-dashboard table {
   width: 100%;
+  min-width: 700px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -112,4 +115,39 @@
   border: 1px solid #D8000C;
   padding: 1rem;
   border-radius: 8px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .admin-dashboard {
+    padding: 1rem;
+  }
+
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .admin-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .admin-table-container {
+    margin: 0 -1rem;
+    border-radius: 0;
+  }
+
+  .admin-dashboard th,
+  .admin-dashboard td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .play-button,
+  .back-button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
 }

@@ -15,6 +15,7 @@ import StoryPlayer from './components/StoryPlayer'
 import SaveStoryModal from './components/SaveStoryModal'
 import LoadStory from './components/LoadStory'
 import OfflineManager from './components/OfflineManager'
+import UserProfile from './components/UserProfile'
 import ReuploadConfirmModal from './components/ReuploadConfirmModal'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
 import TeacherCard from './components/TeacherCard'
@@ -166,6 +167,7 @@ function MainApp() {
       case 'upload':
       case 'offline':
       case 'load':
+      case 'profile':
       default:
         return 'home'
     }
@@ -418,6 +420,7 @@ function MainApp() {
             onLoadStories={() => navigateTo('load')}
             onOfflineManager={() => navigateTo('offline')}
             onAdminClick={() => navigateTo('admin')}
+            onProfile={() => navigateTo('profile')}
             onLogout={logout}
           />
         )}
@@ -531,6 +534,16 @@ function MainApp() {
                   navigateTo('playing')
                 }}
                 onBack={() => navigateTo('home')}
+              />
+            </motion.div>
+          )}
+
+          {step === 'profile' && (
+            <motion.div key="profile" className="step-container">
+              <UserProfile 
+                user={user}
+                onBack={() => navigateTo('home')}
+                onLogout={logout}
               />
             </motion.div>
           )}

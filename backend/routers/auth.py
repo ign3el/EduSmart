@@ -314,3 +314,94 @@ def reset_password(request: ResetPasswordRequest):
 
 # Import get_db_cursor at the top if not already imported
 from database import get_db_cursor
+
+class ChangePasswordRequest(BaseModel):
+    """Request model for changing password."""
+    current_password: str
+    new_password: str = Field(..., min_length=8, max_length=100)
+    
+    @validator('new_password')
+    def password_complexity(cls, v):
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.islower() for c in v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one digit')
+        return v
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+def change_password(
+    request: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Changes the authenticated user's password.
+    Requires the current password for verification.
+    """
+    from auth import verify_password, get_password_hash
+    
+    # Verify current password
+    if not verify_password(request.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+    
+    # Hash new password
+    new_password_hash = get_password_hash(request.new_password)
+    
+    try:
+        with get_db_cursor(commit=True) as cursor:
+            cursor.execute(
+                "UPDATE users SET password_hash = %s WHERE id = %s",
+                (new_password_hash, current_user.id)
+            )
+        
+        logger.info(f"Password changed successfully for user ID: {current_user.id}")
+        return {"message": "Password changed successfully"}
+    except Exception as e:
+        logger.error(f"Failed to change password: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change password"
+        )
+
+class UpdateUsernameRequest(BaseModel):
+    """Request model for updating username."""
+    username: str = Field(..., min_length=3, max_length=50, pattern="^[a-zA-Z0-9_]+$")
+
+@router.put("/update-username", response_model=UserResponse, status_code=status.HTTP_200_OK)
+def update_username(
+    request: UpdateUsernameRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Updates the authenticated user's username.
+    """
+    # Check if username is already taken by another user
+    existing_user = UserOperations.get_by_username(request.username)
+    if existing_user and existing_user['id'] != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken"
+        )
+    
+    try:
+        with get_db_cursor(commit=True) as cursor:
+            cursor.execute(
+                "UPDATE users SET username = %s WHERE id = %s",
+                (request.username, current_user.id)
+            )
+        
+        # Fetch updated user
+        updated_user = UserOperations.get_by_id(current_user.id)
+        logger.info(f"Username updated for user ID: {current_user.id}")
+        
+        return UserResponse(**updated_user)
+    except Exception as e:
+        logger.error(f"Failed to update username: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update username"
+        )

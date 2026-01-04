@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import './NavigationMenu.css'
 
-function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOfflineManager, onAdminClick, onLogout }) {
+function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOfflineManager, onAdminClick, onProfile, onLogout }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   const handleAction = (action) => {
@@ -65,6 +65,11 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
         {onNewStory && (
           <button onClick={() => handleAction(onNewStory)} className="nav-item accent">
             ✨ New Story
+          </button>
+        )}
+        {onProfile && (
+          <button onClick={() => handleAction(onProfile)} className="nav-item">
+            👤 {user?.email?.split('@')[0] || 'Profile'}
           </button>
         )}
         {onLogout && (
@@ -154,6 +159,12 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                   <div className="menu-divider"></div>
                   <div className="menu-section">
                     <h4>Account</h4>
+                    {onProfile && (
+                      <button onClick={() => handleAction(onProfile)} className="menu-item">
+                        <span className="menu-icon">👤</span>
+                        <span>{user?.email?.split('@')[0] || 'Profile'}</span>
+                      </button>
+                    )}
                     {onLogout ? (
                       <button onClick={() => handleAction(onLogout)} className="menu-item danger">
                         <span className="menu-icon">🚪</span>

@@ -21,10 +21,13 @@
     overflow-x: auto;
     border: 1px solid #dee2e6;
     border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
 }
 
 .story-list table {
     width: 100%;
+    min-width: 800px;
     border-collapse: collapse;
     text-align: left;
 }
@@ -105,7 +108,49 @@
 .play-story-button:hover {
   background-color: #0056b3;
 }
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .filter-input {
+        width: 100%;
+        max-width: 100%;
+    }
 
+    .story-list-controls {
+        margin-bottom: 1rem;
+    }
+
+    .story-table-container {
+        margin: 0 -1rem;
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+    }
+
+    .story-list th,
+    .story-list td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .story-list th {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+    }
+
+    .story-id-cell {
+        font-size: 0.75rem;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .play-story-button {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+}
 .loading-message, .error-message {
   text-align: center;
   padding: 2rem;
