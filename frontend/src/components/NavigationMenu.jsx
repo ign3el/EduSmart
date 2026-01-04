@@ -110,33 +110,33 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                 <div className="menu-actions">
                   <div className="menu-section">
                     <h4>Navigation</h4>
-                    {onHome && (
+                    {onHome ? (
                       <button onClick={() => handleAction(onHome)} className="menu-item">
                         <span className="menu-icon">🏠</span>
                         <span>Home</span>
                       </button>
-                    )}
-                    {onLoadStories && (
+                    ) : null}
+                    {onLoadStories ? (
                       <button onClick={() => handleAction(onLoadStories)} className="menu-item">
                         <span className="menu-icon">📚</span>
                         <span>Load Saved Story</span>
                       </button>
-                    )}
-                    {onOfflineManager && (
+                    ) : null}
+                    {onOfflineManager ? (
                       <button onClick={() => handleAction(onOfflineManager)} className="menu-item">
                         <span className="menu-icon">📂</span>
                         <span>Offline Manager</span>
                       </button>
-                    )}
-                    {onNewStory && (
+                    ) : null}
+                    {onNewStory ? (
                       <button onClick={() => handleAction(onNewStory)} className="menu-item">
                         <span className="menu-icon">✨</span>
                         <span>New Story</span>
                       </button>
-                    )}
+                    ) : null}
                   </div>
 
-                  {isAdmin && onAdminClick && (
+                  {isAdmin && onAdminClick ? (
                     <>
                       <div className="menu-divider"></div>
                       <div className="menu-section">
@@ -147,16 +147,18 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         </button>
                       </div>
                     </>
-                  )}
+                  ) : null}
 
                   <div className="menu-divider"></div>
                   <div className="menu-section">
                     <h4>Account</h4>
-                    {onLogout && (
+                    {onLogout ? (
                       <button onClick={() => handleAction(onLogout)} className="menu-item danger">
                         <span className="menu-icon">🚪</span>
                         <span>Logout</span>
                       </button>
+                    ) : (
+                      <div style={{padding: '1rem', color: 'red'}}>ERROR: No logout function</div>
                     )}
                   </div>
                 </div>
