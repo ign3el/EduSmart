@@ -134,17 +134,23 @@
 }
 
 .offline-actions {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
   margin-top: 2rem;
 }
 
-/* Desktop: Side by side */
+/* Desktop: Side by side with equal widths */
 @media (min-width: 900px) {
   .offline-actions {
+    display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
+    align-items: start;
+  }
+  
+  .action-section {
+    height: 100%;
   }
 }
 

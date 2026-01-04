@@ -18,7 +18,8 @@ import OfflineManager from './components/OfflineManager'
 import ReuploadConfirmModal from './components/ReuploadConfirmModal'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
 import TeacherCard from './components/TeacherCard'
-import FloatingMenu from './components/FloatingMenu'
+import NavigationMenu from './components/NavigationMenu'
+import StoryActionsBar from './components/StoryActionsBar'
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 import './App.css'
 
@@ -405,31 +406,22 @@ function MainApp() {
 
   return (
     <div className="app">
-      <FloatingMenu
-        user={user}
-        isAdmin={user?.is_admin}
-        onHome={() => navigateTo('home')}
-        onNewStory={step === 'playing' ? handleRestart : null}
-        onLoadStories={() => navigateTo('load')}
-        onOfflineManager={() => navigateTo('offline')}
-        onSaveOnline={step === 'playing' && !isSaved ? handleSaveStory : null}
-        onDownloadOffline={step === 'playing' && storyPlayerRef.current ? () => storyPlayerRef.current.triggerDownload() : null}
-        onAdminClick={() => navigateTo('admin')}
-        onLogout={logout}
-        showStoryActions={step === 'playing'}
-      />
       <header className="app-header">
         <div className="app-header-content">
           <h1>EduSmart</h1>
           <p className="header-subtitle">AI-Powered Storymaker</p>
         </div>
         {isAuthenticated && (
-          <div className="header-user-actions">
-            {user && user.is_admin && (
-              <button className="admin-btn" onClick={() => navigateTo('admin')}>Admin Panel</button>
-            )}
-            <button className="logout-btn" onClick={logout}>Logout</button>
-          </div>
+          <NavigationMenu
+            user={user}
+            isAdmin={user?.is_admin}
+            onHome={() => navigateTo('home')}
+            onNewStory={step === 'playing' ? handleRestart : null}
+            onLoadStories={() => navigateTo('load')}
+            onOfflineManager={() => navigateTo('offline')}
+            onAdminClick={() => navigateTo('admin')}
+            onLogout={logout}
+          />
         )}
       </header>
 
@@ -578,21 +570,29 @@ function MainApp() {
           )}
 
           {step === 'playing' && storyData && (
-            <motion.div key="playing" className="player-container">
-              <StoryPlayer
-                ref={storyPlayerRef}
-                storyData={storyData} 
-                avatar={selectedAvatar} 
-                onRestart={handleRestart}
-                onSave={handleSaveStory}
+            <>
+              <StoryActionsBar
+                onSaveOnline={!isSaved ? handleSaveStory : null}
+                onDownloadOffline={storyPlayerRef.current ? () => storyPlayerRef.current.triggerDownload() : null}
                 isSaved={isSaved}
                 isOffline={isOfflineMode}
-                savedStoryId={savedStoryId}
-                currentJobId={currentJobId}
-                totalScenes={totalScenes}
-                completedSceneCount={completedSceneCount}
               />
-            </motion.div>
+              <motion.div key="playing" className="player-container">
+                <StoryPlayer
+                  ref={storyPlayerRef}
+                  storyData={storyData} 
+                  avatar={selectedAvatar} 
+                  onRestart={handleRestart}
+                  onSave={handleSaveStory}
+                  isSaved={isSaved}
+                  isOffline={isOfflineMode}
+                  savedStoryId={savedStoryId}
+                  currentJobId={currentJobId}
+                  totalScenes={totalScenes}
+                  completedSceneCount={completedSceneCount}
+                />
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
 

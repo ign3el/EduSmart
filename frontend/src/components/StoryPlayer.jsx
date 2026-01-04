@@ -195,6 +195,8 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
       }
       setCurrentScene(currentScene + 1);
       setGeneratingMessage('');
+      // Auto-play next scene
+      setIsPlaying(true);
     } else if (currentScene < actualTotalScenes - 1) {
       // Trying to go to a scene that hasn't been generated yet
       setGeneratingMessage(`Scene ${currentScene + 2} is still being generated. Please wait...`);
@@ -214,6 +216,8 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
       }
       setCurrentScene(currentScene - 1);
       setGeneratingMessage('');
+      // Auto-play previous scene
+      setIsPlaying(true);
     }
   };
 
@@ -252,6 +256,8 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
     }
     setCurrentScene(index);
     setGeneratingMessage('');
+    // Auto-play selected scene
+    setIsPlaying(true);
   };
 
   const togglePlay = () => {
