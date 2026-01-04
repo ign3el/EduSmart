@@ -164,6 +164,8 @@
   flex: 1;
   overflow-y: auto;
   padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .menu-user-info {
@@ -220,6 +222,7 @@
 .menu-actions {
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 
 .menu-section {
