@@ -70,18 +70,18 @@ class JobStateManager:
                 ON scenes(story_id, scene_index)
             """)
             
-            conn.execute(""", file_hash: str = None, user_id: int = None, username: str = None):
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_stories_file_hash 
+                ON stories(file_hash, created_at)
+            """)
+    
+    def initialize_story(self, story_id: str, grade_level: str, file_hash: str = None, user_id: int = None, username: str = None):
         """Create a preliminary story job record."""
         with self._get_conn() as conn:
             conn.execute("""
                 INSERT INTO stories (story_id, status, title, grade_level, total_scenes, completed_scenes, file_hash, user_id, username)
                 VALUES (?, 'initializing', 'Initializing story...', ?, 0, 0, ?, ?, ?)
-            """, (story_id, grade_level, file_hash, user_id, usernameob record."""
-        with self._get_conn() as conn:
-            conn.execute("""
-                INSERT INTO stories (story_id, status, title, grade_level, total_scenes, completed_scenes)
-                VALUES (?, 'initializing', 'Initializing story...', ?, 0, 0)
-            """, (story_id, grade_level))
+            """, (story_id, grade_level, file_hash, user_id, username))
 
     def update_story_metadata(self, story_id: str, title: str, total_scenes: int):
         """Update story metadata after initial AI processing."""
