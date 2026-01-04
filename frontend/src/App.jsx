@@ -649,7 +649,7 @@ function MainApp() {
                 avatar={selectedAvatar} 
                 onRestart={handleRestart}
                 onSave={!isSaved ? handleSaveStory : null}
-                onDownloadOffline={storyPlayerRef.current ? () => storyPlayerRef.current.triggerDownload() : null}
+                onDownloadOffline={() => storyPlayerRef.current?.triggerDownload()}
                 isSaved={isSaved}
                 isOffline={isOfflineMode}
                 savedStoryId={savedStoryId}

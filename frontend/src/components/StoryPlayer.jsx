@@ -207,7 +207,9 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   const handleSeek = (e) => {
     if (audioRef.current && audioRef.current.duration) {
       const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
+      // Handle both click and touch events
+      const clientX = e.type && e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+      const x = clientX - rect.left;
       const percentage = x / rect.width;
       const newTime = percentage * audioRef.current.duration;
       audioRef.current.currentTime = newTime;
@@ -365,12 +367,12 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       <div className="player-header">
         <h2>🎬 {storyData.title || "Story Time"}</h2>
         <div className="player-header-actions">
-          {!isSaved && !isOffline && onSave && (
+          {!isSaved && onSave && (
             <button onClick={onSave} className="action-btn save-btn" disabled={completedSceneCount < totalScenes}>
-              💾 Save Online
+              💾 Save
             </button>
           )}
-          {!isOffline && onDownloadOffline && (
+          {onDownloadOffline && (
             <button onClick={onDownloadOffline} className="action-btn download-btn" disabled={completedSceneCount < totalScenes}>
               📥 Download
             </button>
@@ -418,7 +420,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
                 {/* Audio Progress Bar */}
                 <div className="audio-progress-section">
                   <span className="time-display">{formatTime(currentTime)}</span>
-                  <div className="audio-progress-bar" onClick={handleSeek}>
+                  <div className="audio-progress-bar" onClick={handleSeek} onTouchStart={handleSeek}>
                     <div className="audio-progress-fill" style={{ width: `${progress}%` }} />
                     <div className="audio-progress-handle" style={{ left: `${progress}%` }} />
                   </div>
