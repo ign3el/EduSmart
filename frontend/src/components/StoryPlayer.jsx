@@ -9,21 +9,16 @@ const API_DOMAIN = "https://edusmart.ign3el.com";
 // Helper function to build full URL, handling absolute URLs and data URLs
 const buildFullUrl = (url) => {
   if (!url) {
-    console.warn('⚠️ buildFullUrl received empty URL');
     return '';
   }
-  console.log('🔧 buildFullUrl input:', url);
   
   // Check if already absolute (http/https) or data URL
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
-    console.log('✅ URL is already absolute:', url);
     return url;
   }
   
   // Relative path, prepend domain
-  const fullUrl = `${API_DOMAIN}${url}`;
-  console.log('🔗 Built full URL:', fullUrl);
-  return fullUrl;
+  return `${API_DOMAIN}${url}`;
 };
 
 const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null, totalScenes = 0, completedSceneCount = 0 }, ref) => {
@@ -97,36 +92,9 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
   }, [currentScene, scenes]);
 
   useEffect(() => {
-    
-    // Test if image endpoint is accessible - Enhanced logging for mobile debugging
+    // Pre-test image accessibility (silent)
     if (fullImageUrl) {
-      console.log('🖼️ StoryPlayer - Loading image for scene:', currentScene);
-      console.log('📍 Full Image URL:', fullImageUrl);
-      console.log('📱 User Agent:', navigator.userAgent);
-      console.log('🌐 Window width:', window.innerWidth);
-      
-      fetch(fullImageUrl, { method: 'HEAD' })
-        .then(res => {
-          console.log('✅ HEAD request status:', res.status);
-          console.log('📋 Response headers:', [...res.headers.entries()]);
-          if (!res.ok) {
-            console.error('❌ HEAD request not OK:', res.status, res.statusText);
-          }
-        })
-        .catch(err => {
-          console.error('❌ HEAD request failed:', err);
-          console.error('Error details:', err.message, err.stack);
-        });
-      
-      // Try to load the image directly to see any errors
       const testImg = new Image();
-      testImg.onload = () => {
-        console.log('✅ Test image loaded successfully');
-      };
-      testImg.onerror = (err) => {
-        console.error('❌ Test image load failed:', err);
-        console.error('Failed URL:', testImg.src);
-      };
       testImg.src = fullImageUrl;
     }
   }, [currentScene, fullImageUrl, imageLoaded, imageError]);
@@ -419,19 +387,12 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
                   src={fullImageUrl} 
                   alt={`Scene ${currentScene + 1}`}
                   onLoad={(e) => {
-                    console.log('✅ Image loaded successfully in DOM');
-                    console.log('📍 Image dimensions:', e.target.naturalWidth, 'x', e.target.naturalHeight);
-                    console.log('🔗 Image URL:', e.target.src);
                     if (!imageLoaded) setImageLoaded(true);
                     if (imageError) setImageError(false);
                   }}
                   onError={(e) => {
-                    console.error('❌ Image failed to load in DOM');
-                    console.error('🔗 Failed URL:', e.target?.src);
-                    console.error('📱 User Agent:', navigator.userAgent);
-                    console.error('🌐 Online:', navigator.onLine);
-                    console.error('📄 Image dimensions:', e.target?.naturalWidth, 'x', e.target?.naturalHeight);
-                    setImageError(true);
+                    if (!imageError) setImageError(true);
+                    if (imageLoaded) setImageLoaded(false);
                   }}
                   crossOrigin="anonymous"
                 />

@@ -38,8 +38,6 @@ function LoadStory({ onLoad, onBack }) {
   const fetchStories = async () => {
     try {
       const response = await apiClient.get('/api/list-stories')
-      console.log('Fetched stories:', response.data)
-      console.log('First story details:', response.data[0])
       
       // Remove duplicates based on story_id
       const uniqueStories = response.data.reduce((acc, current) => {
@@ -56,7 +54,6 @@ function LoadStory({ onLoad, onBack }) {
         return acc
       }, [])
       
-      console.log(`Removed ${response.data.length - uniqueStories.length} duplicate stories`)
       setStories(uniqueStories)
     } catch (error) {
       console.error('Error fetching stories:', error)
@@ -84,22 +81,7 @@ function LoadStory({ onLoad, onBack }) {
 
   const handleLoad = async (story) => {
     try {
-      console.log('Loading story with story_id:', story.story_id)
-      console.log('Full story object:', story)
       const response = await apiClient.get(`/api/load-story/${story.story_id}`)
-      console.log('Story loaded successfully:', response.data.name)
-      console.log('Story data scenes:', response.data.story_data?.scenes?.length || 0)
-      
-      // Log first scene to verify URLs are present
-      if (response.data.story_data?.scenes?.length > 0) {
-        const firstScene = response.data.story_data.scenes[0]
-        console.log('First scene sample:', {
-          narration: firstScene.narration?.substring(0, 50) + '...',
-          audio_url: firstScene.audio_url || '⚠️ MISSING',
-          image_url: firstScene.image_url || '⚠️ MISSING'
-        })
-      }
-      
       onLoad(response.data.story_data, response.data.name, story.story_id)
     } catch (error) {
       console.error('Failed to load story:', error)
