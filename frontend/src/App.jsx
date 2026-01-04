@@ -353,6 +353,7 @@ function MainApp() {
                 // First scene is ready - show it immediately
                 setStoryData(job.result)
                 navigateTo('playing')
+                // Don't clear interval - continue polling for remaining scenes
               } else {
                 // Update story data with newly completed scenes
                 setStoryData(job.result)
@@ -366,7 +367,10 @@ function MainApp() {
               setTotalScenes(job.total_scenes)
               setCompletedSceneCount(job.total_scenes)
             }
-            navigateTo('playing')
+            // Only navigate if not already playing
+            if (step !== 'playing') {
+              navigateTo('playing')
+            }
           } else if (job.status === 'failed') {
             clearInterval(pollTimer)
             throw new Error(job.error || "AI Generation failed.")
@@ -489,6 +493,9 @@ function MainApp() {
             onAdminClick={() => navigateTo('admin')}
             onProfile={() => navigateTo('profile')}
             onLogout={logout}
+            onSaveStory={step === 'playing' && !isSaved ? handleSaveStory : null}
+            onDownloadStory={step === 'playing' ? () => storyPlayerRef.current?.triggerDownload() : null}
+            isPlayingStory={step === 'playing'}
           />
         )}
       </header>

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import updateService from '../services/updateService'
 import './NavigationMenu.css'
 
-function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOfflineManager, onAdminClick, onProfile, onLogout }) {
+function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOfflineManager, onAdminClick, onProfile, onLogout, onSaveStory, onDownloadStory, isPlayingStory }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
 
@@ -83,14 +83,24 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
             ⚙️ Admin Panel
           </button>
         )}
-        {onNewStory && (
+        {isPlayingStory && onSaveStory && (
+          <button onClick={() => handleAction(onSaveStory)} className="nav-item accent">
+            💾 Save
+          </button>
+        )}
+        {isPlayingStory && onDownloadStory && (
+          <button onClick={() => handleAction(onDownloadStory)} className="nav-item accent">
+            📥 Download
+          </button>
+        )}
+        {!isPlayingStory && onNewStory && (
           <button onClick={() => handleAction(onNewStory)} className="nav-item accent">
             ✨ New Story
           </button>
         )}
         {onProfile && (
-          <button onClick={() => handleAction(onProfile)} className="nav-item">
-            👤 {user?.email?.split('@')[0] || 'Profile'}
+          <button onClick={() => handleAction(onProfile)} className="nav-item profile-avatar" title="Account">
+            {user?.email?.charAt(0).toUpperCase() || '👤'}
           </button>
         )}
         <button 
@@ -134,7 +144,7 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
 
               <div className="mobile-menu-content">
                 {user && (
-                  <div className="menu-user-info">
+                  <div className="menu-user-info" onClick={() => handleAction(onProfile)} style={{cursor: 'pointer'}}>
                     <div className="user-avatar">{user.email?.charAt(0).toUpperCase()}</div>
                     <div className="user-details">
                       <p className="user-email">{user.email}</p>
@@ -188,12 +198,6 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                   <div className="menu-divider"></div>
                   <div className="menu-section">
                     <h4>Account</h4>
-                    {onProfile && (
-                      <button onClick={() => handleAction(onProfile)} className="menu-item">
-                        <span className="menu-icon">👤</span>
-                        <span>{user?.email?.split('@')[0] || 'Profile'}</span>
-                      </button>
-                    )}
                     <button 
                       onClick={() => {
                         handleCheckUpdate();
