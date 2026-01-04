@@ -19,10 +19,11 @@
 
 .story-table-container {
     overflow-x: auto;
-    border: 1px solid #dee2e6;
+    border: 1px solid #d0d9ff;
     border-radius: 8px;
     -webkit-overflow-scrolling: touch;
     max-width: 100%;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
 }
 
 .story-list table {
@@ -35,7 +36,7 @@
 .story-list th,
 .story-list td {
     padding: 1rem;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid #e5ebff;
     vertical-align: middle;
 }
 
@@ -57,11 +58,11 @@
 }
 
 .story-list tbody tr:nth-child(even) {
-    background-color: #f8f9fa;
+    background-color: #f0f4ff;
 }
 
 .story-list tbody tr:nth-child(odd) {
-    background-color: #ffffff;
+    background-color: #fafbff;
 }
 
 .story-list th.sorted-asc::after,
@@ -85,7 +86,7 @@
 
 
 .story-list tr:hover {
-    background: linear-gradient(90deg, #f1f3f5 0%, #e9ecef 100%) !important;
+    background: linear-gradient(90deg, #e8edff 0%, #dfe7ff 100%) !important;
     transition: background 0.2s ease;
 }
 
