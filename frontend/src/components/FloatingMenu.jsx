@@ -17,7 +17,9 @@ function FloatingMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOffl
   return (
     <>
       <button className="floating-menu-toggle" onClick={toggleMenu} aria-label="Menu">
+        <span className="menu-text">Menu</span>
         <motion.div
+          className="menu-icon"
           animate={{ rotate: isOpen ? 90 : 0 }}
           transition={{ duration: 0.3 }}
         >

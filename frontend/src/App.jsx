@@ -49,6 +49,7 @@ function MainApp() {
   const [detectedLanguage, setDetectedLanguage] = useState('en');
   
   const [storyData, setStoryData] = useState(null)
+  const storyPlayerRef = useRef(null);
   const [progress, setProgress] = useState(0)
   const [totalScenes, setTotalScenes] = useState(0) // Track total scenes from backend
   const [completedSceneCount, setCompletedSceneCount] = useState(0) // Track completed scenes
@@ -412,7 +413,7 @@ function MainApp() {
         onLoadStories={() => navigateTo('load')}
         onOfflineManager={() => navigateTo('offline')}
         onSaveOnline={step === 'playing' && !isSaved ? handleSaveStory : null}
-        onDownloadOffline={null}
+        onDownloadOffline={step === 'playing' && storyPlayerRef.current ? () => storyPlayerRef.current.triggerDownload() : null}
         onAdminClick={() => navigateTo('admin')}
         onLogout={logout}
         showStoryActions={step === 'playing'}
@@ -578,7 +579,8 @@ function MainApp() {
 
           {step === 'playing' && storyData && (
             <motion.div key="playing" className="player-container">
-              <StoryPlayer 
+              <StoryPlayer
+                ref={storyPlayerRef}
                 storyData={storyData} 
                 avatar={selectedAvatar} 
                 onRestart={handleRestart}

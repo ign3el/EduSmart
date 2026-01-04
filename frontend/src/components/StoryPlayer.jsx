@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlay, FiPause, FiSkipForward, FiSkipBack, FiRotateCw } from 'react-icons/fi';
 import './StoryPlayer.css';
@@ -26,7 +26,7 @@ const buildFullUrl = (url) => {
   return fullUrl;
 };
 
-function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null, totalScenes = 0, completedSceneCount = 0 }) {
+const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null, totalScenes = 0, completedSceneCount = 0 }, ref) => {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
@@ -47,6 +47,11 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
   const fullAudioUrl = buildFullUrl(scene?.audio_url);
   const fullImageUrl = buildFullUrl(scene?.image_url);
   const uploadUrl = buildFullUrl(storyData?.upload_url);
+
+  // Expose download function to parent component
+  useImperativeHandle(ref, () => ({
+    triggerDownload: () => handleOfflineDownload()
+  }));
 
   // Preload all scene images when story loads
   useEffect(() => {
@@ -386,14 +391,12 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
                     alt={`Scene ${currentScene + 1}`}
                     onLoad={() => {
                       console.log('✅ Image loaded successfully in DOM');
-                      setImageLoaded(true);
                     }}
                     onError={(e) => {
                       console.error('❌ Image failed to load in DOM');
                       console.error('Error event:', e);
                       console.error('Image src:', e.target?.src);
                       console.error('Natural dimensions:', e.target?.naturalWidth, 'x', e.target?.naturalHeight);
-                      setImageError(true);
                     }}
                     crossOrigin="anonymous"
                   />
@@ -468,48 +471,7 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
       </div>
 
       <div className="action-buttons-overlay">
-        <motion.button 
-          className="action-menu-toggle"
-          onClick={() => setShowActionMenu(!showActionMenu)}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          ⋮
-        </motion.button>
-        
-        <AnimatePresence>
-          {showActionMenu && (
-            <motion.div 
-              className="action-menu"
-              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {!isSaved && !isOffline && onSave && (
-                <button className="action-menu-item save-online" onClick={() => { onSave(); setShowActionMenu(false); }}>
-                  <span className="action-icon">💾</span>
-                  <span>Save Online</span>
-                </button>
-              )}
-              {!isOffline && (
-                <button 
-                  className="action-menu-item download-offline" 
-                  onClick={() => { handleOfflineDownload(); setShowActionMenu(false); }}
-                  disabled={isDownloading}
-                >
-                  <span className="action-icon">📥</span>
-                  <span>{isDownloading ? 'Downloading...' : 'Download Offline'}</span>
-                </button>
-              )}
-              <button className="action-menu-item go-home" onClick={() => { onRestart(); setShowActionMenu(false); }}>
-                <span className="action-icon"><FiRotateCw /></span>
-                <span>{isSaved || isOffline ? 'Back Home' : 'New Story'}</span>
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Action menu removed - now using global FloatingMenu */}
       </div>
 
       {downloadMessage && (
@@ -560,6 +522,8 @@ function StoryPlayer({ storyData, avatar, onRestart, onSave, isSaved = false, is
       )}
     </div>
   );
-}
+});
+
+StoryPlayer.displayName = 'StoryPlayer';
 
 export default StoryPlayer;

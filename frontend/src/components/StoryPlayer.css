@@ -69,6 +69,26 @@
   min-height: 70vh;
 }
 
+/* Landscape mobile: Side-by-side layout */
+@media (max-width: 1023px) and (orientation: landscape) {
+  .scene-content {
+    grid-template-columns: 1fr 1.2fr;
+    gap: 1rem;
+    padding: 1rem;
+    min-height: auto;
+  }
+  
+  .scene-image {
+    min-height: 250px;
+    max-height: 400px;
+  }
+  
+  .scene-text {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+}
+
 /* Desktop: Side-by-side layout */
 @media (min-width: 1024px) {
   .scene-content {

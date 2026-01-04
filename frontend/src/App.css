@@ -199,12 +199,18 @@
   .home-buttons {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    max-width: 100%;
-    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    gap: 2rem;
   }
 
   .home-btn {
     max-width: none;
+    min-height: 180px;
+  }
+  
+  .content-shell {
+    max-width: 1400px;
   }
 }
 
