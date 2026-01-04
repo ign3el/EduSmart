@@ -439,8 +439,8 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
                     {isPlaying ? <FiPause /> : <FiPlay />}
                   </button>
                   
-                  <button onClick={goToNextScene} className="control-btn next-btn">
-                    {currentScene === scenes.length - 1 ? "📝 Quiz" : <FiSkipForward />}
+                  <button onClick={goToNextScene} className="control-btn next-btn" title={currentScene === scenes.length - 1 ? 'Take Quiz' : 'Next Scene'}>
+                    {currentScene === scenes.length - 1 ? "📝" : <FiSkipForward />}
                   </button>
                 </div>
 

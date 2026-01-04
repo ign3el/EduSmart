@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import updateService from '../services/updateService'
@@ -9,13 +9,13 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [isPWA, setIsPWA] = useState(false)
-  let deferredPrompt = null
+  const deferredPromptRef = useRef(null)
 
   // Handle PWA install prompt
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault()
-      deferredPrompt = e
+      deferredPromptRef.current = e
       setShowInstallPrompt(true)
     }
 
@@ -39,14 +39,14 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
   }, [])
 
   const handleInstallPWA = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
+    if (deferredPromptRef.current) {
+      deferredPromptRef.current.prompt()
+      const { outcome } = await deferredPromptRef.current.userChoice
       if (outcome === 'accepted') {
         setIsPWA(true)
         setShowInstallPrompt(false)
       }
-      deferredPrompt = null
+      deferredPromptRef.current = null
     }
   }
 

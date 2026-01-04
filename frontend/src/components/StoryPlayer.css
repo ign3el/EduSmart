@@ -500,13 +500,13 @@
 }
 
 .control-btn {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border-radius: 6px;
   border: 1px solid var(--edge);
   background: rgba(255, 255, 255, 0.04);
   color: var(--ink-1);
-  font-size: 0.75rem;
+  font-size: 1rem;
   display: grid;
   place-items: center;
   transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
@@ -524,8 +524,8 @@
 }
 
 .play-btn {
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
   background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
   color: #04101f;
   border: none;
