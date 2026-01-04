@@ -12,6 +12,21 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
     setIsMobileOpen(false)
   }
 
+  // Debug logging for mobile menu
+  if (isMobileOpen) {
+    console.log('🍔 Mobile Menu Debug:', {
+      user: !!user,
+      userEmail: user?.email,
+      isAdmin,
+      onHome: !!onHome,
+      onLoadStories: !!onLoadStories,
+      onOfflineManager: !!onOfflineManager,
+      onAdminClick: !!onAdminClick,
+      onNewStory: !!onNewStory,
+      onLogout: !!onLogout
+    })
+  }
+
   return (
     <>
       {/* Mobile Hamburger Button */}

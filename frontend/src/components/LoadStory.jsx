@@ -40,7 +40,24 @@ function LoadStory({ onLoad, onBack }) {
       const response = await apiClient.get('/api/list-stories')
       console.log('Fetched stories:', response.data)
       console.log('First story details:', response.data[0])
-      setStories(response.data)
+      
+      // Remove duplicates based on story_id
+      const uniqueStories = response.data.reduce((acc, current) => {
+        const exists = acc.find(item => item.story_id === current.story_id)
+        if (!exists) {
+          acc.push(current)
+        } else {
+          // Keep the most recent one
+          const index = acc.findIndex(item => item.story_id === current.story_id)
+          if (new Date(current.updated_at) > new Date(acc[index].updated_at)) {
+            acc[index] = current
+          }
+        }
+        return acc
+      }, [])
+      
+      console.log(`Removed ${response.data.length - uniqueStories.length} duplicate stories`)
+      setStories(uniqueStories)
     } catch (error) {
       console.error('Error fetching stories:', error)
       alert('Failed to load stories. Please refresh the page.')

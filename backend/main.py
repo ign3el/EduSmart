@@ -523,8 +523,14 @@ async def load_story(story_id: str, user: User = Depends(get_current_user)):
     for scene in story_data.get("scenes", []):
         if scene.get("image_url"):
             scene["image_url"] = scene["image_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+            # Strip UUID prefix from filename if present (e.g., abc123-def456-_scene_0.png -> scene_0.png)
+            import re
+            scene["image_url"] = re.sub(r'/([a-f0-9-]+)_scene_', '/scene_', scene["image_url"])
         if scene.get("audio_url"):
             scene["audio_url"] = scene["audio_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+            # Strip UUID prefix from audio filename
+            import re
+            scene["audio_url"] = re.sub(r'/([a-f0-9-]+)_scene_', '/scene_', scene["audio_url"])
             
     return {"name": story["name"], "story_data": story_data}
 
