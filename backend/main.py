@@ -393,8 +393,8 @@ async def upload_story(
         story_id, 
         grade_level, 
         file_hash=file_hash, 
-        user_id=current_user.id, 
-        username=current_user.username
+        user_id=current_user['id'], 
+        username=current_user['username']
     )
     
     # Use progressive workflow
