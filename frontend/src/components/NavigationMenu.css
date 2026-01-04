@@ -99,7 +99,7 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
-  z-index: 998;
+  z-index: 9998;
 }
 
 @media (min-width: 769px) {
@@ -118,7 +118,7 @@
   background: linear-gradient(145deg, rgba(15, 22, 66, 0.98), rgba(18, 31, 77, 0.98));
   border-left: 1px solid rgba(168, 85, 247, 0.3);
   box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   overflow: hidden;
