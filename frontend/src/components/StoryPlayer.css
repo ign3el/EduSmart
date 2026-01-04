@@ -170,7 +170,8 @@
   flex-direction: column;
   gap: 0.8rem;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
+  flex: 1;
 }
 
 .scene-image {
@@ -182,13 +183,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
-  max-height: 50vh;
 }
 
 .scene-image img {
   width: 100%;
-  height: 100%;
+  height: auto;
   object-fit: contain;
   border-radius: var(--radius-md);
   display: block;
@@ -219,16 +218,17 @@
   background: rgba(255, 255, 255, 0.03);
   border-radius: var(--radius-md);
   border: 1px solid var(--edge);
-  max-height: 25vh;
+  max-height: 15vh;
   overflow-y: auto;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* Desktop: Fixed height for narration */
 @media (min-width: 1024px) {
   .scene-narration {
-    max-height: 30vh;
+    max-height: 20vh;
   }
 }
 
