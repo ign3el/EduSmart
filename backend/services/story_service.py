@@ -90,10 +90,10 @@ STEP 1 - DOCUMENT ANALYSIS (Internal - do this first):
    - Questions or exercises included
    - Concepts emphasized or repeated
 🔍 EXTRACT: What specific knowledge/skills should students gain from THIS document?
-📝 LIST the 3-5 most important concepts the document teaches
+📝 LIST all the most important concepts the document teaches
 
 STEP 2 - STORY DESIGN (Use extracted objectives):
-✓ Each scene MUST teach one concept you extracted from the document
+✓ Each scene MUST teach atleast one of the concepts you extracted from the document
 ✓ Use the document's examples, terminology, and explanations as your source material
 ✓ If document includes specific facts/data/dates, incorporate them accurately
 ✓ Match the document's subject depth (don't oversimplify or add unrelated content)
@@ -159,7 +159,7 @@ IMAGE_PROMPT REQUIREMENTS:
 ✓ Set appropriate environment (classroom, nature, laboratory, historical setting)
 ✓ Use composition that focuses attention on learning elements
 
-Generate 6-10 scenes. Output ONLY the JSON object."""
+Generate as many scenes as required. Output ONLY the JSON object."""
 
             def _generate_story_unified():
                 return self.client.models.generate_content(

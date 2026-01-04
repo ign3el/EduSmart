@@ -145,20 +145,8 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       audioRef.current.src = fullAudioUrl;
       audioRef.current.load(); // Force the browser to load the new scene's audio
       
-      // Add 0.5s delay before starting audio to let scene load
-      if (isPlaying) {
-        setTimeout(() => {
-          if (audioRef.current && isPlaying) {
-            const playPromise = audioRef.current.play();
-            if (playPromise !== undefined) {
-              playPromise.catch(err => {
-                console.error("Audio interrupted on scene change:", err);
-                setIsPlaying(false);
-              });
-            }
-          }
-        }, 500);
-      }
+      // Don't auto-play here - let the isPlaying effect handle it
+      // This prevents race conditions between scene change and play state
     }
   }, [currentScene, fullAudioUrl, fullImageUrl]);
 
@@ -265,13 +253,15 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
 
   const togglePlay = () => {
     if (audioRef.current) {
-      if (isPlaying) {
-        // Pause audio
+      const isCurrentlyPlaying = !audioRef.current.paused;
+      
+      if (isCurrentlyPlaying) {
+        // Audio is playing, pause it
         audioRef.current.pause();
         setIsPlaying(false);
         console.log('⏸️ Audio paused');
       } else {
-        // Play audio
+        // Audio is paused, play it
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
           playPromise

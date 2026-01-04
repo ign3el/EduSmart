@@ -563,7 +563,8 @@ async def save_story(job_id: str, story_name: str = Form(...), user: User = Depe
         
         story_data = {
             "title": status["title"],
-            "scenes": updated_scenes
+            "scenes": updated_scenes,
+            "quiz": status.get("quiz", [])
         }
         
         success = StoryOperations.save_story(
