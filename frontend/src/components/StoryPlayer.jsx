@@ -264,7 +264,30 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   };
 
   const togglePlay = () => {
-    setIsPlaying(!isPlaying);
+    if (audioRef.current) {
+      if (isPlaying) {
+        // Pause audio
+        audioRef.current.pause();
+        setIsPlaying(false);
+        console.log('⏸️ Audio paused');
+      } else {
+        // Play audio
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+              console.log('▶️ Audio playing');
+            })
+            .catch(err => {
+              console.error('Audio play error:', err);
+              setIsPlaying(false);
+            });
+        } else {
+          setIsPlaying(true);
+        }
+      }
+    }
   };
 
   const handleOfflineDownload = async () => {
@@ -352,6 +375,12 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
 
   if (showQuiz && !storyData?.quiz) {
     console.log('⚠️ Quiz mode but no quiz data available')
+    console.log('📊 storyData structure:', {
+      hasStoryData: !!storyData,
+      storyDataKeys: storyData ? Object.keys(storyData) : [],
+      hasQuiz: !!storyData?.quiz,
+      scenes: storyData?.scenes?.length
+    })
   }
 
   if (!scene) {

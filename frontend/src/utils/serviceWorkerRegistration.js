@@ -82,32 +82,10 @@ export function onConnectionChange(callback) {
     window.removeEventListener('offline', callback);
   };
 }
-
-// Prompt user to install PWA
+// PWA install prompt is now handled in NavigationMenu.jsx
+// Removed duplicate handler to prevent conflicts
 export function promptInstall() {
-  let deferredPrompt = null;
-  
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    
-    // Show custom install button/banner
-    console.log('💾 PWA install prompt ready');
-    
-    // You can trigger this later with a button click
-    window.showInstallPrompt = async () => {
-      if (!deferredPrompt) {
-        console.log('No install prompt available');
-        return false;
-      }
-      
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response to install prompt: ${outcome}`);
-      deferredPrompt = null;
-      return outcome === 'accepted';
-    };
-  });
+  console.log('💾 PWA install prompt setup delegated to NavigationMenu');
   
   // Track successful installation
   window.addEventListener('appinstalled', () => {
