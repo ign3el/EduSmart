@@ -624,6 +624,7 @@ function MainApp() {
                 onDownloadOffline={storyPlayerRef.current ? () => storyPlayerRef.current.triggerDownload() : null}
                 isSaved={isSaved}
                 isOffline={isOfflineMode}
+                allScenesReady={completedSceneCount >= totalScenes && totalScenes > 0}
               />
               <motion.div key="playing" className="player-container">
                 <StoryPlayer

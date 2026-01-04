@@ -396,22 +396,6 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
       
       <div className="player-header">
         <h2>🎬 {storyData.title || "Story Time"}</h2>
-        <div className="player-header-actions">
-          {!isSaved && !isOffline && onSave && (
-            <button className="action-btn save-btn" onClick={onSave}>
-              💾 Save Online
-            </button>
-          )}
-          {!isOffline && (
-            <button 
-              className="action-btn download-btn" 
-              onClick={handleOfflineDownload}
-              disabled={isDownloading}
-            >
-              📥 {isDownloading ? 'Downloading...' : 'Download Offline'}
-            </button>
-          )}
-        </div>
         {uploadUrl && (
           <a className="upload-link" href={uploadUrl} target="_blank" rel="noreferrer">
             See Your Uploaded File

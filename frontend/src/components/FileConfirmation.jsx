@@ -6,7 +6,7 @@ import './FileConfirmation.css'
 function FileConfirmation({ file, gradeLevel, onConfirm, onBack, onReupload, onEditGrade }) {
   // New state for Kokoro TTS settings
   const [voice, setVoice] = useState('af_sarah');
-  const [speed, setSpeed] = useState(1.0);
+  const [speed, setSpeed] = useState(1.25); // 1.25 is the middle of 0.5-2.0 range for "Normal"
   const [detectedLanguage, setDetectedLanguage] = useState('en');
   const [isDetectingLanguage, setIsDetectingLanguage] = useState(false);
 
