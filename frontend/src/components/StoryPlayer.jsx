@@ -151,6 +151,8 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
   // Handle Scene Change and Source Loading
   useEffect(() => {
     setProgress(0);
+    setCurrentTime(0);
+    setDuration(0);
     setImageLoaded(false);
     setImageError(false);
     
@@ -175,25 +177,28 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
       audioRef.current.src = fullAudioUrl;
       audioRef.current.load(); // Force the browser to load the new scene's audio
       
-      // Only auto-play if isPlaying state is true
+      // Add 0.5s delay before starting audio to let scene load
       if (isPlaying) {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(err => {
-            console.error("Audio interrupted on scene change:", err);
-            setIsPlaying(false);
-          });
-        }
+        setTimeout(() => {
+          if (audioRef.current && isPlaying) {
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(err => {
+                console.error("Audio interrupted on scene change:", err);
+                setIsPlaying(false);
+              });
+            }
+          }
+        }, 500);
       }
     }
-  }, [currentScene, fullAudioUrl, fullImageUrl, isPlaying]);
+  }, [currentScene, fullAudioUrl, fullImageUrl]);
 
   const goToNextScene = () => {
     if (currentScene < scenes.length - 1) {
       // Stop current audio before changing scene
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
       }
       setCurrentScene(currentScene + 1);
       setGeneratingMessage('');
@@ -214,7 +219,6 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
       // Stop current audio before changing scene
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
       }
       setCurrentScene(currentScene - 1);
       setGeneratingMessage('');
