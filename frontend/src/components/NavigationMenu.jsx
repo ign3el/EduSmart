@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import updateService from '../services/updateService'
@@ -7,6 +7,48 @@ import './NavigationMenu.css'
 function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOfflineManager, onAdminClick, onProfile, onLogout, onSaveStory, onDownloadStory, isPlayingStory }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false)
+  const [isPWA, setIsPWA] = useState(false)
+  let deferredPrompt = null
+
+  // Handle PWA install prompt
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault()
+      deferredPrompt = e
+      setShowInstallPrompt(true)
+    }
+
+    const handleAppInstalled = () => {
+      setShowInstallPrompt(false)
+      setIsPWA(true)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) {
+      setIsPWA(true)
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
+
+  const handleInstallPWA = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      if (outcome === 'accepted') {
+        setIsPWA(true)
+        setShowInstallPrompt(false)
+      }
+      deferredPrompt = null
+    }
+  }
 
   const handleCheckUpdate = async () => {
     setIsCheckingUpdate(true)
@@ -221,6 +263,21 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                       <span className="menu-icon">{isCheckingUpdate ? '⏳' : '🔄'}</span>
                       <span>Check for Updates</span>
                     </button>
+                    {showInstallPrompt && !isPWA && (
+                      <button onClick={() => {
+                        handleInstallPWA();
+                        setIsMobileOpen(false);
+                      }} className="menu-item accent">
+                        <span className="menu-icon">📲</span>
+                        <span>Install App</span>
+                      </button>
+                    )}
+                    {isPWA && (
+                      <div className="menu-item" style={{opacity: 0.6}}>
+                        <span className="menu-icon">✓</span>
+                        <span>App Installed</span>
+                      </div>
+                    )}
                     {onLogout ? (
                       <button onClick={() => handleAction(onLogout)} className="menu-item danger">
                         <span className="menu-icon">🚪</span>

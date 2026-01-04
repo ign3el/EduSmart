@@ -350,14 +350,6 @@ function OfflineManager({ onLoadOffline, onBack }) {
               {storageInfo.persisted && ' 🔒'}
             </div>
           )}
-          {showInstallPrompt && !isPWA && (
-            <button className="install-pwa-btn" onClick={handleInstallPWA}>
-              📲 Install App
-            </button>
-          )}
-          {isPWA && (
-            <div className="pwa-badge">✓ Installed</div>
-          )}
         </div>
       </div>
 
