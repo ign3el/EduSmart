@@ -17,11 +17,13 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
       e.preventDefault()
       deferredPromptRef.current = e
       setShowInstallPrompt(true)
+      console.log('✅ beforeinstallprompt event fired - Install App button should show')
     }
 
     const handleAppInstalled = () => {
       setShowInstallPrompt(false)
       setIsPWA(true)
+      console.log('✅ App installed successfully')
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -30,7 +32,10 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) {
       setIsPWA(true)
+      console.log('✅ App is already in standalone mode')
     }
+
+    console.log('🔍 PWA listener attached - waiting for beforeinstallprompt event...')
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -267,14 +272,6 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                       <button onClick={() => {
                         handleInstallPWA();
                         setIsMobileOpen(false);
-                      }} className="menu-item accent">
-                        <span className="menu-icon">📲</span>
-                        <span>Install App</span>
-                      </button>
-                    )}
-                    {!showInstallPrompt && !isPWA && (
-                      <button onClick={() => {
-                        alert('📲 Install app feature is available on compatible devices (Chrome, Edge, Firefox on Android)');
                       }} className="menu-item accent">
                         <span className="menu-icon">📲</span>
                         <span>Install App</span>
