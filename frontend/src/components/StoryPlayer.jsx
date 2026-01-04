@@ -469,10 +469,6 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, isSaved 
         </AnimatePresence>
       </div>
 
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${progress}%` }} />
-      </div>
-
       <div className="action-buttons-overlay">
         {/* Action menu removed - now using global FloatingMenu */}
       </div>
