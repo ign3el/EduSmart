@@ -145,10 +145,24 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       audioRef.current.src = fullAudioUrl;
       audioRef.current.load(); // Force the browser to load the new scene's audio
       
-      // Don't auto-play here - let the isPlaying effect handle it
-      // This prevents race conditions between scene change and play state
+      // If isPlaying is true, wait for audio to be ready before playing
+      if (isPlaying) {
+        const handleCanPlay = () => {
+          if (audioRef.current && isPlaying) {
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(err => {
+                console.error('Scene change auto-play failed:', err);
+                setIsPlaying(false);
+              });
+            }
+          }
+          audioRef.current?.removeEventListener('canplay', handleCanPlay);
+        };
+        audioRef.current.addEventListener('canplay', handleCanPlay);
+      }
     }
-  }, [currentScene, fullAudioUrl, fullImageUrl]);
+  }, [currentScene, fullAudioUrl, fullImageUrl, isPlaying]);
 
   const handleQuizClick = () => {
     console.log('🎯 Quiz button clicked - starting quiz...')

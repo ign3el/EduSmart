@@ -14,10 +14,15 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
   // Handle PWA install prompt
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
+      console.log('📱 beforeinstallprompt event fired!', {
+        userAgent: navigator.userAgent.substring(0, 100),
+        standalone: window.matchMedia('(display-mode: standalone)').matches,
+        isIOS: /iPhone|iPad|iPod/.test(navigator.userAgent)
+      })
       e.preventDefault()
       deferredPromptRef.current = e
       setShowInstallPrompt(true)
-      console.log('✅ beforeinstallprompt event fired - Install App button should show')
+      console.log('💾 PWA install prompt ready - Install App button should appear')
     }
 
     const handleAppInstalled = () => {
@@ -36,6 +41,13 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
     }
 
     console.log('🔍 PWA listener attached - waiting for beforeinstallprompt event...')
+    console.log('🌐 Device info:', {
+      standalone: window.matchMedia('(display-mode: standalone)').matches,
+      isIOS: /iPhone|iPad|iPod/.test(navigator.userAgent),
+      isAndroid: /Android/.test(navigator.userAgent),
+      isChrome: /Chrome/.test(navigator.userAgent),
+      hasServiceWorker: 'serviceWorker' in navigator
+    })
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
