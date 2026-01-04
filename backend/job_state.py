@@ -41,7 +41,10 @@ class JobStateManager:
                     total_scenes INTEGER,
                     completed_scenes INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    file_hash TEXT,
+                    user_id INTEGER,
+                    username TEXT
                 )
             """)
             
@@ -66,9 +69,14 @@ class JobStateManager:
                 CREATE INDEX IF NOT EXISTS idx_scenes_story 
                 ON scenes(story_id, scene_index)
             """)
-    
-    def initialize_story(self, story_id: str, grade_level: str):
+            
+            conn.execute(""", file_hash: str = None, user_id: int = None, username: str = None):
         """Create a preliminary story job record."""
+        with self._get_conn() as conn:
+            conn.execute("""
+                INSERT INTO stories (story_id, status, title, grade_level, total_scenes, completed_scenes, file_hash, user_id, username)
+                VALUES (?, 'initializing', 'Initializing story...', ?, 0, 0, ?, ?, ?)
+            """, (story_id, grade_level, file_hash, user_id, usernameob record."""
         with self._get_conn() as conn:
             conn.execute("""
                 INSERT INTO stories (story_id, status, title, grade_level, total_scenes, completed_scenes)
@@ -197,6 +205,23 @@ class JobStateManager:
                 SET status = 'failed', updated_at = CURRENT_TIMESTAMP
                 WHERE story_id = ?
             """, (story_id,))
+    
+    def check_duplicate_file(self, file_hash: str, hours: int = 24) -> Optional[Dict]:
+        """Check if a file with the same hash was uploaded within the specified hours."""
+        with self._get_conn() as conn:
+            row = conn.execute("""
+                SELECT story_id, title, username, user_id, created_at, status
+                FROM stories
+                WHERE file_hash = ? 
+                  AND created_at >= datetime('now', '-' || ? || ' hours')
+                  AND status = 'completed'
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (file_hash, hours)).fetchone()
+            
+            if row:
+                return dict(row)
+            return None
 
 # Global instance
 job_manager = JobStateManager()

@@ -8,6 +8,7 @@ import re
 import json
 import zipfile
 import logging
+import hashlib
 from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -325,15 +326,76 @@ async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level
         logger.error(f"AI Workflow Error: {e}")
         job_manager.mark_story_failed(story_id, str(e))
 
+@app.post("/api/check-duplicate")
+async def check_duplicate(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Check if a file has been uploaded within the last 24 hours."""
+    # Calculate file hash
+    file_content = await file.read()
+    file_hash = hashlib.sha256(file_content).hexdigest()
+    
+    # Reset file pointer for potential reuse
+    await file.seek(0)
+    
+    # Check for duplicate
+    duplicate = job_manager.check_duplicate_file(file_hash, hours=24)
+    
+    if duplicate:
+        return {
+            "is_duplicate": True,
+            "story_id": duplicate["story_id"],
+            "story_title": duplicate["title"],
+            "created_by": duplicate["username"] or f"User {duplicate['user_id']}",
+            "created_at": duplicate["created_at"]
+        }
+    
+    return {"is_duplicate": False, "file_hash": file_hash}
+
 @app.post("/api/upload")
-async def upload_story(background_tasks: BackgroundTasks, file: UploadFile = File(...), grade_level: str = Form("Grade 4"), voice: str = Form("af_sarah"), speed: float = Form(1.0)):
+async def upload_story(
+    background_tasks: BackgroundTasks, 
+    file: UploadFile = File(...), 
+    grade_level: str = Form("Grade 4"), 
+    voice: str = Form("af_sarah"), 
+    speed: float = Form(1.0),
+    file_hash: str = Form(None),
+    force_new: bool = Form(False),
+    current_user: User = Depends(get_current_user)
+):
+    # Calculate hash if not provided
+    file_content = await file.read()
+    if not file_hash:
+        file_hash = hashlib.sha256(file_content).hexdigest()
+    
+    # Check for duplicate unless force_new is True
+    if not force_new:
+        duplicate = job_manager.check_duplicate_file(file_hash, hours=24)
+        if duplicate:
+            return {
+                "is_duplicate": True,
+                "story_id": duplicate["story_id"],
+                "story_title": duplicate["title"],
+                "created_by": duplicate["username"] or f"User {duplicate['user_id']}",
+                "created_at": duplicate["created_at"]
+            }
+    
     story_id = str(uuid.uuid4())
     upload_path = os.path.join("uploads", f"{story_id}_{file.filename}")
+    
+    # Write file content
     with open(upload_path, "wb") as f:
-        f.write(await file.read())
+        f.write(file_content)
 
-    # Immediately create a record for the job to prevent race conditions
-    job_manager.initialize_story(story_id, grade_level)
+    # Initialize story with hash and user info
+    job_manager.initialize_story(
+        story_id, 
+        grade_level, 
+        file_hash=file_hash, 
+        user_id=current_user.id, 
+        username=current_user.username
+    )
     
     # Use progressive workflow
     background_tasks.add_task(run_ai_workflow_progressive, story_id, upload_path, grade_level, voice, speed)

@@ -18,6 +18,7 @@ import OfflineManager from './components/OfflineManager'
 import UserProfile from './components/UserProfile'
 import ReuploadConfirmModal from './components/ReuploadConfirmModal'
 import UploadProgressOverlay from './components/UploadProgressOverlay'
+import DuplicateStoryModal from './components/DuplicateStoryModal'
 import TeacherCard from './components/TeacherCard'
 import NavigationMenu from './components/NavigationMenu'
 import StoryActionsBar from './components/StoryActionsBar'
@@ -173,11 +174,35 @@ function MainApp() {
     }
   }
 
-  const handleFileUpload = (file) => {
+  const handleFileUpload = async (file) => {
     setUploadedFile(file)
     setUploadFileName(file.name)
     setShowUploadProgress(true)
     setUploadProgress(0)
+    
+    // Calculate file hash and check for duplicates
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await apiClient.post('/api/check-duplicate', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      
+      if (response.data.is_duplicate) {
+        // Found duplicate - show modal
+        setShowUploadProgress(false)
+        setDuplicateInfo(response.data)
+        setShowDuplicateModal(true)
+        return
+      }
+      
+      // Store hash for later use
+      setFileHash(response.data.file_hash)
+    } catch (err) {
+      console.error('Error checking duplicate:', err)
+      // Continue with upload even if check fails
+    }
     
     // Simulate upload progress
     let progress = 0
@@ -231,10 +256,16 @@ function MainApp() {
 
   const handleAvatarSelect = async (avatar) => {
     setSelectedAvatar(avatar)
-    await generateStory(avatar)
+    // Check if this was after a duplicate detection and user wants to force new
+    const forceNew = duplicateInfo !== null
+    await generateStory(avatar, forceNew)
+    // Clear duplicate info after using it
+    if (forceNew) {
+      setDuplicateInfo(null)
+    }
   }
 
-  const generateStory = async (avatar) => {
+  const generateStory = async (avatar, forceNew = false) => {
     try {
       navigateTo('generating')
       setError(null)
@@ -248,6 +279,11 @@ function MainApp() {
       // Append new Kokoro TTS settings
       formData.append('voice', voice)
       formData.append('speed', speed)
+      // Append file hash and force_new flag
+      if (fileHash) {
+        formData.append('file_hash', fileHash)
+      }
+      formData.append('force_new', forceNew.toString())
 
       // Use apiClient for automatic auth headers, assuming it's the default export from api.js
       const response = await fetch(`${API_URL}/api/upload`, { 
@@ -416,7 +452,7 @@ function MainApp() {
             user={user}
             isAdmin={user?.is_admin}
             onHome={() => navigateTo('home')}
-            onNewStory={step === 'playing' ? () => navigateTo('upload') : null}
+            onNewStory={() => navigateTo('upload')}
             onLoadStories={() => navigateTo('load')}
             onOfflineManager={() => navigateTo('offline')}
             onAdminClick={() => navigateTo('admin')}
@@ -619,6 +655,50 @@ function MainApp() {
             <ReuploadConfirmModal
               onConfirm={handleReuploadConfirm}
               onCancel={() => setShowReuploadModal(false)}
+            />
+          )}
+
+          {showDuplicateModal && duplicateInfo && (
+            <DuplicateStoryModal
+              isOpen={showDuplicateModal}
+              onClose={() => setShowDuplicateModal(false)}
+              onLoadExisting={async () => {
+                setShowDuplicateModal(false)
+                // Load the existing story
+                try {
+                  const response = await apiClient.get(`/api/story/${duplicateInfo.story_id}/status`)
+                  const storyStatus = response.data
+                  
+                  if (storyStatus.status === 'completed') {
+                    const formattedStory = {
+                      title: storyStatus.title,
+                      scenes: storyStatus.scenes.map((scene, idx) => ({
+                        id: idx,
+                        text: scene.text,
+                        imageUrl: scene.image_url,
+                        audioUrl: scene.audio_url
+                      }))
+                    }
+                    
+                    setStoryData(formattedStory)
+                    setCurrentJobId(duplicateInfo.story_id)
+                    setIsSaved(true)
+                    setSavedStoryId(duplicateInfo.story_id)
+                    navigateTo('playing')
+                  } else {
+                    setError('Story is still being generated')
+                  }
+                } catch (err) {
+                  console.error('Error loading duplicate story:', err)
+                  setError('Failed to load existing story')
+                }
+              }}
+              onCreateNew={() => {
+                setShowDuplicateModal(false)
+                // Continue with normal upload flow but force new generation
+                navigateTo('confirm')
+              }}
+              duplicateInfo={duplicateInfo}
             />
           )}
 
