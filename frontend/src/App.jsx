@@ -249,12 +249,16 @@ function MainApp() {
     }
   }
 
-  const handleConfirmFile = (settings) => {
+  const handleConfirmFile = async (settings) => {
     if (settings) {
       setVoice(settings.voice);
       setSpeed(settings.speed);
     }
-    navigateTo('avatar')
+    // Check if this was after a duplicate detection and user wants to force new
+    const forceNew = duplicateInfo !== null
+    await generateStory('Professor Paws', forceNew) // Use default avatar
+    // Clear duplicate info after using it
+    setDuplicateInfo(null)
   }
 
   const handleAvatarSelect = async (avatar) => {
@@ -584,12 +588,6 @@ function MainApp() {
                 onBack={() => navigateTo('home')}
                 onLogout={logout}
               />
-            </motion.div>
-          )}
-
-          {step === 'avatar' && (
-            <motion.div key="avatar" className="step-container">
-              <AvatarSelector onSelect={handleAvatarSelect} />
             </motion.div>
           )}
 
