@@ -125,7 +125,8 @@ mimetypes.add_type('image/png', '.png')
 
 # --- Static File Serving ---
 app.mount("/api/outputs", StaticFiles(directory="outputs"), name="outputs")
-app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
+# Custom endpoint handles saved-stories with UUID prefix matching (see below)
+# app.mount("/api/saved-stories", StaticFiles(directory="saved_stories"), name="saved_stories")
 
 @app.get("/api/saved-stories/{story_id}/{filename}")
 async def serve_story_file(story_id: str, filename: str):
@@ -135,13 +136,13 @@ async def serve_story_file(story_id: str, filename: str):
     """
     import glob
     from pathlib import Path
+    from fastapi.responses import FileResponse
     
     story_dir = Path("saved_stories") / story_id
     exact_path = story_dir / filename
     
     # Try exact match first
     if exact_path.exists() and exact_path.is_file():
-        from fastapi.responses import FileResponse
         return FileResponse(exact_path)
     
     # If not found, try to find file with UUID prefix (e.g., uuid_scene_0.png)
@@ -150,11 +151,11 @@ async def serve_story_file(story_id: str, filename: str):
     matches = glob.glob(pattern)
     
     if matches:
-        from fastapi.responses import FileResponse
         return FileResponse(matches[0])
     
     # Still not found, raise 404
     raise HTTPException(status_code=404, detail=f"File not found: {filename}")
+
 app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 def _safe_story_dirname(story_name: str, story_id: str) -> str:
