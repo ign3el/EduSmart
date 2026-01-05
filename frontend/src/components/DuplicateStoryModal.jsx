@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import './DuplicateStoryModal.css';
 
 function DuplicateStoryModal({ isOpen, onClose, onLoadExisting, onCreateNew, duplicateInfo }) {
@@ -20,7 +21,7 @@ function DuplicateStoryModal({ isOpen, onClose, onLoadExisting, onCreateNew, dup
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -87,7 +88,8 @@ function DuplicateStoryModal({ isOpen, onClose, onLoadExisting, onCreateNew, dup
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
