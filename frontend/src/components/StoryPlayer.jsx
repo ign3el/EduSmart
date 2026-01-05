@@ -118,6 +118,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
 
   // Handle Scene Change and Source Loading
   useEffect(() => {
+    // Reset progress and time for new scene
     setProgress(0);
     setCurrentTime(0);
     setDuration(0);
@@ -175,6 +176,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       // Stop current audio before changing scene
       if (audioRef.current) {
         audioRef.current.pause();
+        // Don't reset currentTime here - it will be reset in the scene change useEffect
       }
       setCurrentScene(currentScene + 1);
       setGeneratingMessage('');
@@ -195,6 +197,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       // Stop current audio before changing scene
       if (audioRef.current) {
         audioRef.current.pause();
+        // Don't reset currentTime here - it will be reset in the scene change useEffect
       }
       setCurrentScene(currentScene - 1);
       setGeneratingMessage('');
@@ -257,7 +260,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     // Stop current audio before changing scene
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      // Don't reset currentTime here - it will be reset in the scene change useEffect
     }
     setCurrentScene(index);
     setGeneratingMessage('');
@@ -270,18 +273,18 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       const isCurrentlyPlaying = !audioRef.current.paused;
       
       if (isCurrentlyPlaying) {
-        // Audio is playing, pause it
+        // Audio is playing, pause it (position is preserved)
         audioRef.current.pause();
         setIsPlaying(false);
-        console.log('⏸️ Audio paused');
+        console.log('⏸️ Audio paused at:', audioRef.current.currentTime);
       } else {
-        // Audio is paused, play it
+        // Audio is paused, play it (resumes from current position)
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
               setIsPlaying(true);
-              console.log('▶️ Audio playing');
+              console.log('▶️ Audio resumed from:', audioRef.current.currentTime);
             })
             .catch(err => {
               console.error('Audio play error:', err);

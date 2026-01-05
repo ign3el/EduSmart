@@ -506,7 +506,8 @@ async def get_status(job_id: str):
             "completed_scene_count": len(completed_scenes),  # Number of completed scenes
             "result": {
                 "title": status["title"],
-                "scenes": completed_scenes
+                "scenes": completed_scenes,
+                "quiz": status.get("quiz", [])
             }
         }
     
