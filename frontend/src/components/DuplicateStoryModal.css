@@ -16,8 +16,10 @@
 
 .duplicate-modal {
   position: relative;
-  width: min(550px, 90vw);
-  max-height: 85vh;
+  width: 90vw;
+  max-width: 550px;
+  max-height: 90vh;
+  margin: auto;
   background: linear-gradient(150deg, rgba(12, 21, 40, 0.95), rgba(12, 21, 40, 0.9));
   border: 1px solid var(--edge);
   border-radius: var(--radius-lg);
@@ -26,8 +28,6 @@
   display: flex;
   flex-direction: column;
   z-index: 10001;
-  /* Ensure it stays in view */
-  max-width: 90vw;
 }
 
 .duplicate-header {

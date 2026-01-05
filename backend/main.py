@@ -649,9 +649,12 @@ async def handle_duplicate_choice(
 @app.get("/api/story/{story_id}/status")
 async def get_story_status(story_id: str) -> Dict[str, Any]:
     """Get overall story status with scene completion info."""
+    logger.info(f"🔍 Getting story status for: {story_id}")
+    
     # First check if story is in the active job system
     status = job_manager.get_story_status(story_id)
     if status:
+        logger.info(f"✅ Found story in job manager")
         scenes = job_manager.get_all_scenes(story_id)
         return {
             "story_id": story_id,
@@ -673,16 +676,29 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
         }
     
     # If not in job system, check if it's a saved story
+    logger.info(f"📂 Not in job manager, checking saved stories...")
     try:
-        if storage_manager.story_exists(story_id, in_saved=True):
+        story_exists = storage_manager.story_exists(story_id, in_saved=True)
+        logger.info(f"📂 Story exists in saved: {story_exists}")
+        
+        if story_exists:
             # This is a saved story - reconstruct from directory
             metadata = storage_manager.get_metadata(story_id, in_saved=True)
+            logger.info(f"📋 Metadata: {metadata}")
             
             # Try to load from story.json if it exists
-            story_json_path = os.path.join(storage_manager.get_story_path(story_id, in_saved=True), "story.json")
+            story_path = storage_manager.get_story_path(story_id, in_saved=True)
+            logger.info(f"📁 Story path: {story_path}")
+            
+            story_json_path = os.path.join(story_path, "story.json")
+            logger.info(f"📄 Checking for story.json at: {story_json_path}")
+            logger.info(f"📄 story.json exists: {os.path.exists(story_json_path)}")
+            
             if os.path.exists(story_json_path):
+                logger.info(f"✅ Loading from story.json")
                 with open(story_json_path, 'r', encoding='utf-8') as f:
                     story_data = json.load(f)
+                    logger.info(f"📊 Loaded story data with {len(story_data.get('scenes', []))} scenes")
                     
                 return {
                     "story_id": story_id,
@@ -704,7 +720,17 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                 }
             else:
                 # No story.json, try to reconstruct from files
+                logger.warning(f"⚠️ No story.json found, reconstructing from files")
                 story_dir = storage_manager.get_story_path(story_id, in_saved=True)
+                logger.info(f"📁 Scanning directory: {story_dir}")
+                
+                # List all files in directory
+                if os.path.exists(story_dir):
+                    all_files = os.listdir(story_dir)
+                    logger.info(f"📂 Files in directory: {all_files}")
+                else:
+                    logger.error(f"❌ Story directory does not exist: {story_dir}")
+                
                 scenes = []
                 scene_index = 0
                 
@@ -715,6 +741,8 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                     
                     image_path = os.path.join(story_dir, image_file)
                     audio_path = os.path.join(story_dir, audio_file)
+                    
+                    logger.info(f"🔍 Looking for scene {scene_index}: image={os.path.exists(image_path)}, audio={os.path.exists(audio_path)}")
                     
                     if not (os.path.exists(image_path) or os.path.exists(audio_path)):
                         break
@@ -729,6 +757,8 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                     })
                     scene_index += 1
                 
+                logger.info(f"✅ Reconstructed {len(scenes)} scenes from files")
+                
                 return {
                     "story_id": story_id,
                     "status": "completed",
@@ -738,7 +768,8 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                     "scenes": scenes
                 }
     except Exception as e:
-        logger.error(f"Error loading saved story {story_id}: {e}")
+        logger.error(f"❌ Error loading saved story {story_id}: {e}")
+        logger.exception(e)
     
     # Story not found in either system
     raise HTTPException(status_code=404, detail="Story not found")
