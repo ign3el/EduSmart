@@ -765,7 +765,6 @@ function MainApp() {
                   console.error('Error status:', err.response?.status)
                   setError('Failed to load existing story: ' + (err.response?.data?.detail || err.message))
                 }
-                }
               }}
               onCreateNew={() => {
                 setShowDuplicateModal(false)
