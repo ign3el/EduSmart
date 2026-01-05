@@ -719,6 +719,19 @@
   padding: 1rem 1.3rem;
   box-shadow: var(--shadow-strong);
   z-index: 30;
+  max-width: 90vw;
+  width: 420px;
+}
+
+/* Mobile responsive positioning */
+@media (max-width: 768px) {
+  .download-popup {
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100vw - 2rem);
+    max-width: 420px;
+  }
 }
 
 .download-popup-content {

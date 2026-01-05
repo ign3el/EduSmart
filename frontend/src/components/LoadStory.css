@@ -227,6 +227,17 @@
   max-width: 90vw;
 }
 
+/* Mobile responsive positioning */
+@media (max-width: 768px) {
+  .download-popup {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100vw - 2rem);
+    max-width: 420px;
+  }
+}
+
 .download-popup-content {
   background: rgba(12, 21, 40, 0.95);
   border: 1px solid var(--edge);

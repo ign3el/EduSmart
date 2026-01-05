@@ -34,6 +34,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [generatingMessage, setGeneratingMessage] = useState('');
+  const [savedTime, setSavedTime] = useState(0); // Track saved playback position
   const audioRef = useRef(null);
   const imageCache = useRef({});
 
@@ -103,6 +104,22 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   const [userPaused, setUserPaused] = useState(false);
   const [systemPaused, setSystemPaused] = useState(false);
   
+  // Save current time when user pauses
+  const handlePause = () => {
+    if (audioRef.current) {
+      setSavedTime(audioRef.current.currentTime);
+      console.log('⏸️ User paused at:', audioRef.current.currentTime);
+    }
+  };
+  
+  // Resume from saved time when user plays
+  const handlePlay = () => {
+    if (audioRef.current && savedTime > 0) {
+      audioRef.current.currentTime = savedTime;
+      console.log('▶️ Audio resumed from:', savedTime);
+    }
+  };
+  
   useEffect(() => {
     if (audioRef.current) {
       const handlePlay = () => {
@@ -166,6 +183,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     setProgress(0);
     setCurrentTime(0);
     setDuration(0);
+    setSavedTime(0); // Reset saved time when scene changes
     setImageLoaded(false);
     setImageError(false);
     
@@ -317,13 +335,17 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       const isCurrentlyPlaying = !audioRef.current.paused;
       
       if (isCurrentlyPlaying) {
-        // User is pausing - set userPaused flag
+        // User is pausing - set userPaused flag and save time
         audioRef.current.pause();
         setUserPaused(true);
         setIsPlaying(false);
-        console.log('⏸️ User paused at:', audioRef.current.currentTime);
+        handlePause();
       } else {
-        // User is playing - clear userPaused flag
+        // User is playing - restore saved time first
+        if (savedTime > 0) {
+          audioRef.current.currentTime = savedTime;
+        }
+        
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
           playPromise

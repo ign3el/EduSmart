@@ -129,93 +129,93 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
       {/* Desktop Menu (Always visible) */}
       <nav className="hidden md:flex items-center gap-2 flex-wrap">
         {onHome && (
-          <button 
-            onClick={() => handleAction(onHome)} 
-            className="px-4 py-2 bg-white/5 border border-purple-500/30 rounded-lg text-ink-1 text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-purple-500/15 hover:border-purple-500/50 hover:-translate-y-0.5 whitespace-nowrap"
-          >
-            🏠 Home
-          </button>
+        <button 
+          onClick={() => handleAction(onHome)} 
+          className="menu-btn"
+        >
+          🏠 Home
+        </button>
         )}
         {onLoadStories && (
-          <button 
-            onClick={() => handleAction(onLoadStories)} 
-            className="px-4 py-2 bg-white/5 border border-purple-500/30 rounded-lg text-ink-1 text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-purple-500/15 hover:border-purple-500/50 hover:-translate-y-0.5 whitespace-nowrap"
-          >
-            📚 Load Story
-          </button>
+        <button 
+          onClick={() => handleAction(onLoadStories)} 
+          className="menu-btn"
+        >
+          📚 Load Story
+        </button>
         )}
         {onOfflineManager && (
-          <button 
-            onClick={() => handleAction(onOfflineManager)} 
-            className="px-4 py-2 bg-white/5 border border-purple-500/30 rounded-lg text-ink-1 text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-purple-500/15 hover:border-purple-500/50 hover:-translate-y-0.5 whitespace-nowrap"
-          >
-            📂 Offline Manager
-          </button>
+        <button 
+          onClick={() => handleAction(onOfflineManager)} 
+          className="menu-btn"
+        >
+          📂 Offline Manager
+        </button>
         )}
         {isAdmin && onAdminClick && (
-          <button 
-            onClick={() => handleAction(onAdminClick)} 
-            className="px-4 py-2 bg-white/5 border border-cyan-500/40 rounded-lg text-ink-1 text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-cyan-500/15 hover:border-cyan-500/60 hover:-translate-y-0.5 whitespace-nowrap"
-          >
-            ⚙️ Admin Panel
-          </button>
+        <button 
+          onClick={() => handleAction(onAdminClick)} 
+          className="menu-btn admin"
+        >
+          ⚙️ Admin Panel
+        </button>
         )}
         {isPlayingStory && onSaveStory && (
-          <button 
-            onClick={() => handleAction(onSaveStory)} 
-            className="px-4 py-2 bg-gradient-to-br from-purple-500 to-pink-500 border-transparent rounded-lg text-white text-sm font-semibold cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/40 hover:-translate-y-0.5 whitespace-nowrap"
-          >
-            💾 Save
-          </button>
+        <button 
+          onClick={() => handleAction(onSaveStory)} 
+          className="menu-btn primary"
+        >
+          💾 Save
+        </button>
         )}
         {isPlayingStory && onDownloadStory && (
-          <button 
-            onClick={() => handleAction(onDownloadStory)} 
-            className="px-4 py-2 bg-gradient-to-br from-purple-500 to-pink-500 border-transparent rounded-lg text-white text-sm font-semibold cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/40 hover:-translate-y-0.5 whitespace-nowrap"
-          >
-            📥 Download
-          </button>
+        <button 
+          onClick={() => handleAction(onDownloadStory)} 
+          className="menu-btn primary"
+        >
+          📥 Download
+        </button>
         )}
         {currentStory?.persistent_path && (
-          <button 
-            onClick={() => handleAction(onShowFileViewer)} 
-            className="px-4 py-2 bg-white/5 border border-green-500/30 rounded-lg text-ink-1 text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-green-500/15 hover:border-green-500/50 hover:-translate-y-0.5 whitespace-nowrap"
-          >
-            📄 View File
-          </button>
+        <button 
+          onClick={() => handleAction(onShowFileViewer)} 
+          className="menu-btn"
+        >
+          📄 View File
+        </button>
         )}
         {!isPlayingStory && onNewStory && (
-          <button 
-            onClick={() => handleAction(onNewStory)} 
-            className="px-4 py-2 bg-gradient-to-br from-purple-500 to-pink-500 border-transparent rounded-lg text-white text-sm font-semibold cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/40 hover:-translate-y-0.5 whitespace-nowrap"
-          >
-            ✨ New Story
-          </button>
+        <button 
+          onClick={() => handleAction(onNewStory)} 
+          className="menu-btn primary"
+        >
+          ✨ New Story
+        </button>
         )}
         <button 
           onClick={handleCheckUpdate} 
-          className="px-4 py-2 bg-blue-500/8 border border-blue-500/40 rounded-lg text-ink-1 text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-blue-500/15 hover:border-blue-500/60 hover:-translate-y-0.5 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+          className="menu-btn update"
           disabled={isCheckingUpdate}
           title="Check for updates"
         >
           {isCheckingUpdate ? '⏳' : '🔄'} Update
         </button>
         {onProfile && (
-          <button 
-            onClick={() => handleAction(onProfile)} 
-            className="min-w-[40px] h-10 px-3.2 rounded-[20px] bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-white/20 text-white text-[0.85rem] font-bold cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-purple-500/50 flex items-center justify-center whitespace-nowrap"
-            title="Account"
-          >
-            {user?.email?.split('@')[0] || '👤'}
-          </button>
+        <button 
+          onClick={() => handleAction(onProfile)} 
+          className="menu-btn profile"
+          title="Account"
+        >
+          {user?.email?.split('@')[0] || '👤'}
+        </button>
         )}
         {onLogout && (
-          <button 
-            onClick={() => handleAction(onLogout)} 
-            className="px-4 py-2 bg-white/5 border border-rose-500/40 rounded-lg text-ink-1 text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-rose-500/15 hover:border-rose-500/60 hover:-translate-y-0.5 hover:text-rose-500 whitespace-nowrap"
-          >
-            🚪 Logout
-          </button>
+        <button 
+          onClick={() => handleAction(onLogout)} 
+          className="menu-btn logout"
+        >
+          🚪 Logout
+        </button>
         )}
       </nav>
 

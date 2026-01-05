@@ -35,8 +35,31 @@ class HashService:
         """Save hash cache to disk"""
         try:
             self.hash_cache_file.parent.mkdir(parents=True, exist_ok=True)
+            # Convert Path objects to strings before JSON serialization
+            serializable_cache = {}
+            for key, value in self.hash_cache.items():
+                if isinstance(value, dict):
+                    serializable_value = {}
+                    for k, v in value.items():
+                        if isinstance(v, Path):
+                            serializable_value[k] = str(v.resolve())
+                        elif isinstance(v, dict):
+                            # Handle nested dicts
+                            nested = {}
+                            for nk, nv in v.items():
+                                if isinstance(nv, Path):
+                                    nested[nk] = str(nv.resolve())
+                                else:
+                                    nested[nk] = nv
+                            serializable_value[k] = nested
+                        else:
+                            serializable_value[k] = v
+                    serializable_cache[key] = serializable_value
+                else:
+                    serializable_cache[key] = value
+            
             with open(self.hash_cache_file, 'w') as f:
-                json.dump(self.hash_cache, f, indent=2)
+                json.dump(serializable_cache, f, indent=2)
         except Exception as e:
             logger.warning(f"Failed to save hash cache: {e}")
     
@@ -121,7 +144,7 @@ class HashService:
                                 "story_id": story_dir.name,
                                 "path": str(file_path),
                                 "source": "file_scan",
-                                "relative_path": file_path.relative_to(story_dir)
+                                "relative_path": str(file_path.relative_to(story_dir))
                             })
                     except Exception as e:
                         logger.warning(f"Could not hash {file_path}: {e}")
@@ -200,6 +223,20 @@ class HashService:
                 logger.info(f"Updated metadata with hash for story {story_id}")
             except Exception as e:
                 logger.error(f"Failed to update metadata: {e}")
+        else:
+            # Create metadata if it doesn't exist
+            try:
+                base_dir.mkdir(parents=True, exist_ok=True)
+                metadata = {
+                    "story_id": story_id,
+                    "file_hash": file_hash,
+                    "created_at": str(time.time())
+                }
+                with open(metadata_path, 'w') as f:
+                    json.dump(metadata, f, indent=2)
+                logger.info(f"Created metadata with hash for story {story_id}")
+            except Exception as e:
+                logger.error(f"Failed to create metadata: {e}")
     
     def get_story_hash(self, story_id: str, in_saved: bool = False) -> Optional[str]:
         """
