@@ -212,12 +212,16 @@ function MainApp() {
       const formData = new FormData()
       formData.append('file', file)
       
+      console.log('📤 Checking for duplicates...')
       const response = await apiClient.post('/api/check-duplicate', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       
+      console.log('✅ Duplicate check response:', response.data)
+      
       if (response.data.is_duplicate) {
         // Found duplicate - show modal
+        console.log('🔄 Duplicate found, showing modal')
         setShowUploadProgress(false)
         setDuplicateInfo(response.data)
         setShowDuplicateModal(true)
@@ -226,12 +230,16 @@ function MainApp() {
       
       // Store hash for later use
       setFileHash(response.data.file_hash)
+      console.log('✅ No duplicate, continuing upload')
     } catch (err) {
-      console.error('Error checking duplicate:', err)
-      // Continue with upload even if check fails
+      console.error('❌ Error checking duplicate:', err)
+      setShowUploadProgress(false)
+      setError('Failed to check for duplicates: ' + err.message)
+      return
     }
     
     // Simulate upload progress
+    console.log('📊 Starting upload progress simulation')
     let progress = 0
     const interval = setInterval(() => {
       progress += Math.random() * 30
@@ -243,6 +251,7 @@ function MainApp() {
     setTimeout(() => {
       clearInterval(interval)
       setUploadProgress(100)
+      console.log('✅ Upload complete, navigating to confirm')
       
       // Proceed after completion
       setTimeout(() => {
@@ -691,43 +700,71 @@ function MainApp() {
               isOpen={showDuplicateModal}
               onClose={() => setShowDuplicateModal(false)}
               onLoadExisting={async () => {
+                console.log('👀 onLoadExisting called')
+                console.log('📚 duplicateInfo:', duplicateInfo)
                 setShowDuplicateModal(false)
                 // Load the existing story
                 try {
                   console.log('🔄 Loading existing story:', duplicateInfo.story_id)
                   const response = await apiClient.get(`/api/story/${duplicateInfo.story_id}/status`)
+                  console.log('📦 API Response:', response)
                   const storyStatus = response.data
                   console.log('📊 Story status:', storyStatus)
                   
+                  if (!storyStatus) {
+                    console.error('❌ Story status is null/undefined')
+                    setError('Failed to load story: No data returned')
+                    return
+                  }
+                  
                   if (storyStatus.status === 'completed') {
+                    console.log('✅ Story is completed')
+                    console.log('🎬 Scenes data:', storyStatus.scenes)
+                    
+                    if (!storyStatus.scenes || storyStatus.scenes.length === 0) {
+                      console.error('❌ No scenes found in story')
+                      setError('Story has no scenes')
+                      return
+                    }
+                    
                     const formattedStory = {
                       title: storyStatus.title || 'Saved Story',
-                      scenes: storyStatus.scenes.map((scene, idx) => ({
-                        id: idx,
-                        text: scene.text || '',
-                        imageUrl: scene.image_url || '',
-                        audioUrl: scene.audio_url || ''
-                      })),
+                      scenes: storyStatus.scenes.map((scene, idx) => {
+                        console.log(`🎬 Scene ${idx}:`, scene)
+                        return {
+                          id: idx,
+                          text: scene.text || '',
+                          imageUrl: scene.image_url || '',
+                          audioUrl: scene.audio_url || ''
+                        }
+                      }),
                       quiz: storyStatus.quiz || []
                     }
                     
                     console.log('✅ Formatted story:', formattedStory)
-                    console.log('🎬 Navigating to playing...')
+                    console.log('🎨 Setting story data...')
                     
                     setStoryData(formattedStory)
                     setCurrentJobId(duplicateInfo.story_id)
                     setIsSaved(true)
                     setSavedStoryId(duplicateInfo.story_id)
                     setSelectedAvatar({ id: 'loaded', name: 'Saved Story' })
+                    
+                    console.log('🎬 Navigating to playing...')
                     navigateTo('playing')
+                    
+                    console.log('✅ Navigation complete, story should be visible')
                   } else {
                     console.warn('⚠️ Story not completed:', storyStatus.status)
-                    setError('Story is still being generated')
+                    setError(`Story is not ready: ${storyStatus.status}`)
                   }
                 } catch (err) {
                   console.error('❌ Error loading duplicate story:', err)
-                  console.error('Error details:', err.response?.data)
+                  console.error('Error response:', err.response)
+                  console.error('Error data:', err.response?.data)
+                  console.error('Error status:', err.response?.status)
                   setError('Failed to load existing story: ' + (err.response?.data?.detail || err.message))
+                }
                 }
               }}
               onCreateNew={() => {

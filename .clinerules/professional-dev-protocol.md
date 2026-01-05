@@ -12,3 +12,6 @@
 - Always state `# Mode: ACT` at the start of your implementation responses.
 - **Preservation**: Group all related file edits into a single request.
 - **Budget**: Stop and ask for review if a task exceeds 5 consecutive requests.
+- **Logging**: Follow `sonnet-logging.md` protocol for enhanced audit trails
+- **Model Selection**: Use Haiku by default, request Sonnet only for complexity > 7.5
+- **Progress Tracking**: Update `memory-bank/progress.md` after each chunk
