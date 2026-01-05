@@ -114,7 +114,7 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
     <>
       {/* Mobile Hamburger Button */}
       <button 
-        className="fixed top-4 right-4 z-[1000] w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-none text-white text-xl cursor-pointer shadow-lg shadow-purple-500/40 flex items-center justify-center transition-all duration-300 hover:scale-105 hover:shadow-purple-500/60 md:hidden" 
+        className="mobile-menu-btn" 
         onClick={() => setIsMobileOpen(!isMobileOpen)} 
         aria-label="Menu"
       >
@@ -127,7 +127,7 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
       </button>
 
       {/* Desktop Menu (Always visible) */}
-      <nav className="hidden md:flex items-center gap-2 flex-wrap">
+      <nav className="desktop-menu">
         {onHome && (
         <button 
           onClick={() => handleAction(onHome)} 
@@ -225,141 +225,141 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
           {isMobileOpen && (
             <>
               <motion.div
-                className="fixed inset-0 bg-black/60 backdrop-blur-[4px] z-[9998]"
+                className="mobile-overlay"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsMobileOpen(false)}
               />
               <motion.div
-                className="fixed top-0 right-0 bottom-0 w-[min(85vw,320px)] bg-gradient-to-br from-[#0f1642] to-[#121f4d] border-l border-purple-500/30 shadow-[-10px_0_40px_rgba(0,0,0,0.5)] z-[9999] flex flex-col overflow-hidden"
+                className="mobile-drawer"
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               >
-                <div className="flex justify-between items-center p-5 border-b border-purple-500/20 bg-purple-500/10">
-                  <h3 className="m-0 text-[1.3rem] text-ink-1 font-bold">Menu</h3>
+                <div className="drawer-header">
+                  <h3>Menu</h3>
                   <button 
                     onClick={() => setIsMobileOpen(false)} 
-                    className="bg-none border-none text-ink-2 text-[1.5rem] cursor-pointer p-1 transition-colors duration-200 hover:text-ink-1"
+                    className="drawer-close-btn"
                   >
                     ✕
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                <div className="drawer-content">
                   {user && (
                     <div 
-                      className="flex items-center gap-3 p-3 bg-purple-500/8 rounded-lg mx-0 mb-2.5 cursor-pointer" 
+                      className="user-profile-card" 
                       onClick={() => handleAction(onProfile)}
                     >
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-[1.3rem] font-bold text-white flex-shrink-0">
+                      <div className="user-avatar">
                         {user.email?.charAt(0).toUpperCase()}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="m-0 text-[0.95rem] text-ink-1 font-semibold truncate">{user.email}</p>
-                        {isAdmin && <span className="inline-block px-2 py-0.5 bg-gradient-to-br from-cyan-500 to-blue-500 text-white rounded-[12px] text-[0.75rem] font-bold mt-1">Admin</span>}
+                      <div className="user-info">
+                        <p className="user-email">{user.email}</p>
+                        {isAdmin && <span className="user-badge">Admin</span>}
                       </div>
                     </div>
                   )}
 
-                  <div className="flex flex-col flex-1">
-                    <div className="px-0 mb-4">
-                      <h4 className="m-0 mb-3 px-2 text-[0.85rem] text-ink-2 font-semibold uppercase tracking-wider">Navigation</h4>
-                      {onHome ? (
+                  <div className="section-container">
+                    <div>
+                      <h4 className="section-header">Navigation</h4>
+                      {onHome && (
                         <button 
                           onClick={() => handleAction(onHome)} 
-                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-purple-500/15 rounded-[10px] text-ink-1 font-semibold cursor-pointer transition-all duration-200 hover:bg-purple-500/15 hover:border-purple-500/40 hover:translate-x-1 mb-2 text-left"
+                          className="drawer-btn"
                         >
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">🏠</span>
+                          <span className="icon">🏠</span>
                           <span>Home</span>
                         </button>
-                      ) : null}
-                      {onLoadStories ? (
+                      )}
+                      {onLoadStories && (
                         <button 
                           onClick={() => handleAction(onLoadStories)} 
-                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-purple-500/15 rounded-[10px] text-ink-1 font-semibold cursor-pointer transition-all duration-200 hover:bg-purple-500/15 hover:border-purple-500/40 hover:translate-x-1 mb-2 text-left"
+                          className="drawer-btn"
                         >
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">📚</span>
+                          <span className="icon">📚</span>
                           <span>Load Saved Story</span>
                         </button>
-                      ) : null}
-                      {onOfflineManager ? (
+                      )}
+                      {onOfflineManager && (
                         <button 
                           onClick={() => handleAction(onOfflineManager)} 
-                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-purple-500/15 rounded-[10px] text-ink-1 font-semibold cursor-pointer transition-all duration-200 hover:bg-purple-500/15 hover:border-purple-500/40 hover:translate-x-1 mb-2 text-left"
+                          className="drawer-btn"
                         >
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">📂</span>
+                          <span className="icon">📂</span>
                           <span>Offline Manager</span>
                         </button>
-                      ) : null}
-                      {onNewStory ? (
+                      )}
+                      {onNewStory && (
                         <button 
                           onClick={() => handleAction(onNewStory)} 
-                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-purple-500/15 rounded-[10px] text-ink-1 font-semibold cursor-pointer transition-all duration-200 hover:bg-purple-500/15 hover:border-purple-500/40 hover:translate-x-1 mb-2 text-left"
+                          className="drawer-btn"
                         >
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">✨</span>
+                          <span className="icon">✨</span>
                           <span>New Story</span>
                         </button>
-                      ) : null}
-                      {isPlayingStory && onSaveStory ? (
+                      )}
+                      {isPlayingStory && onSaveStory && (
                         <button 
                           onClick={() => handleAction(onSaveStory)} 
-                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-gradient-to-br from-purple-500 to-pink-500 border-transparent rounded-[10px] text-white font-semibold cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/40 hover:translate-x-1 mb-2 text-left"
+                          className="drawer-btn primary"
                         >
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">💾</span>
+                          <span className="icon">💾</span>
                           <span>Save Story</span>
                         </button>
-                      ) : null}
-                      {isPlayingStory && onDownloadStory ? (
+                      )}
+                      {isPlayingStory && onDownloadStory && (
                         <button 
                           onClick={() => handleAction(onDownloadStory)} 
-                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-gradient-to-br from-purple-500 to-pink-500 border-transparent rounded-[10px] text-white font-semibold cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/40 hover:translate-x-1 mb-2 text-left"
+                          className="drawer-btn primary"
                         >
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">📥</span>
+                          <span className="icon">📥</span>
                           <span>Download Story</span>
                         </button>
-                      ) : null}
-                      {currentStory?.persistent_path ? (
+                      )}
+                      {currentStory?.persistent_path && (
                         <button 
                           onClick={() => handleAction(onShowFileViewer)} 
-                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-green-500/30 rounded-[10px] text-ink-1 font-semibold cursor-pointer transition-all duration-200 hover:bg-green-500/15 hover:border-green-500/50 hover:translate-x-1 mb-2 text-left"
+                          className="drawer-btn"
                         >
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">📄</span>
+                          <span className="icon">📄</span>
                           <span>View Current File</span>
                         </button>
-                      ) : null}
+                      )}
                     </div>
 
-                    {isAdmin && onAdminClick ? (
+                    {isAdmin && onAdminClick && (
                       <>
-                        <div className="h-px bg-purple-500/15 my-4"></div>
-                        <div className="px-0 mb-4">
-                          <h4 className="m-0 mb-3 px-2 text-[0.85rem] text-ink-2 font-semibold uppercase tracking-wider">Admin</h4>
+                        <div className="section-divider"></div>
+                        <div>
+                          <h4 className="section-header">Admin</h4>
                           <button 
                             onClick={() => handleAction(onAdminClick)} 
-                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-purple-500/15 rounded-[10px] text-ink-1 font-semibold cursor-pointer transition-all duration-200 hover:bg-purple-500/15 hover:border-purple-500/40 hover:translate-x-1 text-left"
+                            className="drawer-btn"
                           >
-                            <span className="text-[1.3rem] w-6 text-center flex-shrink-0">⚙️</span>
+                            <span className="icon">⚙️</span>
                             <span>Admin Panel</span>
                           </button>
                         </div>
                       </>
-                    ) : null}
+                    )}
 
-                    <div className="h-px bg-purple-500/15 my-4"></div>
-                    <div className="px-0">
-                      <h4 className="m-0 mb-3 px-2 text-[0.85rem] text-ink-2 font-semibold uppercase tracking-wider">Account</h4>
+                    <div className="section-divider"></div>
+                    <div>
+                      <h4 className="section-header">Account</h4>
                       <button 
                         onClick={() => {
                           handleCheckUpdate();
                           setIsMobileOpen(false);
                         }} 
-                        className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-purple-500/15 rounded-[10px] text-ink-1 font-semibold cursor-pointer transition-all duration-200 hover:bg-purple-500/15 hover:border-purple-500/40 hover:translate-x-1 mb-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="drawer-btn"
                         disabled={isCheckingUpdate}
                       >
-                        <span className="text-[1.3rem] w-6 text-center flex-shrink-0">{isCheckingUpdate ? '⏳' : '🔄'}</span>
+                        <span className="icon">{isCheckingUpdate ? '⏳' : '🔄'}</span>
                         <span>Check for Updates</span>
                       </button>
                       {!isPWA && (
@@ -368,28 +368,26 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                             handleInstallPWA();
                             setIsMobileOpen(false);
                           }} 
-                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-gradient-to-br from-purple-500 to-pink-500 border-transparent rounded-[10px] text-white font-semibold cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/40 hover:translate-x-1 mb-2 text-left"
+                          className="drawer-btn primary"
                         >
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">📲</span>
+                          <span className="icon">📲</span>
                           <span>Install App</span>
                         </button>
                       )}
                       {isPWA && (
-                        <div className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-purple-500/15 rounded-[10px] text-ink-1 font-semibold opacity-60 mb-2">
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">✓</span>
+                        <div className="status-indicator">
+                          <span className="icon">✓</span>
                           <span>App Installed</span>
                         </div>
                       )}
-                      {onLogout ? (
+                      {onLogout && (
                         <button 
                           onClick={() => handleAction(onLogout)} 
-                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-rose-500/30 rounded-[10px] text-ink-1 font-semibold cursor-pointer transition-all duration-200 hover:bg-rose-500/15 hover:border-rose-500/50 hover:translate-x-1 hover:text-rose-500 text-left"
+                          className="drawer-btn"
                         >
-                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">🚪</span>
+                          <span className="icon">🚪</span>
                           <span>Logout</span>
                         </button>
-                      ) : (
-                        <div className="p-4 text-red-500">ERROR: No logout function</div>
                       )}
                     </div>
                   </div>

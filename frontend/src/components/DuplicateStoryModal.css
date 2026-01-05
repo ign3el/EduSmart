@@ -25,6 +25,8 @@
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  /* Force centering on all screen sizes */
+  margin: 0 auto;
 }
 
 .duplicate-header {

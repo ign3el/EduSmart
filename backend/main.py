@@ -649,29 +649,99 @@ async def handle_duplicate_choice(
 @app.get("/api/story/{story_id}/status")
 async def get_story_status(story_id: str) -> Dict[str, Any]:
     """Get overall story status with scene completion info."""
+    # First check if story is in the active job system
     status = job_manager.get_story_status(story_id)
-    if not status:
-        raise HTTPException(status_code=404, detail="Story not found")
+    if status:
+        scenes = job_manager.get_all_scenes(story_id)
+        return {
+            "story_id": story_id,
+            "status": status["status"],
+            "title": status["title"],
+            "total_scenes": status["total_scenes"],
+            "completed_scenes": status["completed_scenes"],
+            "scenes": [
+                {
+                    "scene_index": s["scene_index"],
+                    "text": s["text"],
+                    "image_status": s["image_status"],
+                    "audio_status": s["audio_status"],
+                    "image_url": s["image_url"],
+                    "audio_url": s["audio_url"]
+                }
+                for s in scenes
+            ]
+        }
     
-    scenes = job_manager.get_all_scenes(story_id)
-    return {
-        "story_id": story_id,
-        "status": status["status"],
-        "title": status["title"],
-        "total_scenes": status["total_scenes"],
-        "completed_scenes": status["completed_scenes"],
-        "scenes": [
-            {
-                "scene_index": s["scene_index"],
-                "text": s["text"],
-                "image_status": s["image_status"],
-                "audio_status": s["audio_status"],
-                "image_url": s["image_url"],
-                "audio_url": s["audio_url"]
-            }
-            for s in scenes
-        ]
-    }
+    # If not in job system, check if it's a saved story
+    try:
+        if storage_manager.story_exists(story_id, in_saved=True):
+            # This is a saved story - reconstruct from directory
+            metadata = storage_manager.get_metadata(story_id, in_saved=True)
+            
+            # Try to load from story.json if it exists
+            story_json_path = os.path.join(storage_manager.get_story_path(story_id, in_saved=True), "story.json")
+            if os.path.exists(story_json_path):
+                with open(story_json_path, 'r', encoding='utf-8') as f:
+                    story_data = json.load(f)
+                    
+                return {
+                    "story_id": story_id,
+                    "status": "completed",
+                    "title": story_data.get("title", metadata.get("title", "Saved Story")),
+                    "total_scenes": len(story_data.get("scenes", [])),
+                    "completed_scenes": len(story_data.get("scenes", [])),
+                    "scenes": [
+                        {
+                            "scene_index": idx,
+                            "text": scene.get("text", ""),
+                            "image_status": "completed",
+                            "audio_status": "completed",
+                            "image_url": scene.get("imageUrl") or scene.get("image_url", ""),
+                            "audio_url": scene.get("audioUrl") or scene.get("audio_url", "")
+                        }
+                        for idx, scene in enumerate(story_data.get("scenes", []))
+                    ]
+                }
+            else:
+                # No story.json, try to reconstruct from files
+                story_dir = storage_manager.get_story_path(story_id, in_saved=True)
+                scenes = []
+                scene_index = 0
+                
+                # Look for scene files (scene_0.png, scene_0.wav, etc.)
+                while True:
+                    image_file = f"scene_{scene_index}.png"
+                    audio_file = f"scene_{scene_index}.wav"
+                    
+                    image_path = os.path.join(story_dir, image_file)
+                    audio_path = os.path.join(story_dir, audio_file)
+                    
+                    if not (os.path.exists(image_path) or os.path.exists(audio_path)):
+                        break
+                    
+                    scenes.append({
+                        "scene_index": scene_index,
+                        "text": "",  # No text available without story.json
+                        "image_status": "completed" if os.path.exists(image_path) else "missing",
+                        "audio_status": "completed" if os.path.exists(audio_path) else "missing",
+                        "image_url": f"/api/saved-stories/{story_id}/{image_file}" if os.path.exists(image_path) else "",
+                        "audio_url": f"/api/saved-stories/{story_id}/{audio_file}" if os.path.exists(audio_path) else ""
+                    })
+                    scene_index += 1
+                
+                return {
+                    "story_id": story_id,
+                    "status": "completed",
+                    "title": metadata.get("title", "Saved Story"),
+                    "total_scenes": len(scenes),
+                    "completed_scenes": len(scenes),
+                    "scenes": scenes
+                }
+    except Exception as e:
+        logger.error(f"Error loading saved story {story_id}: {e}")
+    
+    # Story not found in either system
+    raise HTTPException(status_code=404, detail="Story not found")
 
 
 @app.get("/api/story/{story_id}/scene/{scene_index}")
