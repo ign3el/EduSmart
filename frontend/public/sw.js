@@ -109,31 +109,64 @@ self.addEventListener('fetch', (event) => {
   // Strategy 2: Network-First for API calls (with fallback to cache)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
+      // Add timeout to fetch to prevent hanging
+      Promise.race([
+        fetch(request).then((response) => {
           // Cache successful API responses for offline fallback
           if (response.status === 200) {
             const responseToCache = response.clone();
             caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseToCache);
+              cache.put(request, responseToCache).catch(err => {
+                console.warn('[Service Worker] Cache put failed:', err);
+              });
             });
           }
           return response;
-        })
-        .catch(() => {
-          // Network failed, try cache
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              console.log('[Service Worker] API offline, serving from cache:', request.url);
-              return cachedResponse;
+        }).catch((error) => {
+          console.warn('[Service Worker] API fetch failed:', error);
+          throw error;
+        }),
+        // 10-second timeout
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Service Worker: API timeout')), 10000)
+        )
+      ]).catch(() => {
+        // Network failed or timed out, try cache
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) {
+            console.log('[Service Worker] API offline, serving from cache:', request.url);
+            return cachedResponse;
+          }
+          // Return graceful error response
+          return new Response(
+            JSON.stringify({ 
+              error: 'Offline', 
+              message: 'No cached data available',
+              timestamp: Date.now()
+            }),
+            { 
+              status: 503, 
+              headers: { 
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+              } 
             }
-            // Return error response
-            return new Response(
-              JSON.stringify({ error: 'Offline', message: 'No cached data available' }),
-              { status: 503, headers: { 'Content-Type': 'application/json' } }
-            );
-          });
-        })
+          );
+        }).catch((cacheError) => {
+          console.warn('[Service Worker] Cache lookup failed:', cacheError);
+          // Final fallback
+          return new Response(
+            JSON.stringify({ 
+              error: 'Service Unavailable', 
+              message: 'Please check your connection and try again'
+            }),
+            { 
+              status: 503, 
+              headers: { 'Content-Type': 'application/json' } 
+            }
+          );
+        });
+      })
     );
     return;
   }
@@ -151,14 +184,42 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
         
-        return fetch(request).then((response) => {
-          if (response.status === 200) {
-            const responseToCache = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseToCache);
-            });
+        // Add timeout for media fetches
+        return Promise.race([
+          fetch(request).then((response) => {
+            if (response.status === 200) {
+              const responseToCache = response.clone();
+              caches.open(RUNTIME_CACHE).then((cache) => {
+                cache.put(request, responseToCache).catch(err => {
+                  console.warn('[Service Worker] Media cache put failed:', err);
+                });
+              });
+            }
+            return response;
+          }).catch((error) => {
+            console.warn('[Service Worker] Media fetch failed:', error);
+            throw error;
+          }),
+          // 30-second timeout for media
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Service Worker: Media timeout')), 30000)
+          )
+        ]).catch(() => {
+          // Return a placeholder or transparent pixel for images
+          if (request.destination === 'image') {
+            return new Response(
+              new Blob([new Uint8Array([
+                0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 
+                0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x21, 
+                0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 
+                0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 
+                0x01, 0x00, 0x3b
+              ])], { type: 'image/gif' }),
+              { headers: { 'Content-Type': 'image/gif' } }
+            );
           }
-          return response;
+          // For audio/video, return empty response
+          return new Response(null, { status: 404 });
         });
       })
     );

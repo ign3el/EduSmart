@@ -19,15 +19,25 @@ export function registerServiceWorker() {
             const newWorker = registration.installing;
             console.log('🔄 Service Worker update found');
             
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New service worker available, prompt user to refresh
-                if (confirm('New version available! Reload to update?')) {
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  window.location.reload();
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker available, prompt user to refresh
+                  if (confirm('New version available! Reload to update?')) {
+                    // Wait for controller before reloading
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                      window.location.reload();
+                    });
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
                 }
-              }
-            });
+              });
+              
+              // Add error handler to prevent unhandled promise rejections
+              newWorker.addEventListener('error', (error) => {
+                console.error('❌ Service Worker error:', error);
+              });
+            }
           });
         })
         .catch((error) => {

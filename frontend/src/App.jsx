@@ -315,6 +315,9 @@ function MainApp() {
         formData.append('file_hash', fileHash)
       }
       formData.append('force_new', forceNew.toString())
+      
+      // Append user agent for mobile detection
+      formData.append('user_agent', navigator.userAgent)
 
       // Use apiClient for automatic auth headers, assuming it's the default export from api.js
       const response = await fetch(`${API_URL}/api/upload`, { 

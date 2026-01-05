@@ -10,6 +10,26 @@ const Quiz = ({ questions, onComplete }) => {
   const [isCorrect, setIsCorrect] = useState(null);
   const [userAnswers, setUserAnswers] = useState([]);
   const [reviewMode, setReviewMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Handle missing or invalid quiz data
+  const validQuestions = Array.isArray(questions) && questions.length > 0 ? questions : [];
+  
+  // Fallback: Generate quiz from story data if quiz is missing
+  const generateFallbackQuiz = () => {
+    console.log('🔄 Generating fallback quiz from available data...');
+    // This would be called if questions are missing
+    // For now, we'll show a message
+  };
+
+  // Check for quiz data issues
+  React.useEffect(() => {
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      console.warn('⚠️ Quiz component received no questions data');
+      console.log('Expected: Array of question objects');
+      console.log('Received:', questions);
+    }
+  }, [questions]);
 
   const retakeQuiz = () => {
     setCurrentQuestion(0);
@@ -26,17 +46,22 @@ const Quiz = ({ questions, onComplete }) => {
 
     setSelectedOption(option);
     const currentQ = questions[currentQuestion];
-    const correctAnswer = currentQ.answer;
+    // Handle both old and new quiz structure
+    const correctAnswer = currentQ.correct_answer || currentQ.answer;
+    const questionText = currentQ.question_text || currentQ.question;
     const correct = option === correctAnswer;
     setIsCorrect(correct);
 
     // Track user answer with proper state update
     const newAnswer = {
-      question: currentQ.question,
+      question: questionText,
       selected: option,
       correct: correctAnswer,
       explanation: currentQ.explanation || "No explanation provided.",
-      isCorrect: correct
+      isCorrect: correct,
+      // Include additional metadata if available
+      source: currentQ.source,
+      document_section: currentQ.document_section
     };
     
     setUserAnswers(prev => [...prev, newAnswer]);
@@ -90,6 +115,11 @@ const Quiz = ({ questions, onComplete }) => {
                 <span className={`review-badge ${answer.isCorrect ? 'badge-correct' : 'badge-wrong'}`}>
                   {answer.isCorrect ? '✓ Correct' : '✗ Wrong'}
                 </span>
+                {answer.source && (
+                  <span className="source-badge">
+                    {answer.source === 'extracted' ? '📄 From Document' : '🧠 Generated'}
+                  </span>
+                )}
               </div>
               <h4>{answer.question}</h4>
               <div className="review-answers">
@@ -106,6 +136,11 @@ const Quiz = ({ questions, onComplete }) => {
                   </p>
                 )}
               </div>
+              {answer.document_section && (
+                <div className="document-section">
+                  <strong>📍 Section:</strong> {answer.document_section}
+                </div>
+              )}
               <div className="explanation">
                 <strong>💡 Explanation:</strong>
                 <p>{answer.explanation}</p>
@@ -124,12 +159,38 @@ const Quiz = ({ questions, onComplete }) => {
     );
   }
 
-  const q = questions[currentQuestion];
+  // Guard: Handle missing or invalid questions
+  if (!validQuestions.length) {
+    return (
+      <motion.div 
+        className="quiz-container error" 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }}
+      >
+        <div className="error-state">
+          <h2>⚠️ Quiz Unavailable</h2>
+          <p>The quiz data for this story is not yet available.</p>
+          <p className="small">Please ensure the story generation completed successfully.</p>
+          <button onClick={onComplete} className="finish-btn">Back to Story</button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const q = validQuestions[currentQuestion];
+  // Handle both old and new quiz structure
+  const questionText = q.question_text || q.question;
+  const options = q.options || [];
 
   return (
     <div className="quiz-container">
       <div className="quiz-progress">
-        Question {currentQuestion + 1} of {questions.length}
+        Question {currentQuestion + 1} of {validQuestions.length}
+        {q.source && (
+          <span className="source-indicator">
+            {q.source === 'extracted' ? '📄' : '🧠'}
+          </span>
+        )}
       </div>
       
       <AnimatePresence mode="wait">
@@ -140,9 +201,14 @@ const Quiz = ({ questions, onComplete }) => {
           exit={{ x: -50, opacity: 0 }}
           className="question-card"
         >
-          <h3>{q.question}</h3>
+          <h3>{questionText}</h3>
+          {q.document_section && (
+            <div className="document-section-info">
+              📍 From: {q.document_section}
+            </div>
+          )}
           <div className="options-grid">
-            {q.options.map((option, index) => (
+            {options.map((option, index) => (
               <button
                 key={index}
                 onClick={() => handleAnswer(option)}

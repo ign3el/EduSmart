@@ -246,9 +246,9 @@ async def get_avatars():
         {"id": "dinosaur", "name": "Dino-Explorer", "description": "Nature guide."}
     ]
 
-async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_index: int, scene: dict, voice: str, speed: float, story_seed: int):
+async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_index: int, scene: dict, voice: str, speed: float, story_seed: int, is_mobile: bool = False):
     """
-    Generate image and audio for a scene IN PARALLEL.
+    Generate image and audio for a scene IN PARALLEL with mobile optimization.
     Updates job state as each completes.
     """
     character_prompt = scene.get("image_prompt", "")
@@ -261,12 +261,23 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
                 return
             
             job_manager.update_scene_image(scene_id, "processing")
-            img_bytes = await asyncio.to_thread(
-                gemini.generate_image,
-                character_prompt,
-                text,
-                story_seed
-            )
+            
+            # Use mobile-optimized image generation for mobile devices
+            if is_mobile:
+                img_bytes = await asyncio.to_thread(
+                    gemini.generate_image_mobile_optimized,
+                    character_prompt,
+                    text,
+                    story_seed,
+                    True  # is_mobile=True
+                )
+            else:
+                img_bytes = await asyncio.to_thread(
+                    gemini.generate_image,
+                    character_prompt,
+                    text,
+                    story_seed
+                )
             
             if img_bytes:
                 img_name = f"scene_{scene_index}.png"
@@ -274,7 +285,7 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
                 try:
                     img_url = storage_manager.save_file(story_id, img_name, img_bytes, in_saved=False)
                     job_manager.update_scene_image(scene_id, "completed", img_url)
-                    logger.info(f"✓ Scene {scene_index} image complete: {img_url}")
+                    logger.info(f"✓ Scene {scene_index} image complete ({'mobile' if is_mobile else 'desktop'}): {img_url}")
                 except Exception as save_error:
                     logger.error(f"Failed to save image: {save_error}")
                     job_manager.update_scene_image(scene_id, "failed")
@@ -292,15 +303,21 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
                 return
             
             job_manager.update_scene_audio(scene_id, "processing")
-            audio_bytes = await kokoro_tts.generate_audio(text, voice, speed)
+            
+            # Use mobile-optimized audio for mobile devices
+            from services.chatterbox_client import chatterbox
+            if is_mobile:
+                audio_bytes = await chatterbox.generate_audio_optimized(text, voice, True)
+            else:
+                audio_bytes = await kokoro_tts.generate_audio(text, voice, speed)
             
             if audio_bytes:
-                aud_name = f"scene_{scene_index}.wav" # Kokoro provides WAV audio
+                aud_name = f"scene_{scene_index}.wav"  # Kokoro provides WAV audio
                 # Use new storage manager
                 try:
                     aud_url = storage_manager.save_file(story_id, aud_name, audio_bytes, in_saved=False)
                     job_manager.update_scene_audio(scene_id, "completed", aud_url)
-                    logger.info(f"✓ Scene {scene_index} audio complete: {aud_url}")
+                    logger.info(f"✓ Scene {scene_index} audio complete ({'mobile' if is_mobile else 'desktop'}): {aud_url}")
                 except Exception as save_error:
                     logger.error(f"Failed to save audio: {save_error}")
                     job_manager.update_scene_audio(scene_id, "failed")
@@ -420,6 +437,7 @@ async def upload_story(
     speed: float = Form(1.0),
     file_hash: str = Form(None),
     force_new: bool = Form(False),
+    user_agent: str = Form(None),  # Add user agent parameter
     current_user: User = Depends(get_current_user)
 ):
     # Calculate hash if not provided
@@ -455,9 +473,86 @@ async def upload_story(
         username=current_user['username']
     )
     
-    # Use progressive workflow
-    background_tasks.add_task(run_ai_workflow_progressive, story_id, upload_path, grade_level, voice, speed)
-    return {"job_id": story_id}
+    # Detect if user is on mobile device
+    is_mobile = False
+    if user_agent:
+        mobile_keywords = ['mobile', 'android', 'iphone', 'ipad', 'windows phone', 'blackberry']
+        is_mobile = any(keyword in user_agent.lower() for keyword in mobile_keywords)
+    
+    # Use progressive workflow with mobile optimization
+    async def run_workflow_with_mobile_detection():
+        # Create a wrapper that passes mobile flag
+        await run_ai_workflow_progressive(story_id, upload_path, grade_level, voice, speed)
+        # Update the generate_scene_media_progressive calls to use is_mobile parameter
+        # This will be handled by checking the user_agent in the workflow
+    
+    # Modify the workflow to detect mobile and pass it to scene generation
+    async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grade_level: str, voice: str, speed: float, is_mobile: bool):
+        try:
+            # Create story folder with metadata
+            storage_manager.create_story_folder(story_id, {
+                "grade_level": grade_level,
+                "voice": voice,
+                "speed": speed,
+                "file_path": file_path,
+                "is_mobile": is_mobile
+            })
+            logger.info(f"📁 Created story folder: generated_stories/{story_id}")
+            
+            # Generate story structure
+            story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
+            
+            if not story_data:
+                raise Exception("AI failed to generate story content.")
+            
+            scenes = story_data.get("scenes", [])
+            title = story_data.get("title", "Untitled Story")
+            
+            # Initialize job state
+            job_manager.update_story_metadata(story_id, title, len(scenes))
+            
+            # Create scene records immediately (text is ready)
+            scene_ids = []
+            for i, scene in enumerate(scenes):
+                scene_id = job_manager.create_scene(
+                    story_id, 
+                    i, 
+                    scene.get("narrative_text", ""),
+                    scene.get("image_prompt", "")
+                )
+                scene_ids.append(scene_id)
+            
+            logger.info(f"✓ Story structure ready: {len(scenes)} scenes")
+            
+            # --- Hybrid Generation Strategy ---
+            story_seed = int(uuid.uuid4().hex[:8], 16)
+            
+            # 1. Generate Scene 1 first for a fast user start
+            if len(scenes) > 0:
+                logger.info("Starting media generation for Scene 1 (priority)...")
+                await generate_scene_media_progressive(
+                    story_id, scene_ids[0], 0, scenes[0], voice, speed, story_seed, is_mobile
+                )
+                logger.info("✓ Finished media generation for Scene 1.")
+
+            # 2. Generate the rest of the scenes in parallel
+            if len(scenes) > 1:
+                logger.info(f"Starting parallel media generation for remaining {len(scenes) - 1} scenes...")
+                remaining_tasks = [
+                    generate_scene_media_progressive(story_id, scene_ids[i], i, scene, voice, speed, story_seed, is_mobile)
+                    for i, scene in enumerate(scenes[1:], start=1)
+                ]
+                await asyncio.gather(*remaining_tasks, return_exceptions=True)
+                logger.info("✓ Finished parallel generation for remaining scenes.")
+
+            logger.info(f"✓ All media generation complete for story {story_id}")
+            
+        except Exception as e:
+            logger.error(f"AI Workflow Error: {e}")
+            job_manager.mark_story_failed(story_id, str(e))
+    
+    background_tasks.add_task(run_ai_workflow_progressive_mobile, story_id, upload_path, grade_level, voice, speed, is_mobile)
+    return {"job_id": story_id, "is_mobile": is_mobile}
 
 
 # Progressive endpoints for scene-by-scene loading

@@ -16,12 +16,35 @@
   text-align: center;
   color: var(--ink-2);
   font-weight: 700;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.source-indicator {
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--edge);
 }
 
 .question-card h3 {
   text-align: center;
   font-size: clamp(1.1rem, 3vw, 1.5rem);
+  margin-bottom: 0.5rem;
+}
+
+.document-section-info {
+  text-align: center;
+  color: var(--ink-2);
+  font-size: 0.9rem;
   margin-bottom: 1rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(109, 228, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(109, 228, 255, 0.2);
 }
 
 .options-grid {
@@ -141,8 +164,30 @@
 .review-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   color: var(--ink-2);
   font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.source-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--edge);
+  color: var(--ink-1);
+}
+
+.document-section {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(109, 228, 255, 0.08);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  border: 1px solid rgba(109, 228, 255, 0.15);
 }
 
 .review-badge {
@@ -164,4 +209,159 @@
 
 .final-score strong {
   color: var(--accent-1);
+}
+
+/* Review Mode Container - Fix for scrolling */
+.quiz-container.review-mode {
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.review-mode .review-list {
+  overflow-y: auto;
+  flex-grow: 1;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  padding-right: 0.5rem;
+  max-height: calc(75vh - 120px); /* Account for header/footer */
+}
+
+/* Custom scrollbar for review list */
+.review-mode .review-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.review-mode .review-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.review-mode .review-list::-webkit-scrollbar-thumb {
+  background: rgba(109, 228, 255, 0.4);
+  border-radius: 4px;
+}
+
+.review-mode .review-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(109, 228, 255, 0.6);
+}
+
+/* Ensure review items have proper spacing and sizing */
+.review-item {
+  min-height: 120px;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Review answers section styling */
+.review-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  border: 1px solid var(--edge);
+}
+
+.user-answer,
+.correct-answer-text {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.user-answer strong,
+.correct-answer-text strong {
+  color: var(--ink-2);
+  margin-right: 0.3rem;
+}
+
+.text-correct {
+  color: var(--accent-3);
+  font-weight: 700;
+}
+
+.text-wrong {
+  color: #ff7b7b;
+  font-weight: 700;
+}
+
+/* Question styling in review */
+.review-item h4 {
+  margin: 0.3rem 0;
+  font-size: 1rem;
+  color: var(--ink-1);
+  line-height: 1.3;
+}
+
+/* Review number styling */
+.review-number {
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+/* Ensure proper spacing in review header */
+.review-header {
+  gap: 0.5rem;
+}
+
+/* Mobile adjustments for review content */
+@media (max-width: 768px) {
+  .review-answers {
+    padding: 0.4rem;
+    gap: 0.2rem;
+  }
+  
+  .user-answer,
+  .correct-answer-text {
+    font-size: 0.85rem;
+  }
+  
+  .review-item h4 {
+    font-size: 0.95rem;
+  }
+}
+
+/* Prevent long text overflow */
+.review-item h4,
+.explanation p,
+.user-answer,
+.correct-answer-text {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Review footer should stay fixed at bottom */
+.review-footer {
+  flex-shrink: 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--edge);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Mobile responsiveness for review mode */
+@media (max-width: 768px) {
+  .quiz-container.review-mode {
+    max-height: 80vh;
+  }
+  
+  .review-mode .review-list {
+    max-height: calc(80vh - 140px);
+  }
+  
+  .review-item {
+    min-height: 100px;
+    padding: 0.75rem;
+  }
+}
+
+/* Prevent content clipping */
+.review-mode h2,
+.review-mode .final-score {
+  flex-shrink: 0;
 }
