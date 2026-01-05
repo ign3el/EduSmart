@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import updateService from '../services/updateService'
 
-function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOfflineManager, onAdminClick, onProfile, onLogout, onSaveStory, onDownloadStory, isPlayingStory }) {
+function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOfflineManager, onAdminClick, onProfile, onLogout, onSaveStory, onDownloadStory, isPlayingStory, currentStory, onShowFileViewer }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
@@ -175,6 +175,14 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
             📥 Download
           </button>
         )}
+        {currentStory?.persistent_path && (
+          <button 
+            onClick={() => handleAction(onShowFileViewer)} 
+            className="px-4 py-2 bg-white/5 border border-green-500/30 rounded-lg text-ink-1 text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-green-500/15 hover:border-green-500/50 hover:-translate-y-0.5 whitespace-nowrap"
+          >
+            📄 View File
+          </button>
+        )}
         {!isPlayingStory && onNewStory && (
           <button 
             onClick={() => handleAction(onNewStory)} 
@@ -312,6 +320,15 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                           <span>Download Story</span>
                         </button>
                       ) : null}
+                      {currentStory?.persistent_path ? (
+                        <button 
+                          onClick={() => handleAction(onShowFileViewer)} 
+                          className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/3 border border-green-500/30 rounded-[10px] text-ink-1 font-semibold cursor-pointer transition-all duration-200 hover:bg-green-500/15 hover:border-green-500/50 hover:translate-x-1 mb-2 text-left"
+                        >
+                          <span className="text-[1.3rem] w-6 text-center flex-shrink-0">📄</span>
+                          <span>View Current File</span>
+                        </button>
+                      ) : null}
                     </div>
 
                     {isAdmin && onAdminClick ? (
@@ -376,9 +393,11 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                     </div>
                   </div>
                 </div>
-              </motion.div>
+      </motion.div>
           </>
           )}
+        {/* @ts-ignore */}
+        {/* @ts-ignore */}
         </AnimatePresence>,
         document.body
       )}

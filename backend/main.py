@@ -9,8 +9,10 @@ import json
 import zipfile
 import logging
 import hashlib
+import shutil
 from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, HTTPException, Depends
+from fastapi import BackgroundTasks as BackgroundTasksExplicit
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -25,9 +27,10 @@ from core.setup import create_admin_user
 from database_models import User, StoryOperations
 from services.story_service import GeminiService
 from services.tts_service import kokoro_tts
+from services.hash_service import hash_service
 from job_state import job_manager
 from story_storage import storage_manager, cleanup_scheduler_task, database_cleanup_scheduler_task
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Dict, Any
 
 # Type checking imports for Pylance
 if TYPE_CHECKING:
@@ -105,11 +108,11 @@ app.include_router(upload_router)
 # --- Non-Auth related application logic ---
 
 # Type annotation for gemini service to help Pylance
-from typing import Dict, Any, List
+from typing import Dict, Any, List, TYPE_CHECKING
 
 # Explicitly declare the methods Pylance should recognize
 # This helps with static analysis while maintaining runtime functionality
-gemini: GeminiService = GeminiService()
+gemini: 'GeminiService' = GeminiService()
 jobs: Dict[str, Any] = {}
 
 # Method existence hints for Pylance (these don't affect runtime)
@@ -239,7 +242,7 @@ def _safe_story_dirname(story_name: str, story_id: str) -> str:
     return slug
 
 @app.get("/api/avatars")
-async def get_avatars():
+async def get_avatars() -> List[Dict[str, str]]:
     return [
         {"id": "wizard", "name": "Professor Paws", "description": "Wise teacher."},
         {"id": "robot", "name": "Robo-Buddy", "description": "Tech explorer."},
@@ -331,7 +334,7 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
     # Run image and audio generation IN PARALLEL
     await asyncio.gather(generate_image(), generate_audio())
 
-async def run_ai_workflow_progressive(story_id: str, file_path: str, grade_level: str, voice: str, speed: float):
+async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grade_level: str, voice: str, speed: float, is_mobile: bool):
     """
     Progressive story generation workflow:
     1. Create story folder in generated_stories
@@ -406,65 +409,118 @@ async def check_duplicate(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user)
 ):
-    """Check if a file has been uploaded within the last 24 hours."""
-    # Calculate file hash
+    """Check if a file has been uploaded across both saved and generated stories."""
+    # Read file content
     file_content = await file.read()
-    file_hash = hashlib.sha256(file_content).hexdigest()
+    
+    # Use hash service to find duplicates
+    duplicate_info = hash_service.find_duplicate(file_content, file.filename)
     
     # Reset file pointer for potential reuse
     await file.seek(0)
     
-    # Check for duplicate
-    duplicate = job_manager.check_duplicate_file(file_hash, hours=24)
+    if duplicate_info:
+        # Check if duplicate is in saved_stories (persistent) or generated_stories (temp)
+        saved_matches = duplicate_info.get("saved_stories", [])
+        generated_matches = duplicate_info.get("generated_stories", [])
+        
+        # Prefer saved stories as they are permanent
+        if saved_matches:
+            match = saved_matches[0]
+            return {
+                "is_duplicate": True,
+                "duplicate_type": "saved",
+                "story_id": match["story_id"],
+                "story_title": match.get("metadata", {}).get("title", "Unknown"),
+                "created_at": match.get("metadata", {}).get("created_timestamp"),
+                "file_hash": duplicate_info["hash"]
+            }
+        elif generated_matches:
+            match = generated_matches[0]
+            return {
+                "is_duplicate": True,
+                "duplicate_type": "generated",
+                "story_id": match["story_id"],
+                "story_title": match.get("metadata", {}).get("title", "Unknown"),
+                "created_at": match.get("metadata", {}).get("created_timestamp"),
+                "file_hash": duplicate_info["hash"]
+            }
     
-    if duplicate:
-        return {
-            "is_duplicate": True,
-            "story_id": duplicate["story_id"],
-            "story_title": duplicate["title"],
-            "created_by": duplicate["username"] or f"User {duplicate['user_id']}",
-            "created_at": duplicate["created_at"]
-        }
-    
-    return {"is_duplicate": False, "file_hash": file_hash}
+    return {"is_duplicate": False, "file_hash": hash_service.generate_bytes_hash(file_content)}
 
 @app.post("/api/upload")
 async def upload_story(
-    background_tasks: BackgroundTasks, 
+    background_tasks: BackgroundTasksExplicit,  # type: ignore
     file: UploadFile = File(...), 
     grade_level: str = Form("Grade 4"), 
     voice: str = Form("af_sarah"), 
     speed: float = Form(1.0),
     file_hash: str = Form(None),
     force_new: bool = Form(False),
-    user_agent: str = Form(None),  # Add user agent parameter
+    user_agent: str = Form(None),
     current_user: User = Depends(get_current_user)
 ):
-    # Calculate hash if not provided
+    """
+    Upload file and handle duplicate detection.
+    If duplicate found and user chooses to view existing, delete temp story and redirect.
+    If duplicate found and user chooses to generate new, create new story with copy of file.
+    """
+    # Read file content
     file_content = await file.read()
+    
+    # Calculate hash if not provided
     if not file_hash:
-        file_hash = hashlib.sha256(file_content).hexdigest()
+        file_hash = hash_service.generate_bytes_hash(file_content)
     
     # Check for duplicate unless force_new is True
+    duplicate_info = None
     if not force_new:
-        duplicate = job_manager.check_duplicate_file(file_hash, hours=24)
-        if duplicate:
+        duplicate_info = hash_service.find_duplicate(file_content, file.filename)
+    
+    if duplicate_info:
+        saved_matches = duplicate_info.get("saved_stories", [])
+        generated_matches = duplicate_info.get("generated_stories", [])
+        
+        # Return duplicate info - frontend will handle user choice
+        if saved_matches or generated_matches:
+            match = (saved_matches[0] if saved_matches else generated_matches[0])
+            duplicate_type = "saved" if saved_matches else "generated"
+            
             return {
                 "is_duplicate": True,
-                "story_id": duplicate["story_id"],
-                "story_title": duplicate["title"],
-                "created_by": duplicate["username"] or f"User {duplicate['user_id']}",
-                "created_at": duplicate["created_at"]
+                "duplicate_type": duplicate_type,
+                "story_id": match["story_id"],
+                "story_title": match.get("metadata", {}).get("title", "Unknown"),
+                "created_at": match.get("metadata", {}).get("created_timestamp"),
+                "file_hash": file_hash,
+                "message": "File already exists. Choose to view existing or generate new."
             }
     
+    # No duplicate or force_new=True - create new story
     story_id = str(uuid.uuid4())
-    upload_path = os.path.join("uploads", f"{story_id}_{file.filename}")
     
-    # Write file content
-    with open(upload_path, "wb") as f:
+    # Create temporary story folder in generated_stories
+    temp_dir = storage_manager.create_story_folder(story_id, {
+        "grade_level": grade_level,
+        "voice": voice,
+        "speed": speed,
+        "original_filename": file.filename,
+        "file_hash": file_hash,
+        "user_id": current_user['id'],
+        "username": current_user['username'],
+        "is_temp": True
+    })
+    
+    # Save original file to temp folder
+    filename = file.filename or "uploaded_file"
+    temp_file_path = os.path.join(temp_dir, filename)
+    with open(temp_file_path, "wb") as f:
         f.write(file_content)
-
-    # Initialize story with hash and user info
+    
+    # Store file hash in metadata
+    hash_service.update_story_metadata_hash(story_id, file_hash, in_saved=False)
+    
+    # Initialize job state
     job_manager.initialize_story(
         story_id, 
         grade_level, 
@@ -480,84 +536,118 @@ async def upload_story(
         is_mobile = any(keyword in user_agent.lower() for keyword in mobile_keywords)
     
     # Use progressive workflow with mobile optimization
-    async def run_workflow_with_mobile_detection():
-        # Create a wrapper that passes mobile flag
-        await run_ai_workflow_progressive(story_id, upload_path, grade_level, voice, speed)
-        # Update the generate_scene_media_progressive calls to use is_mobile parameter
-        # This will be handled by checking the user_agent in the workflow
+    background_tasks.add_task(
+        run_ai_workflow_progressive_mobile, 
+        story_id, 
+        temp_file_path, 
+        grade_level, 
+        voice, 
+        speed, 
+        is_mobile
+    )
     
-    # Modify the workflow to detect mobile and pass it to scene generation
-    async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grade_level: str, voice: str, speed: float, is_mobile: bool):
-        try:
-            # Create story folder with metadata
-            storage_manager.create_story_folder(story_id, {
-                "grade_level": grade_level,
-                "voice": voice,
-                "speed": speed,
-                "file_path": file_path,
-                "is_mobile": is_mobile
-            })
-            logger.info(f"📁 Created story folder: generated_stories/{story_id}")
-            
-            # Generate story structure
-            story_data = await asyncio.to_thread(gemini.process_file_to_story, file_path, grade_level)
-            
-            if not story_data:
-                raise Exception("AI failed to generate story content.")
-            
-            scenes = story_data.get("scenes", [])
-            title = story_data.get("title", "Untitled Story")
-            
-            # Initialize job state
-            job_manager.update_story_metadata(story_id, title, len(scenes))
-            
-            # Create scene records immediately (text is ready)
-            scene_ids = []
-            for i, scene in enumerate(scenes):
-                scene_id = job_manager.create_scene(
-                    story_id, 
-                    i, 
-                    scene.get("narrative_text", ""),
-                    scene.get("image_prompt", "")
-                )
-                scene_ids.append(scene_id)
-            
-            logger.info(f"✓ Story structure ready: {len(scenes)} scenes")
-            
-            # --- Hybrid Generation Strategy ---
-            story_seed = int(uuid.uuid4().hex[:8], 16)
-            
-            # 1. Generate Scene 1 first for a fast user start
-            if len(scenes) > 0:
-                logger.info("Starting media generation for Scene 1 (priority)...")
-                await generate_scene_media_progressive(
-                    story_id, scene_ids[0], 0, scenes[0], voice, speed, story_seed, is_mobile
-                )
-                logger.info("✓ Finished media generation for Scene 1.")
+    return {
+        "job_id": story_id, 
+        "is_mobile": is_mobile,
+        "message": "Story generation started"
+    }
 
-            # 2. Generate the rest of the scenes in parallel
-            if len(scenes) > 1:
-                logger.info(f"Starting parallel media generation for remaining {len(scenes) - 1} scenes...")
-                remaining_tasks = [
-                    generate_scene_media_progressive(story_id, scene_ids[i], i, scene, voice, speed, story_seed, is_mobile)
-                    for i, scene in enumerate(scenes[1:], start=1)
-                ]
-                await asyncio.gather(*remaining_tasks, return_exceptions=True)
-                logger.info("✓ Finished parallel generation for remaining scenes.")
-
-            logger.info(f"✓ All media generation complete for story {story_id}")
-            
-        except Exception as e:
-            logger.error(f"AI Workflow Error: {e}")
-            job_manager.mark_story_failed(story_id, str(e))
+@app.post("/api/handle-duplicate-choice")
+async def handle_duplicate_choice(
+    background_tasks: BackgroundTasks,
+    choice: str = Form(...),  # "view_existing" or "generate_new"
+    duplicate_story_id: str = Form(...),
+    duplicate_type: str = Form(...),  # "saved" or "generated"
+    file: UploadFile = File(...),
+    grade_level: str = Form("Grade 4"),
+    voice: str = Form("af_sarah"),
+    speed: float = Form(1.0),
+    user_agent: str = Form(None),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Handle user's choice when duplicate is detected.
+    - view_existing: Delete temp story and return existing story_id
+    - generate_new: Create new story with file copy
+    """
+    if choice == "view_existing":
+        # Delete any temp story that was created
+        if duplicate_type == "generated":
+            # This is a temp story, delete it
+            storage_manager.delete_story(duplicate_story_id, in_saved=False)
+            job_manager.mark_story_failed(duplicate_story_id, "User chose to view existing story")
+        
+        return {
+            "action": "view_existing",
+            "story_id": duplicate_story_id,
+            "message": "Redirecting to existing story"
+        }
     
-    background_tasks.add_task(run_ai_workflow_progressive_mobile, story_id, upload_path, grade_level, voice, speed, is_mobile)
-    return {"job_id": story_id, "is_mobile": is_mobile}
+    elif choice == "generate_new":
+        # Create new story with fresh UUID
+        new_story_id = str(uuid.uuid4())
+        
+        # Read file content
+        file_content = await file.read()
+        
+        # Create new temp story folder
+        temp_dir = storage_manager.create_story_folder(new_story_id, {
+            "grade_level": grade_level,
+            "voice": voice,
+            "speed": speed,
+            "original_filename": file.filename,
+            "file_hash": hash_service.generate_bytes_hash(file_content),
+            "user_id": current_user['id'],
+            "username": current_user['username'],
+            "is_temp": True,
+            "note": "Generated despite duplicate - user choice"
+        })
+        
+        # Save file to new temp folder
+        filename = file.filename or "uploaded_file"
+        temp_file_path = os.path.join(temp_dir, filename)
+        with open(temp_file_path, "wb") as f:
+            f.write(file_content)
+        
+        # Initialize job state
+        job_manager.initialize_story(
+            new_story_id, 
+            grade_level, 
+            file_hash=hash_service.generate_bytes_hash(file_content), 
+            user_id=current_user['id'], 
+            username=current_user['username']
+        )
+        
+        # Detect mobile
+        is_mobile = False
+        if user_agent:
+            mobile_keywords = ['mobile', 'android', 'iphone', 'ipad', 'windows phone', 'blackberry']
+            is_mobile = any(keyword in user_agent.lower() for keyword in mobile_keywords)
+        
+        # Start generation
+        background_tasks.add_task(
+            run_ai_workflow_progressive_mobile, 
+            new_story_id, 
+            temp_file_path, 
+            grade_level, 
+            voice, 
+            speed, 
+            is_mobile
+        )
+        
+        return {
+            "action": "generate_new",
+            "job_id": new_story_id,
+            "message": "New story generation started"
+        }
+    
+    else:
+        raise HTTPException(status_code=400, detail="Invalid choice")
 
 
 # Progressive endpoints for scene-by-scene loading
 @app.get("/api/story/{story_id}/status")
-async def get_story_status(story_id: str):
+async def get_story_status(story_id: str) -> Dict[str, Any]:
     """Get overall story status with scene completion info."""
     status = job_manager.get_story_status(story_id)
     if not status:
@@ -585,7 +675,7 @@ async def get_story_status(story_id: str):
 
 
 @app.get("/api/story/{story_id}/scene/{scene_index}")
-async def get_scene_status(story_id: str, scene_index: int):
+async def get_scene_status(story_id: str, scene_index: int) -> Dict[str, Any]:
     """Get specific scene data."""
     scene_id = f"{story_id}_scene_{scene_index}"
     scene = job_manager.get_scene(scene_id)
@@ -603,7 +693,7 @@ async def get_scene_status(story_id: str, scene_index: int):
 
 
 @app.get("/api/status/{job_id}")
-async def get_status(job_id: str):
+async def get_status(job_id: str) -> Dict[str, Any]:
     # Check if it's a progressive story
     status = job_manager.get_story_status(job_id)
     if status:
