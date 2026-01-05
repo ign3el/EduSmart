@@ -1,32 +1,25 @@
 .duplicate-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  z-index: 1000;
+  inset: 0;
+  background: rgba(5, 11, 22, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
 }
 
 .duplicate-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1001;
-  width: 90%;
-  max-width: 550px;
+  position: relative;
+  width: min(550px, 100%);
+  max-height: 90vh;
   background: linear-gradient(150deg, rgba(12, 21, 40, 0.95), rgba(12, 21, 40, 0.9));
   border: 1px solid var(--edge);
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 30px 60px rgba(168, 85, 247, 0.3);
   overflow: hidden;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  /* Force centering on all screen sizes */
-  margin: 0 auto;
 }
 
 .duplicate-header {
@@ -207,15 +200,8 @@
 
 @media (max-width: 768px) {
   .duplicate-modal {
-    width: 95%;
-    max-width: none;
+    width: min(95vw, 550px);
     max-height: 85vh;
-    /* Ensure modal stays within viewport */
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    /* Add safe area for notches */
-    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .duplicate-header {
@@ -228,9 +214,7 @@
 
   .duplicate-content {
     padding: 1.5rem;
-    /* Allow scrolling if content overflows */
     overflow-y: auto;
-    max-height: calc(85vh - 150px);
   }
 
   .duplicate-info-card {
@@ -266,11 +250,11 @@
   }
 }
 
-/* Additional fixes for very small screens and landscape mode */
+/* Additional fixes for very small screens */
 @media (max-width: 480px) {
   .duplicate-modal {
-    width: 98%;
-    max-height: 90vh;
+    width: 98vw;
+    max-height: 88vh;
   }
 
   .duplicate-header {
@@ -287,43 +271,5 @@
 
   .duplicate-actions {
     gap: 0.75rem;
-  }
-}
-
-/* Landscape mode adjustments */
-@media (max-height: 500px) and (orientation: landscape) {
-  .duplicate-modal {
-    max-height: 90vh;
-    display: flex;
-    flex-direction: row;
-    width: 95%;
-    max-width: 800px;
-  }
-
-  .duplicate-header {
-    width: 40%;
-    border-bottom: none;
-    border-right: 1px solid var(--edge);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .duplicate-content {
-    width: 60%;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  .duplicate-actions {
-    flex-direction: row;
-  }
-
-  .load-existing-button,
-  .create-new-button {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 0.75rem;
   }
 }

@@ -490,7 +490,7 @@ function MainApp() {
             user={user}
             isAdmin={user?.is_admin}
             onHome={() => navigateTo('home')}
-            onNewStory={() => navigateTo('upload')}
+            onNewStory={handleRestart}
             onLoadStories={() => navigateTo('load')}
             onOfflineManager={() => navigateTo('offline')}
             onAdminClick={() => navigateTo('admin')}
@@ -694,31 +694,40 @@ function MainApp() {
                 setShowDuplicateModal(false)
                 // Load the existing story
                 try {
+                  console.log('🔄 Loading existing story:', duplicateInfo.story_id)
                   const response = await apiClient.get(`/api/story/${duplicateInfo.story_id}/status`)
                   const storyStatus = response.data
+                  console.log('📊 Story status:', storyStatus)
                   
                   if (storyStatus.status === 'completed') {
                     const formattedStory = {
-                      title: storyStatus.title,
+                      title: storyStatus.title || 'Saved Story',
                       scenes: storyStatus.scenes.map((scene, idx) => ({
                         id: idx,
-                        text: scene.text,
-                        imageUrl: scene.image_url,
-                        audioUrl: scene.audio_url
-                      }))
+                        text: scene.text || '',
+                        imageUrl: scene.image_url || '',
+                        audioUrl: scene.audio_url || ''
+                      })),
+                      quiz: storyStatus.quiz || []
                     }
+                    
+                    console.log('✅ Formatted story:', formattedStory)
+                    console.log('🎬 Navigating to playing...')
                     
                     setStoryData(formattedStory)
                     setCurrentJobId(duplicateInfo.story_id)
                     setIsSaved(true)
                     setSavedStoryId(duplicateInfo.story_id)
+                    setSelectedAvatar({ id: 'loaded', name: 'Saved Story' })
                     navigateTo('playing')
                   } else {
+                    console.warn('⚠️ Story not completed:', storyStatus.status)
                     setError('Story is still being generated')
                   }
                 } catch (err) {
-                  console.error('Error loading duplicate story:', err)
-                  setError('Failed to load existing story')
+                  console.error('❌ Error loading duplicate story:', err)
+                  console.error('Error details:', err.response?.data)
+                  setError('Failed to load existing story: ' + (err.response?.data?.detail || err.message))
                 }
               }}
               onCreateNew={() => {

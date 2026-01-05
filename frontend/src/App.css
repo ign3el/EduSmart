@@ -53,24 +53,42 @@
 .app-header {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 100;
   backdrop-filter: var(--blur);
-  background: rgba(10, 14, 39, 0.8);
+  background: rgba(10, 14, 39, 0.9);
   border-bottom: 1px solid rgba(168, 85, 247, 0.2);
   box-shadow: 0 10px 30px rgba(168, 85, 247, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.5rem;
+  gap: 1rem;
 }
 
 .app-header-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
   align-items: center;
   text-align: center;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  font-weight: 500;
 }
 
 .logout-btn {
@@ -142,13 +160,32 @@
   width: 100%;
   display: flex;
   justify-content: center;
-  padding: clamp(1.25rem, 4vw, 2.5rem);
+  padding: 2rem 1.5rem;
+  min-height: 0;
 }
 
 .content-shell {
   width: 100%;
   max-width: 1180px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.step-container {
+  width: 100%;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .home-container {
@@ -432,18 +469,54 @@
 @media (max-width: 768px) {
   /* Compact header for mobile */
   .app-header {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .app-header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+
+  .app-header-content {
+    gap: 0;
+  }
+
+  .header-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .app-main {
+    padding: 1rem;
+  }
+
+  .home-container {
+    padding: 1.5rem;
+  }
+
+  .error-message {
+    padding: 1.25rem;
+    margin: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
     padding: 0.6rem 1rem;
   }
 
   .app-header h1 {
     font-size: 1.3rem;
-    margin: 0;
   }
 
   .header-subtitle {
-    display: none; /* Hide subtitle on mobile */
+    font-size: 0.7rem;
   }
 
+  .app-main {
+    padding: 0.75rem;
+  }
+}
   .app-header-content {
     padding: 0;
     gap: 0;
