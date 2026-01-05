@@ -5,6 +5,7 @@ Handles SHA-256 hash generation and duplicate detection across saved and generat
 import os
 import hashlib
 import json
+import time
 from typing import Optional, Dict, List
 from pathlib import Path
 import logging
@@ -145,7 +146,6 @@ class HashService:
         if cache_key in self.hash_cache:
             cached = self.hash_cache[cache_key]
             # Check if cache is still valid (less than 24 hours old)
-            import time
             if time.time() - cached.get("timestamp", 0) < 86400:
                 logger.info(f"Hash found in cache: {file_hash[:16]}...")
                 return cached.get("duplicate_info")
