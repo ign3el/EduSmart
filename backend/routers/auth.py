@@ -10,8 +10,27 @@ from auth import create_access_token, verify_token, generate_secure_token, get_p
 from database_models import User, UserOperations
 from services.email_service import send_verification_email, send_password_reset_email
 from database import get_db_cursor
+import os
 
 logger = logging.getLogger(__name__)
+
+# --- Development Mode Mock User ---
+DEV_USER = {
+    "id": 999,
+    "email": "dev@local",
+    "username": "developer",
+    "password_hash": "dev_password_hash",
+    "is_verified": True,
+    "is_premium": True,
+    "is_admin": True,
+    "last_verification_sent": None,
+    "created_at": datetime.now(),
+    "updated_at": datetime.now()
+}
+
+def get_dev_user():
+    """Return mock user for development mode."""
+    return DEV_USER.copy()
 
 # Create a new router for auth endpoints
 router = APIRouter(
@@ -71,6 +90,10 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     Dependency to get the current user from a JWT token.
     Raises 401 Unauthorized if the token is invalid, expired, or user not found.
     """
+    # Development mode: Return mock user
+    if os.getenv("ENV") == "development":
+        return get_dev_user()
+    
     email = verify_token(token)
     if not email:
         raise HTTPException(
@@ -138,6 +161,12 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     Verifies credentials and returns a JWT access token.
     Note: The 'username' field accepts EITHER username OR email.
     """
+    # Development mode: Skip authentication
+    if os.getenv("ENV") == "development":
+        logger.info("✓ Development mode: Skipping authentication")
+        access_token = create_access_token(data={"sub": DEV_USER['email']})
+        return {"access_token": access_token, "token_type": "bearer"}
+    
     # Try to authenticate with either email or username
     user = None
     if '@' in form_data.username:

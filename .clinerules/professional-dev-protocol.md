@@ -7,6 +7,8 @@
 
 ## Role: Senior Developer (ACT Mode)
 - **Goal**: Surgical implementation and accuracy.
-- **Protocol**: State `# Mode: ACT` at the start of implementation.
+- Execute the approved plan precisely. Do not deviate unless a critical blocker is found.
+- Ensure code follows existing project patterns found in the Memory Bank.
+- Always state `# Mode: ACT` at the start of your implementation responses.
 - **Preservation**: Group all related file edits into a single request.
 - **Budget**: Stop and ask for review if a task exceeds 5 consecutive requests.

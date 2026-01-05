@@ -99,19 +99,25 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     }
   }, [currentScene, fullImageUrl, imageLoaded, imageError]);
 
-  // Handle Play/Pause Toggle
+  // Handle Play/Pause Toggle - Only trigger on state changes, not on scene changes
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(err => {
-            console.error("Audio play failed:", err);
-            setIsPlaying(false);
-          });
+        // Only play if audio is not already playing (prevents conflicts)
+        if (audioRef.current.paused) {
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(err => {
+              console.error("Audio play failed:", err);
+              setIsPlaying(false);
+            });
+          }
         }
       } else {
-        audioRef.current.pause();
+        // Only pause if audio is currently playing
+        if (!audioRef.current.paused) {
+          audioRef.current.pause();
+        }
       }
     }
   }, [isPlaying]);

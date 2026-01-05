@@ -7,6 +7,7 @@ from mysql.connector import pooling
 from contextlib import contextmanager
 from dotenv import load_dotenv
 import logging
+from typing import Optional, Dict, Any
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -15,25 +16,42 @@ logger = logging.getLogger(__name__)
 # Load environment variables from .env file
 load_dotenv()
 
-# --- Database Configuration ---
-# Use os.getenv to read from environment, which is populated by Docker Compose
-DB_CONFIG = {
-    "host": os.getenv("MYSQL_HOST"),
-    "user": os.getenv("MYSQL_USER"),
-    "password": os.getenv("MYSQL_PASSWORD"),
-    "database": os.getenv("MYSQL_DATABASE"),
-    "port": int(os.getenv("MYSQL_PORT", 3306)),
-    "pool_name": "edusmart_pool",
-    "pool_size": 5,
-}
+# --- Environment Detection ---
+ENV = os.getenv("ENV", "production")
 
-connection_pool = None
+# --- Database Configuration ---
+# Skip DB config in development mode
+DB_CONFIG: Optional[Dict[str, Any]] = None
+if ENV == "development":
+    logger.warning("🚫 DEVELOPMENT MODE: Database functionality disabled")
+else:
+    # Use os.getenv to read from environment, which is populated by Docker Compose
+    DB_CONFIG = {
+        "host": os.getenv("MYSQL_HOST"),
+        "user": os.getenv("MYSQL_USER"),
+        "password": os.getenv("MYSQL_PASSWORD"),
+        "database": os.getenv("MYSQL_DATABASE"),
+        "port": int(os.getenv("MYSQL_PORT", 3306)),
+        "pool_name": "edusmart_pool",
+        "pool_size": 5,
+    }
+
+connection_pool: Optional[pooling.MySQLConnectionPool] = None
 
 def get_connection_pool():
     """Initializes and returns the connection pool singleton."""
     global connection_pool
+    
+    # Skip in development mode
+    if ENV == "development":
+        return None
+        
     if connection_pool is None:
         try:
+            # Ensure DB_CONFIG is not None
+            if DB_CONFIG is None:
+                raise ValueError("Database configuration is not available")
+                
             # Ensure all required config values are present
             for key in ["host", "user", "password", "database"]:
                 if DB_CONFIG.get(key) is None:
@@ -44,8 +62,9 @@ def get_connection_pool():
         except (mysql.connector.Error, ValueError) as err:
             logger.error(f"⚠ Failed to create MySQL connection pool: {err}")
             # Log details without showing password
-            config_details = {k: v for k, v in DB_CONFIG.items() if k != 'password'}
-            logger.error(f"   Using config: {config_details}")
+            if DB_CONFIG:
+                config_details = {k: v for k, v in DB_CONFIG.items() if k != 'password'}
+                logger.error(f"   Using config: {config_details}")
             # Set pool to None so subsequent calls don't succeed
             connection_pool = None
             raise
@@ -57,6 +76,10 @@ def get_db_cursor(commit=False):
     Provides a database cursor from the connection pool.
     Handles connection acquisition, cursor creation, and commit/rollback.
     """
+    # Skip in development mode
+    if ENV == "development":
+        raise ConnectionError("Database unavailable in development mode")
+        
     pool = get_connection_pool()
     if pool is None:
         raise ConnectionError("Database connection pool is not available.")
@@ -81,7 +104,8 @@ def get_db_cursor(commit=False):
             connection.close()
 
 # --- Schema Definition ---
-TABLES = {}
+# Maps table names to their CREATE TABLE statements
+TABLES: Dict[str, str] = {}
 
 TABLES['users'] = """
     CREATE TABLE IF NOT EXISTS users (

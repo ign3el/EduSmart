@@ -27,7 +27,11 @@ from services.story_service import GeminiService
 from services.tts_service import kokoro_tts
 from job_state import job_manager
 from story_storage import storage_manager, cleanup_scheduler_task, database_cleanup_scheduler_task
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+# Type checking imports for Pylance
+if TYPE_CHECKING:
+    from services.story_service import GeminiService
 
 # Load environment variables from .env file
 load_dotenv()
@@ -59,18 +63,23 @@ async def startup_event():
     This function runs when the application starts.
     It initializes the database and starts background tasks.
     """
-    try:
-        logger.info("Initializing database...")
-        initialize_database()
-        logger.info("Database initialization successful.")
-        
-        logger.info("Performing initial user setup (admin check)...")
-        create_admin_user()
-        logger.info("Initial user setup complete.")
-        
-    except Exception as e:
-        logger.critical(f"FATAL: Could not initialize database on startup. Error: {e}")
-        # In a real app, you might want the app to fail fast if the DB is unavailable.
+    # Skip database operations in development mode
+    if os.getenv("ENV") == "development":
+        logger.info("✓ Development mode: Skipping database initialization")
+        logger.info("✓ Development mode: Skipping admin user creation")
+    else:
+        try:
+            logger.info("Initializing database...")
+            initialize_database()
+            logger.info("Database initialization successful.")
+            
+            logger.info("Performing initial user setup (admin check)...")
+            create_admin_user()
+            logger.info("Initial user setup complete.")
+            
+        except Exception as e:
+            logger.critical(f"FATAL: Could not initialize database on startup. Error: {e}")
+            # In a real app, you might want the app to fail fast if the DB is unavailable.
     
     logger.info("Initializing story storage manager...")
     # Storage manager auto-initializes on import
@@ -78,8 +87,12 @@ async def startup_event():
     logger.info("Starting story cleanup scheduler (24-hour TTL)...")
     asyncio.create_task(cleanup_scheduler_task())
     
-    logger.info("Starting database cleanup scheduler (runs every 2 days)...")
-    asyncio.create_task(database_cleanup_scheduler_task())
+    # Skip database cleanup in development mode
+    if os.getenv("ENV") != "development":
+        logger.info("Starting database cleanup scheduler (runs every 2 days)...")
+        asyncio.create_task(database_cleanup_scheduler_task())
+    else:
+        logger.info("✓ Development mode: Skipping database cleanup scheduler")
 
 
 # --- API Routers ---
@@ -91,8 +104,23 @@ app.include_router(upload_router)
 
 # --- Non-Auth related application logic ---
 
-gemini = GeminiService()
-jobs = {}
+# Type annotation for gemini service to help Pylance
+from typing import Dict, Any, List
+
+# Explicitly declare the methods Pylance should recognize
+# This helps with static analysis while maintaining runtime functionality
+gemini: GeminiService = GeminiService()
+jobs: Dict[str, Any] = {}
+
+# Method existence hints for Pylance (these don't affect runtime)
+# Pylance will recognize these methods exist on the gemini instance
+if False:
+    # These are never executed but help Pylance understand the types
+    _ = gemini.process_file_to_story
+    _ = gemini.generate_image
+    _ = gemini._extract_json_from_response
+    _ = gemini._exponential_backoff
+    _ = gemini._call_with_exponential_backoff
 
 # Note: generated_stories and saved_stories directories created by storage_manager
 # Keeping uploads folder for backward compatibility during migration

@@ -32,6 +32,95 @@ class GeminiService:
         """Calculate exponential backoff delay: base_delay * (2 ^ attempt)."""
         return self.base_delay * (2 ** attempt)
 
+    def _extract_json_from_response(self, text: str) -> Optional[dict]:
+        """Extract JSON from AI response using multiple strategies."""
+        
+        # Strategy 1: Look for complete JSON object with proper bracket counting
+        def find_complete_json(text: str) -> Optional[str]:
+            start = text.find('{')
+            if start == -1:
+                return None
+            
+            bracket_count = 0
+            in_string = False
+            escape_next = False
+            
+            for i in range(start, len(text)):
+                char = text[i]
+                
+                if escape_next:
+                    escape_next = False
+                    continue
+                
+                if char == '\\':
+                    escape_next = True
+                    continue
+                
+                if char == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+                
+                if not in_string:
+                    if char == '{':
+                        bracket_count += 1
+                    elif char == '}':
+                        bracket_count -= 1
+                        if bracket_count == 0:
+                            return text[start:i+1]
+            
+            return None
+        
+        # Strategy 2: Find JSON in markdown code blocks
+        def extract_from_code_block(text: str) -> Optional[str]:
+            import re
+            # Look for ```json ... ``` or ``` ... ```
+            patterns = [
+                r'```json\s*(\{.*?\})\s*```',
+                r'```\s*(\{.*?\})\s*```'
+            ]
+            for pattern in patterns:
+                match = re.search(pattern, text, re.DOTALL)
+                if match:
+                    return match.group(1)
+            return None
+        
+        # Strategy 3: Find JSON after common AI response prefixes
+        def extract_after_prefix(text: str) -> Optional[str]:
+            prefixes = [
+                'Here is the story:\n',
+                'Here is your story:\n',
+                'JSON:\n',
+                '```json\n',
+                '```'
+            ]
+            for prefix in prefixes:
+                if prefix in text:
+                    after = text.split(prefix, 1)[1]
+                    json_str = find_complete_json(after)
+                    if json_str:
+                        return json_str
+            return None
+        
+        # Try all strategies in order
+        strategies = [
+            find_complete_json,
+            extract_from_code_block,
+            extract_after_prefix
+        ]
+        
+        for strategy in strategies:
+            try:
+                json_str = strategy(text)
+                if json_str:
+                    try:
+                        return json.loads(json_str)
+                    except json.JSONDecodeError:
+                        continue
+            except Exception:
+                continue
+        
+        return None
+
     def _call_with_exponential_backoff(self, func, *args, **kwargs):
         """Execute API call with exponential backoff retry logic with automatic fallback."""
         for attempt in range(self.max_retries + 1):
@@ -175,22 +264,14 @@ Generate as many scenes as required. Output ONLY the JSON object."""
             if response and response.text:
                 cleaned_text = response.text.strip()
                 if cleaned_text:
-                    # Find the start and end of the JSON object
-                    start_index = cleaned_text.find('{')
-                    end_index = cleaned_text.rfind('}')
+                    # Enhanced JSON parsing with multiple fallback strategies
+                    json_obj = self._extract_json_from_response(cleaned_text)
+                    if json_obj:
+                        return json_obj
                     
-                    if start_index != -1 and end_index != -1 and end_index > start_index:
-                        json_str = cleaned_text[start_index:end_index + 1]
-                        try:
-                            return json.loads(json_str)
-                        except json.JSONDecodeError as e:
-                            print(f"STORY JSON DECODE ERROR: {e}")
-                            print(f"Received malformed text (first 500 chars): {json_str[:500]}")
-                            return None
-                    else:
-                        print(f"STORY ERROR: Could not find a valid JSON object in the response.")
-                        print(f"Received (first 500 chars): {cleaned_text[:500]}")
-                        return None
+                    print(f"STORY ERROR: Could not parse valid JSON from response.")
+                    print(f"Received (first 500 chars): {cleaned_text[:500]}")
+                    return None
             
             print("STORY ERROR: Received empty or invalid response from GenAI model.")
             return None
