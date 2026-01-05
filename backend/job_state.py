@@ -98,7 +98,7 @@ class JobStateManager:
             except Exception as e:
                 print(f"Index creation skipped: {e}")
     
-    def initialize_story(self, story_id: str, grade_level: str, file_hash: str = None, user_id: int = None, username: str = None):
+    def initialize_story(self, story_id: str, grade_level: str, file_hash: Optional[str] = None, user_id: Optional[int] = None, username: Optional[str] = None):
         """Create a preliminary story job record."""
         with self._get_conn() as conn:
             conn.execute("""

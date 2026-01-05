@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, Field, validator
 
-from auth import create_access_token, verify_token, generate_secure_token
+from auth import create_access_token, verify_token, generate_secure_token, get_password_hash, verify_password
 from database_models import User, UserOperations
 from services.email_service import send_verification_email, send_password_reset_email
+from database import get_db_cursor
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ class UserResponse(BaseModel):
     username: str
     is_verified: bool
     is_premium: bool
-    is_admin: bool
+    is_admin: bool = False
 
     class Config:
         from_attributes = True # Allows mapping from ORM models or dicts
@@ -177,7 +178,14 @@ def read_users_me(current_user: User = Depends(get_current_user)):
     Returns the data for the currently authenticated user.
     This is a protected endpoint.
     """
-    return current_user
+    return UserResponse(
+        id=current_user['id'],
+        email=current_user['email'],
+        username=current_user['username'],
+        is_verified=current_user['is_verified'],
+        is_premium=current_user['is_premium'],
+        is_admin=current_user['is_admin']
+    )
 
 @router.post("/resend-verification", status_code=status.HTTP_200_OK)
 def resend_verification_email(email: EmailStr):
@@ -342,7 +350,7 @@ def change_password(
     from auth import verify_password, get_password_hash
     
     # Verify current password
-    if not verify_password(request.current_password, current_user.password_hash):
+    if not verify_password(request.current_password, current_user['password_hash']):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect"
@@ -355,10 +363,10 @@ def change_password(
         with get_db_cursor(commit=True) as cursor:
             cursor.execute(
                 "UPDATE users SET password_hash = %s WHERE id = %s",
-                (new_password_hash, current_user.id)
+                (new_password_hash, current_user['id'])
             )
         
-        logger.info(f"Password changed successfully for user ID: {current_user.id}")
+        logger.info(f"Password changed successfully for user ID: {current_user['id']}")
         return {"message": "Password changed successfully"}
     except Exception as e:
         logger.error(f"Failed to change password: {e}")
@@ -381,7 +389,7 @@ def update_username(
     """
     # Check if username is already taken by another user
     existing_user = UserOperations.get_by_username(request.username)
-    if existing_user and existing_user['id'] != current_user.id:
+    if existing_user and existing_user['id'] != current_user['id']:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken"
@@ -391,14 +399,23 @@ def update_username(
         with get_db_cursor(commit=True) as cursor:
             cursor.execute(
                 "UPDATE users SET username = %s WHERE id = %s",
-                (request.username, current_user.id)
+                (request.username, current_user['id'])
             )
         
         # Fetch updated user
-        updated_user = UserOperations.get_by_id(current_user.id)
-        logger.info(f"Username updated for user ID: {current_user.id}")
+        updated_user = UserOperations.get_by_id(current_user['id'])
+        if not updated_user:
+            raise HTTPException(status_code=500, detail="Failed to fetch updated user")
+        logger.info(f"Username updated for user ID: {current_user['id']}")
         
-        return UserResponse(**updated_user)
+        return UserResponse(
+            id=updated_user['id'],
+            email=updated_user['email'],
+            username=updated_user['username'],
+            is_verified=updated_user['is_verified'],
+            is_premium=updated_user['is_premium'],
+            is_admin=updated_user['is_admin']
+        )
     except Exception as e:
         logger.error(f"Failed to update username: {e}")
         raise HTTPException(

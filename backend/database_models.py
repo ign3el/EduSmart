@@ -39,6 +39,7 @@ class UserOperations:
                     "username": username,
                     "is_verified": False,
                     "is_premium": False,
+                    "is_admin": False,
                 }
                 return new_user
         except mysql.connector.IntegrityError:
