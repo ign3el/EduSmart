@@ -1,6 +1,46 @@
-# 📚 EduSmart - AI-Powered Educational Storybook Generator
+# 📚 EduStory - AI-Powered Educational Story Generator
 
-Transform educational documents into engaging, animated learning experiences for students in grades KG-1 through Grade 7.
+Transform educational content into engaging, interactive stories for children in grades KG-1 through Grade 7.
+
+## 🌟 Global Project Rules
+
+This project enforces strict development discipline through automated global rules. All contributors must follow these guidelines:
+
+### 📋 Rule Files
+- **`.roo/rules/01-architectural-integrity.md`** - Architecture principles and component responsibilities
+- **`.roo/rules-code/01-pro-coding.md`** - Coding standards and best practices  
+- **`.roo/rules/memory-sync.md`** - Memory management and task tracking
+
+### 🧠 Memory System
+- **`PROJECT_CONTEXT.md`** - Single source of truth for project architecture
+- **`TASK_HISTORY.md`** - Complete task tracking and decision log
+- **`scripts/validate_memory.py`** - Automated memory validation
+- **`scripts/check_orphaned.py`** - Orphaned component detection
+
+### 🔧 Automated Enforcement
+- **Pre-commit hooks** - Validate memory sync and code quality
+- **CI/CD integration** - Automated checks on every commit
+- **Memory validation** - Ensures consistency across all files
+
+### 🚀 Quick Start for Contributors
+1. **Read memory files** before starting any task
+2. **Update memory** immediately after changes
+3. **Run validation** before committing: `python scripts/validate_memory.py`
+4. **Check for orphans**: `python scripts/check_orphaned.py`
+
+**For detailed rules, see the rule files in `.roo/` directory.**
+
+---
+
+## 🌟 Features
+
+- **📄 Document Upload**: Support for PDF and DOCX files
+- **🎭 Character Selection**: Choose from 5 unique AI guide characters
+- **🎨 Dynamic Scene Generation**: AI-generated anime/cartoon-style illustrations
+- **🎙️ Expressive Voiceovers**: Natural text-to-speech narration
+- **📊 Grade-Level Adaptation**: Content automatically adjusted for age groups
+- **🎬 Interactive Playback**: Visual novel-style presentation with controls
+- **💡 Learning Points**: Key concepts highlighted in each scene
 
 ## 🌟 Features
 

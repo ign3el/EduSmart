@@ -686,7 +686,31 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
             metadata = storage_manager.get_metadata(story_id, in_saved=True)
             logger.info(f"📋 Metadata: {metadata}")
             
-            # Try to load from story.json if it exists
+            # Check if metadata contains complete story_data (new format)
+            if metadata and "story_data" in metadata and "scenes" in metadata["story_data"]:
+                story_data = metadata["story_data"]
+                logger.info(f"✅ Loading from metadata.story_data with {len(story_data.get('scenes', []))} scenes")
+                
+                return {
+                    "story_id": story_id,
+                    "status": "completed",
+                    "title": story_data.get("title", metadata.get("name", "Saved Story")),
+                    "total_scenes": len(story_data.get("scenes", [])),
+                    "completed_scenes": len(story_data.get("scenes", [])),
+                    "scenes": [
+                        {
+                            "scene_index": idx,
+                            "text": scene.get("text", ""),
+                            "image_status": "completed",
+                            "audio_status": "completed",
+                            "image_url": scene.get("imageUrl") or scene.get("image_url", ""),
+                            "audio_url": scene.get("audioUrl") or scene.get("audio_url", "")
+                        }
+                        for idx, scene in enumerate(story_data.get("scenes", []))
+                    ]
+                }
+            
+            # Try to load from story.json if it exists (legacy format)
             story_path = storage_manager.get_story_path(story_id, in_saved=True)
             logger.info(f"📁 Story path: {story_path}")
             
@@ -719,7 +743,7 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                     ]
                 }
             else:
-                # No story.json, try to reconstruct from files
+                # No story.json, try to reconstruct from files (with job_id prefix)
                 logger.warning(f"⚠️ No story.json found, reconstructing from files")
                 story_dir = storage_manager.get_story_path(story_id, in_saved=True)
                 logger.info(f"📁 Scanning directory: {story_dir}")
@@ -733,18 +757,39 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                 
                 scenes = []
                 scene_index = 0
+                job_id = metadata.get("job_id", "")
                 
-                # Look for scene files (scene_0.png, scene_0.wav, etc.)
+                # Use job_id from metadata for file scanning (this is the fix)
                 while True:
-                    image_file = f"scene_{scene_index}.png"
-                    audio_file = f"scene_{scene_index}.wav"
+                    scene_found = False
                     
-                    image_path = os.path.join(story_dir, image_file)
-                    audio_path = os.path.join(story_dir, audio_file)
+                    # Always use job_id pattern for file scanning
+                    if job_id:
+                        image_file = f"{job_id}_scene_{scene_index}.png"
+                        audio_file = f"{job_id}_scene_{scene_index}.mp3"
+                        image_path = os.path.join(story_dir, image_file)
+                        audio_path = os.path.join(story_dir, audio_file)
+                        
+                        # Try .wav if .mp3 not found
+                        if not os.path.exists(audio_path):
+                            audio_file = f"{job_id}_scene_{scene_index}.wav"
+                            audio_path = os.path.join(story_dir, audio_file)
+                        
+                        if os.path.exists(image_path) or os.path.exists(audio_path):
+                            scene_found = True
+                    else:
+                        # Fallback to scene_X.ext pattern
+                        image_file = f"scene_{scene_index}.png"
+                        audio_file = f"scene_{scene_index}.wav"
+                        image_path = os.path.join(story_dir, image_file)
+                        audio_path = os.path.join(story_dir, audio_file)
+                        
+                        if os.path.exists(image_path) or os.path.exists(audio_path):
+                            scene_found = True
                     
                     logger.info(f"🔍 Looking for scene {scene_index}: image={os.path.exists(image_path)}, audio={os.path.exists(audio_path)}")
                     
-                    if not (os.path.exists(image_path) or os.path.exists(audio_path)):
+                    if not scene_found:
                         break
                     
                     scenes.append({
@@ -762,7 +807,7 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                 return {
                     "story_id": story_id,
                     "status": "completed",
-                    "title": metadata.get("title", "Saved Story"),
+                    "title": metadata.get("name", metadata.get("title", "Saved Story")),
                     "total_scenes": len(scenes),
                     "completed_scenes": len(scenes),
                     "scenes": scenes
