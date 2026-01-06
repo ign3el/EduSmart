@@ -387,16 +387,16 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       const isCurrentlyPlaying = !audioRef.current.paused;
       
       if (isCurrentlyPlaying) {
-        // User is pausing - set userPaused flag and save time
+        // Capture current time BEFORE pausing
+        const currentPosition = audioRef.current.currentTime;
         audioRef.current.pause();
-        setUserPaused(true);
+        setSavedTime(currentPosition); // Update saved time immediately
         setIsPlaying(false);
-        handlePause();
+        console.log('⏸️ User paused at:', currentPosition);
       } else {
-        // User is playing - restore saved time first
-        if (savedTime > 0) {
-          audioRef.current.currentTime = savedTime;
-        }
+        // Use ref to bypass state closure issues
+        const targetTime = savedTime > 0 ? savedTime : 0;
+        audioRef.current.currentTime = targetTime;
         
         // If audio error occurred, retry loading
         if (audioError) {
@@ -405,24 +405,15 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
           return;
         }
         
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              setUserPaused(false);
-              setIsPlaying(true);
-              console.log('▶️ Audio resumed from:', audioRef.current.currentTime);
-            })
-            .catch(err => {
-              console.error('Audio play error:', err);
-              setUserPaused(true);
-              setIsPlaying(false);
-              setAudioError(true);
-            });
-        } else {
-          setUserPaused(false);
-          setIsPlaying(true);
-        }
+        audioRef.current.play()
+          .then(() => {
+            setIsPlaying(true);
+            console.log('▶️ Audio resumed from:', targetTime);
+          })
+          .catch(err => {
+            console.error('Play error:', err);
+            setAudioError(true);
+          });
       }
     }
   };

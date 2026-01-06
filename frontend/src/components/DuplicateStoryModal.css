@@ -1,4 +1,9 @@
 /* Fixed Duplicate Story Modal CSS - Centered and Responsive */
+:root {
+  --edge: 1px solid #e0e0e0;
+  --radius-lg: 12px;
+}
+
 .duplicate-overlay {
   position: fixed;
   inset: 0;
@@ -15,8 +20,8 @@
   width: min(550px, 90vw);
   max-height: 85vh;
   background: linear-gradient(150deg, rgba(12, 21, 40, 0.98), rgba(12, 21, 40, 0.95));
-  border: 1px solid var(--edge);
-  border-radius: var(--radius-lg);
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
   box-shadow: 0 30px 60px rgba(168, 85, 247, 0.4);
   overflow-y: auto;
   display: flex;
