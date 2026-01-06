@@ -289,6 +289,7 @@ class StoryStorageManager:
         """
         Get the most recent version of each file in a story folder.
         Handles duplicate files by selecting the most recently modified one.
+        Supports both old format (scene_0.png) and new format (uuid_scene_0.png).
         
         Returns:
             Dictionary mapping scene numbers to latest file paths
@@ -311,40 +312,63 @@ class StoryStorageManager:
             if filename in ["metadata.json"] or ".backup." in filename:
                 continue
             
-            # Extract scene number and type from filename
-            # Format: {uuid}_scene_{number}.{type}
-            parts = filename.split("_")
-            if len(parts) < 3:
+            # Try to extract scene number and type from filename
+            # Support both formats:
+            # 1. New format: {uuid}_scene_{number}.{ext}
+            # 2. Old format: scene_{number}.{ext}
+            
+            scene_num = None
+            file_type = None
+            
+            # Check for new format first
+            if "_scene_" in filename:
+                parts = filename.split("_")
+                # Find the scene part
+                for i, part in enumerate(parts):
+                    if part == "scene" and i + 1 < len(parts):
+                        try:
+                            scene_num = int(parts[i + 1].split(".")[0])
+                            break
+                        except ValueError:
+                            continue
+            
+            # Check for old format if new format didn't work
+            if scene_num is None and filename.startswith("scene_"):
+                try:
+                    # Extract number from "scene_{number}.{ext}"
+                    base_name = filename.split(".")[0]  # Remove extension
+                    scene_num_str = base_name.replace("scene_", "")
+                    scene_num = int(scene_num_str)
+                except ValueError:
+                    continue
+            
+            # Skip if we couldn't extract a scene number
+            if scene_num is None:
                 continue
             
-            try:
-                scene_num = int(parts[2].split(".")[0])
-                file_ext = filename.split(".")[-1].lower()
-                
-                # Determine file type (image or audio)
-                if file_ext in ["png", "jpg", "jpeg"]:
-                    file_type = "image"
-                elif file_ext in ["mp3", "wav", "ogg"]:
-                    file_type = "audio"
-                else:
-                    continue
-                
-                # Create key for this scene
-                key = f"{scene_num}_{file_type}"
-                
-                if key not in scene_files:
-                    scene_files[key] = []
-                
-                # Get file modification time
-                mtime = os.path.getmtime(file_path)
-                
-                scene_files[key].append({
-                    "path": file_path,
-                    "filename": filename,
-                    "mtime": mtime
-                })
-            except (ValueError, IndexError):
+            # Determine file type
+            file_ext = filename.split(".")[-1].lower()
+            if file_ext in ["png", "jpg", "jpeg"]:
+                file_type = "image"
+            elif file_ext in ["mp3", "wav", "ogg"]:
+                file_type = "audio"
+            else:
                 continue
+            
+            # Create key for this scene
+            key = f"{scene_num}_{file_type}"
+            
+            if key not in scene_files:
+                scene_files[key] = []
+            
+            # Get file modification time
+            mtime = os.path.getmtime(file_path)
+            
+            scene_files[key].append({
+                "path": file_path,
+                "filename": filename,
+                "mtime": mtime
+            })
         
         # Select the most recent file for each scene/type
         latest_files = {}

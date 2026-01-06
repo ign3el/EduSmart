@@ -47,7 +47,8 @@ class JobStateManager:
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     file_hash TEXT,
                     user_id INTEGER,
-                    username TEXT
+                    username TEXT,
+                    quiz TEXT
                 )
             """)
             
@@ -63,6 +64,8 @@ class JobStateManager:
                     conn.execute("ALTER TABLE stories ADD COLUMN user_id INTEGER")
                 if 'username' not in columns:
                     conn.execute("ALTER TABLE stories ADD COLUMN username TEXT")
+                if 'quiz' not in columns:
+                    conn.execute("ALTER TABLE stories ADD COLUMN quiz TEXT")
             except Exception as e:
                 # If migration fails, log it but continue (table might be new)
                 print(f"Migration info: {e}")
@@ -106,14 +109,22 @@ class JobStateManager:
                 VALUES (?, 'initializing', 'Initializing story...', ?, 0, 0, ?, ?, ?)
             """, (story_id, grade_level, file_hash, user_id, username))
 
-    def update_story_metadata(self, story_id: str, title: str, total_scenes: int):
+    def update_story_metadata(self, story_id: str, title: str, total_scenes: int, quiz: Optional[List[Dict]] = None):
         """Update story metadata after initial AI processing."""
         with self._get_conn() as conn:
-            conn.execute("""
-                UPDATE stories
-                SET status = 'processing', title = ?, total_scenes = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE story_id = ?
-            """, (title, total_scenes, story_id))
+            if quiz is not None:
+                quiz_json = json.dumps(quiz)
+                conn.execute("""
+                    UPDATE stories
+                    SET status = 'processing', title = ?, total_scenes = ?, quiz = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE story_id = ?
+                """, (title, total_scenes, quiz_json, story_id))
+            else:
+                conn.execute("""
+                    UPDATE stories
+                    SET status = 'processing', title = ?, total_scenes = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE story_id = ?
+                """, (title, total_scenes, story_id))
     
     def create_scene(self, story_id: str, scene_index: int, text: str, character_prompt: Optional[str] = None):
         """Create a new scene for tracking."""

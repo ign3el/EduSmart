@@ -150,9 +150,9 @@ app.mount("/api/generated-stories", StaticFiles(directory="generated_stories"), 
 @app.api_route("/api/saved-stories/{story_id}/{filename:path}", methods=["GET", "HEAD"])
 async def serve_story_file(story_id: str, filename: str):
     """
-    Serve story files with smart UUID prefix matching and proper CORS headers.
+    Serve story files with smart filename matching and proper CORS headers.
     Handles both GET and HEAD requests.
-    If the exact filename doesn't exist, search for files with UUID prefix.
+    Supports both old format (scene_0.png) and new format (uuid_scene_0.png).
     """
     import glob
     import os
@@ -182,38 +182,75 @@ async def serve_story_file(story_id: str, filename: str):
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
         return response
     
-    # If not found, try to find file with UUID prefix (e.g., uuid_scene_0.png)
-    # Extract the base filename without UUID
-    pattern = str(story_dir / f"*_{filename}")
-    logger.info(f"🔎 Searching with glob pattern: {pattern}")
-    matches = glob.glob(pattern)
-    logger.info(f"📋 Glob matches: {matches}")
+    # If not found, try multiple patterns to support both old and new formats
     
-    if matches:
-        logger.info(f"✅ Found UUID-prefixed file: {matches[0]}")
-        response = FileResponse(matches[0])
-        # Add CORS headers for media files
+    # Pattern 1: UUID prefix (new format) - {uuid}_scene_0.png
+    pattern1 = str(story_dir / f"*_{filename}")
+    logger.info(f"🔎 Searching with UUID prefix pattern: {pattern1}")
+    matches1 = glob.glob(pattern1)
+    
+    if matches1:
+        logger.info(f"✅ Found UUID-prefixed file: {matches1[0]}")
+        response = FileResponse(matches1[0])
         response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
         return response
     
-    # Try without underscore separator (in case files are stored differently)
-    pattern2 = str(story_dir / f"*{filename}")
-    logger.info(f"🔎 Trying alternative pattern: {pattern2}")
-    matches2 = glob.glob(pattern2)
-    logger.info(f"📋 Alternative matches: {matches2}")
+    # Pattern 2: Old format direct match - scene_0.png
+    # If filename is like "abc123_scene_0.png", try "scene_0.png"
+    if "_scene_" in filename:
+        base_filename = filename.split("_scene_")[-1]
+        old_format_path = story_dir / f"scene_{base_filename}"
+        logger.info(f"🔎 Trying old format: {old_format_path}")
+        
+        if old_format_path.exists() and old_format_path.is_file():
+            logger.info(f"✅ Found old format file: {old_format_path}")
+            response = FileResponse(old_format_path)
+            response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            return response
     
-    if matches2:
-        logger.info(f"✅ Found file with alternative pattern: {matches2[0]}")
-        response = FileResponse(matches2[0])
-        # Add CORS headers for media files
-        response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response
+    # Pattern 3: Reverse - if requesting old format, try new format
+    if filename.startswith("scene_"):
+        # Extract scene number and type
+        parts = filename.split("_")
+        if len(parts) >= 2:
+            scene_part = parts[1].split(".")[0]
+            ext = filename.split(".")[-1]
+            # Try to find any UUID-prefixed file with this scene number
+            pattern3 = str(story_dir / f"*_scene_{scene_part}.{ext}")
+            logger.info(f"🔎 Trying new format pattern: {pattern3}")
+            matches3 = glob.glob(pattern3)
+            
+            if matches3:
+                logger.info(f"✅ Found new format file: {matches3[0]}")
+                response = FileResponse(matches3[0])
+                response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+                return response
+    
+    # Pattern 4: Generic wildcard search
+    # Try to find any file containing the scene number
+    if "scene_" in filename:
+        scene_match = filename.split("scene_")[-1].split(".")[0]
+        pattern4 = str(story_dir / f"*scene_{scene_match}*")
+        logger.info(f"🔎 Trying wildcard pattern: {pattern4}")
+        matches4 = glob.glob(pattern4)
+        
+        if matches4:
+            logger.info(f"✅ Found wildcard match: {matches4[0]}")
+            response = FileResponse(matches4[0])
+            response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            return response
     
     # List all files in directory for debugging
     all_files = list(story_dir.iterdir())
@@ -225,6 +262,7 @@ async def serve_generated_story_file(story_id: str, filename: str):
     """
     Serve files from generated_stories folder with proper CORS headers.
     Similar to saved-stories endpoint but for in-progress/temporary stories.
+    Supports both old format (scene_0.png) and new format (uuid_scene_0.png).
     """
     import glob
     import os
@@ -253,6 +291,76 @@ async def serve_generated_story_file(story_id: str, filename: str):
         response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
         return response
+    
+    # If not found, try multiple patterns to support both old and new formats
+    
+    # Pattern 1: UUID prefix (new format) - {uuid}_scene_0.png
+    pattern1 = str(story_dir / f"*_{filename}")
+    logger.info(f"🔎 Searching with UUID prefix pattern: {pattern1}")
+    matches1 = glob.glob(pattern1)
+    
+    if matches1:
+        logger.info(f"✅ Found UUID-prefixed file: {matches1[0]}")
+        response = FileResponse(matches1[0])
+        response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
+    
+    # Pattern 2: Old format direct match - scene_0.png
+    # If filename is like "abc123_scene_0.png", try "scene_0.png"
+    if "_scene_" in filename:
+        base_filename = filename.split("_scene_")[-1]
+        old_format_path = story_dir / f"scene_{base_filename}"
+        logger.info(f"🔎 Trying old format: {old_format_path}")
+        
+        if old_format_path.exists() and old_format_path.is_file():
+            logger.info(f"✅ Found old format file: {old_format_path}")
+            response = FileResponse(old_format_path)
+            response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            return response
+    
+    # Pattern 3: Reverse - if requesting old format, try new format
+    if filename.startswith("scene_"):
+        # Extract scene number and type
+        parts = filename.split("_")
+        if len(parts) >= 2:
+            scene_part = parts[1].split(".")[0]
+            ext = filename.split(".")[-1]
+            # Try to find any UUID-prefixed file with this scene number
+            pattern3 = str(story_dir / f"*_scene_{scene_part}.{ext}")
+            logger.info(f"🔎 Trying new format pattern: {pattern3}")
+            matches3 = glob.glob(pattern3)
+            
+            if matches3:
+                logger.info(f"✅ Found new format file: {matches3[0]}")
+                response = FileResponse(matches3[0])
+                response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+                return response
+    
+    # Pattern 4: Generic wildcard search
+    # Try to find any file containing the scene number
+    if "scene_" in filename:
+        scene_match = filename.split("scene_")[-1].split(".")[0]
+        pattern4 = str(story_dir / f"*scene_{scene_match}*")
+        logger.info(f"🔎 Trying wildcard pattern: {pattern4}")
+        matches4 = glob.glob(pattern4)
+        
+        if matches4:
+            logger.info(f"✅ Found wildcard match: {matches4[0]}")
+            response = FileResponse(matches4[0])
+            response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            return response
     
     # List all files in directory for debugging
     all_files = list(story_dir.iterdir())
@@ -388,9 +496,10 @@ async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grad
         
         scenes = story_data.get("scenes", [])
         title = story_data.get("title", "Untitled Story")
+        quiz = story_data.get("quiz", [])
         
-        # Initialize job state
-        job_manager.update_story_metadata(story_id, title, len(scenes))
+        # Initialize job state with quiz data
+        job_manager.update_story_metadata(story_id, title, len(scenes), quiz)
         
         # Create scene records immediately (text is ready)
         scene_ids = []
@@ -719,6 +828,14 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                 story_data = metadata["story_data"]
                 logger.info(f"✅ Loading from metadata.story_data with {len(story_data.get('scenes', []))} scenes")
                 
+                # Parse quiz data if it's stored as JSON string
+                quiz_data = story_data.get("quiz", [])
+                if isinstance(quiz_data, str):
+                    try:
+                        quiz_data = json.loads(quiz_data)
+                    except json.JSONDecodeError:
+                        quiz_data = []
+                
                 return {
                     "story_id": story_id,
                     "status": "completed",
@@ -735,7 +852,8 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                             "audio_url": scene.get("audioUrl") or scene.get("audio_url", "")
                         }
                         for idx, scene in enumerate(story_data.get("scenes", []))
-                    ]
+                    ],
+                    "quiz": quiz_data
                 }
             
             # Try to load from story.json if it exists (legacy format)
@@ -751,6 +869,14 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                 with open(story_json_path, 'r', encoding='utf-8') as f:
                     story_data = json.load(f)
                     logger.info(f"📊 Loaded story data with {len(story_data.get('scenes', []))} scenes")
+                
+                # Parse quiz data if it's stored as JSON string
+                quiz_data = story_data.get("quiz", [])
+                if isinstance(quiz_data, str):
+                    try:
+                        quiz_data = json.loads(quiz_data)
+                    except json.JSONDecodeError:
+                        quiz_data = []
                     
                 return {
                     "story_id": story_id,
@@ -768,7 +894,8 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                             "audio_url": scene.get("audioUrl") or scene.get("audio_url", "")
                         }
                         for idx, scene in enumerate(story_data.get("scenes", []))
-                    ]
+                    ],
+                    "quiz": quiz_data
                 }
             else:
                 # No story.json, use new version-aware reconstruction
@@ -898,6 +1025,14 @@ async def get_status(job_id: str) -> Dict[str, Any]:
         # Calculate real progress based on completed scenes
         actual_progress = int((len(completed_scenes) / status["total_scenes"]) * 100) if status["total_scenes"] > 0 else 0
         
+        # Parse quiz data if it's stored as JSON string
+        quiz_data = status.get("quiz", [])
+        if isinstance(quiz_data, str):
+            try:
+                quiz_data = json.loads(quiz_data)
+            except json.JSONDecodeError:
+                quiz_data = []
+        
         return {
             "status": status["status"],
             "progress": actual_progress,
@@ -906,7 +1041,7 @@ async def get_status(job_id: str) -> Dict[str, Any]:
             "result": {
                 "title": status["title"],
                 "scenes": completed_scenes,
-                "quiz": status.get("quiz", [])
+                "quiz": quiz_data
             }
         }
     
