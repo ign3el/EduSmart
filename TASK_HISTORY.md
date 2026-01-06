@@ -17,3 +17,13 @@
 ✅ [2026-01-05] - **Database Migration**  
   - Migrated production database to MySQL 8.0  
   - Updated connection strings in backend/config.py
+
+✅ [2026-01-06 20:24] - **Global .clinerules Enforcement**  
+  - Copied global rules from C:/Users/sahte/OneDrive/Documents/Cline/Rules/.clinerules to project root  
+  - All future tasks will follow ARCHITECT→BUILDER split-brain protocol
+
+✅ [2026-01-06 20:28] - **API Count Verification Test**  
+  - Single request test completed
+
+✅ [2026-01-06 20:32] - **Combined API Count Verification**  
+  - Testing PLAN+ACT aggregation
