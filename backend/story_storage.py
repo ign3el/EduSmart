@@ -97,7 +97,7 @@ class StoryStorageManager:
     
     def save_file(self, story_id: str, filename: str, content: bytes, in_saved: bool = False) -> str:
         """
-        Save a file to a story folder
+        Save a file to a story folder with version tracking
         
         Returns:
             URL path to access the file
@@ -110,8 +110,45 @@ class StoryStorageManager:
         
         file_path = os.path.join(story_dir, filename)
         
+        # Check if file already exists and handle versioning
+        if os.path.exists(file_path):
+            # Get current timestamp for versioning
+            timestamp = time.time()
+            
+            # Create backup of existing file with timestamp
+            backup_name = f"{filename}.backup.{int(timestamp)}"
+            backup_path = os.path.join(story_dir, backup_name)
+            shutil.copy2(file_path, backup_path)
+            logger.info(f"📦 Backed up existing file: {filename} -> {backup_name}")
+            
+            # Update metadata with version info
+            metadata = self.get_metadata(story_id, in_saved)
+            if "file_versions" not in metadata:
+                metadata["file_versions"] = {}
+            
+            # Track version history
+            if filename not in metadata["file_versions"]:
+                metadata["file_versions"][filename] = []
+            
+            metadata["file_versions"][filename].append({
+                "version": len(metadata["file_versions"][filename]) + 1,
+                "filename": backup_name,
+                "created_at": timestamp,
+                "created_timestamp": datetime.now().isoformat()
+            })
+            
+            self.update_metadata(story_id, metadata, in_saved)
+        
+        # Write new file
         with open(file_path, "wb") as f:
             f.write(content)
+        
+        # Update file modification timestamp in metadata
+        metadata = self.get_metadata(story_id, in_saved)
+        if "file_timestamps" not in metadata:
+            metadata["file_timestamps"] = {}
+        metadata["file_timestamps"][filename] = time.time()
+        self.update_metadata(story_id, metadata, in_saved)
         
         # Return API URL path
         api_prefix = "/api/saved-stories" if in_saved else "/api/generated-stories"
@@ -247,6 +284,132 @@ class StoryStorageManager:
                 created_at = os.path.getctime(story_path)
         
         return (time.time() - created_at) / 3600
+    
+    def get_latest_files(self, story_id: str, in_saved: bool = False) -> dict:
+        """
+        Get the most recent version of each file in a story folder.
+        Handles duplicate files by selecting the most recently modified one.
+        
+        Returns:
+            Dictionary mapping scene numbers to latest file paths
+        """
+        story_path = self.get_story_path(story_id, in_saved)
+        if not os.path.exists(story_path):
+            return {}
+        
+        # Get all files in the story directory
+        all_files = []
+        for filename in os.listdir(story_path):
+            file_path = os.path.join(story_path, filename)
+            if os.path.isfile(file_path):
+                all_files.append((filename, file_path))
+        
+        # Group files by scene number and type
+        scene_files = {}
+        for filename, file_path in all_files:
+            # Skip metadata files and backups
+            if filename in ["metadata.json"] or ".backup." in filename:
+                continue
+            
+            # Extract scene number and type from filename
+            # Format: {uuid}_scene_{number}.{type}
+            parts = filename.split("_")
+            if len(parts) < 3:
+                continue
+            
+            try:
+                scene_num = int(parts[2].split(".")[0])
+                file_ext = filename.split(".")[-1].lower()
+                
+                # Determine file type (image or audio)
+                if file_ext in ["png", "jpg", "jpeg"]:
+                    file_type = "image"
+                elif file_ext in ["mp3", "wav", "ogg"]:
+                    file_type = "audio"
+                else:
+                    continue
+                
+                # Create key for this scene
+                key = f"{scene_num}_{file_type}"
+                
+                if key not in scene_files:
+                    scene_files[key] = []
+                
+                # Get file modification time
+                mtime = os.path.getmtime(file_path)
+                
+                scene_files[key].append({
+                    "path": file_path,
+                    "filename": filename,
+                    "mtime": mtime
+                })
+            except (ValueError, IndexError):
+                continue
+        
+        # Select the most recent file for each scene/type
+        latest_files = {}
+        for key, files in scene_files.items():
+            if files:
+                # Sort by modification time (most recent first)
+                files.sort(key=lambda x: x["mtime"], reverse=True)
+                latest_files[key] = files[0]
+        
+        return latest_files
+    
+    def reconstruct_story_from_files(self, story_id: str, in_saved: bool = False) -> dict:
+        """
+        Reconstruct story.json from files, handling duplicates by using most recent versions.
+        
+        Returns:
+            Reconstructed story data or empty dict if reconstruction fails
+        """
+        story_path = self.get_story_path(story_id, in_saved)
+        if not os.path.exists(story_path):
+            return {}
+        
+        # Get latest files for each scene
+        latest_files = self.get_latest_files(story_id, in_saved)
+        
+        if not latest_files:
+            return {}
+        
+        # Group by scene number
+        scenes = {}
+        for key, file_info in latest_files.items():
+            scene_num, file_type = key.split("_")
+            scene_num = int(scene_num)
+            
+            if scene_num not in scenes:
+                scenes[scene_num] = {"image": None, "audio": None}
+            
+            scenes[scene_num][file_type] = file_info
+        
+        # Build scene list
+        scene_list = []
+        for scene_num in sorted(scenes.keys()):
+            scene_data = scenes[scene_num]
+            if scene_data["image"] and scene_data["audio"]:
+                scene_list.append({
+                    "scene_number": scene_num,
+                    "image_path": scene_data["image"]["filename"],
+                    "audio_path": scene_data["audio"]["filename"],
+                    "file_timestamps": {
+                        "image": scene_data["image"]["mtime"],
+                        "audio": scene_data["audio"]["mtime"]
+                    }
+                })
+        
+        # Try to load metadata
+        metadata = self.get_metadata(story_id, in_saved)
+        
+        # Return reconstructed data
+        return {
+            "story_id": story_id,
+            "scenes": scene_list,
+            "metadata": metadata,
+            "reconstructed": True,
+            "duplicate_handling": "latest_version"
+        }
 
 
 # Singleton instance

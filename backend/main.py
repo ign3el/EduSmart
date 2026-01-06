@@ -743,34 +743,51 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                     ]
                 }
             else:
-                # No story.json, try to reconstruct from files (with job_id prefix)
-                logger.warning(f"⚠️ No story.json found, reconstructing from files")
+                # No story.json, use new version-aware reconstruction
+                logger.warning(f"⚠️ No story.json found, using version-aware reconstruction")
+                
+                # Use the new reconstruction method
+                reconstructed = storage_manager.reconstruct_story_from_files(story_id, in_saved=True)
+                
+                if reconstructed and reconstructed.get("scenes"):
+                    scenes = reconstructed["scenes"]
+                    logger.info(f"✅ Reconstructed {len(scenes)} scenes using version-aware method")
+                    
+                    return {
+                        "story_id": story_id,
+                        "status": "completed",
+                        "title": metadata.get("name", metadata.get("title", "Saved Story")),
+                        "total_scenes": len(scenes),
+                        "completed_scenes": len(scenes),
+                        "scenes": [
+                            {
+                                "scene_index": scene["scene_number"],
+                                "text": "",  # No text available without story.json
+                                "image_status": "completed",
+                                "audio_status": "completed",
+                                "image_url": f"/api/saved-stories/{story_id}/{scene['image_path']}",
+                                "audio_url": f"/api/saved-stories/{story_id}/{scene['audio_path']}"
+                            }
+                            for scene in scenes
+                        ]
+                    }
+                
+                # Fallback to old method if reconstruction fails
+                logger.warning(f"⚠️ Version-aware reconstruction failed, falling back to legacy method")
                 story_dir = storage_manager.get_story_path(story_id, in_saved=True)
-                logger.info(f"📁 Scanning directory: {story_dir}")
-                
-                # List all files in directory
-                if os.path.exists(story_dir):
-                    all_files = os.listdir(story_dir)
-                    logger.info(f"📂 Files in directory: {all_files}")
-                else:
-                    logger.error(f"❌ Story directory does not exist: {story_dir}")
-                
                 scenes = []
                 scene_index = 0
                 job_id = metadata.get("job_id", "")
                 
-                # Use job_id from metadata for file scanning (this is the fix)
                 while True:
                     scene_found = False
                     
-                    # Always use job_id pattern for file scanning
                     if job_id:
                         image_file = f"{job_id}_scene_{scene_index}.png"
                         audio_file = f"{job_id}_scene_{scene_index}.mp3"
                         image_path = os.path.join(story_dir, image_file)
                         audio_path = os.path.join(story_dir, audio_file)
                         
-                        # Try .wav if .mp3 not found
                         if not os.path.exists(audio_path):
                             audio_file = f"{job_id}_scene_{scene_index}.wav"
                             audio_path = os.path.join(story_dir, audio_file)
@@ -778,7 +795,6 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                         if os.path.exists(image_path) or os.path.exists(audio_path):
                             scene_found = True
                     else:
-                        # Fallback to scene_X.ext pattern
                         image_file = f"scene_{scene_index}.png"
                         audio_file = f"scene_{scene_index}.wav"
                         image_path = os.path.join(story_dir, image_file)
@@ -787,22 +803,18 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
                         if os.path.exists(image_path) or os.path.exists(audio_path):
                             scene_found = True
                     
-                    logger.info(f"🔍 Looking for scene {scene_index}: image={os.path.exists(image_path)}, audio={os.path.exists(audio_path)}")
-                    
                     if not scene_found:
                         break
                     
                     scenes.append({
                         "scene_index": scene_index,
-                        "text": "",  # No text available without story.json
+                        "text": "",
                         "image_status": "completed" if os.path.exists(image_path) else "missing",
                         "audio_status": "completed" if os.path.exists(audio_path) else "missing",
                         "image_url": f"/api/saved-stories/{story_id}/{image_file}" if os.path.exists(image_path) else "",
                         "audio_url": f"/api/saved-stories/{story_id}/{audio_file}" if os.path.exists(audio_path) else ""
                     })
                     scene_index += 1
-                
-                logger.info(f"✅ Reconstructed {len(scenes)} scenes from files")
                 
                 return {
                     "story_id": story_id,
