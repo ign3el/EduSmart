@@ -4,9 +4,7 @@ import { FiPlay, FiPause, FiSkipForward, FiSkipBack, FiRotateCw } from 'react-ic
 import './StoryPlayer.css';
 import Quiz from './Quiz';
 
-const API_DOMAIN = "https://edusmart.ign3el.com";
-
-// Helper function to build full URL, handling absolute URLs and data URLs
+// Helper function to build full URL, handling absolute URLs, data URLs, and API paths
 const buildFullUrl = (url) => {
   if (!url) {
     return '';
@@ -17,8 +15,15 @@ const buildFullUrl = (url) => {
     return url;
   }
   
-  // Relative path, prepend domain
-  return `${API_DOMAIN}${url}`;
+  // Check if it's an API path (starts with /api/)
+  if (url.startsWith('/api/')) {
+    // Use the current window's origin to build the full URL
+    return `${window.location.origin}${url}`;
+  }
+  
+  // For other relative paths, prepend the API domain from environment or current origin
+  const apiDomain = import.meta.env.VITE_API_URL || window.location.origin;
+  return `${apiDomain}${url}`;
 };
 
 const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownloadOffline, isSaved = false, isOffline = false, savedStoryId = null, currentJobId = null, totalScenes = 0, completedSceneCount = 0 }, ref) => {
@@ -45,6 +50,24 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   const fullAudioUrl = buildFullUrl(scene?.audio_url);
   const fullImageUrl = buildFullUrl(scene?.image_url);
   const uploadUrl = buildFullUrl(storyData?.upload_url);
+  
+  // Debug logging for URL construction
+  useEffect(() => {
+    if (scene?.audio_url) {
+      console.log('🎵 Audio URL Debug:', {
+        original: scene.audio_url,
+        built: fullAudioUrl,
+        isAbsolute: fullAudioUrl.startsWith('http')
+      });
+    }
+    if (scene?.image_url) {
+      console.log('🖼️ Image URL Debug:', {
+        original: scene.image_url,
+        built: fullImageUrl,
+        isAbsolute: fullImageUrl.startsWith('http')
+      });
+    }
+  }, [scene, fullAudioUrl, fullImageUrl]);
   
   // Audio error state
   const [audioError, setAudioError] = useState(false);
@@ -100,6 +123,12 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     // Pre-test image accessibility (silent)
     if (fullImageUrl) {
       const testImg = new Image();
+      testImg.onload = () => {
+        console.log('✅ Image pre-test successful:', fullImageUrl);
+      };
+      testImg.onerror = () => {
+        console.warn('⚠️ Image pre-test failed:', fullImageUrl);
+      };
       testImg.src = fullImageUrl;
     }
   }, [currentScene, fullImageUrl, imageLoaded, imageError]);
