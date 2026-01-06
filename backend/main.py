@@ -46,11 +46,15 @@ logger = logging.getLogger(__name__)
 # --- App Initialization ---
 app = FastAPI(title="EduStory API")
 
-# Add CORS middleware to allow requests from any origin.
-# For production, you would want to restrict this to your frontend's domain.
+# Add CORS middleware to allow requests from frontend domain.
+# Configured for production with specific origins for better security.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://edusmart.ign3el.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -146,7 +150,7 @@ app.mount("/api/generated-stories", StaticFiles(directory="generated_stories"), 
 @app.api_route("/api/saved-stories/{story_id}/{filename:path}", methods=["GET", "HEAD"])
 async def serve_story_file(story_id: str, filename: str):
     """
-    Serve story files with smart UUID prefix matching.
+    Serve story files with smart UUID prefix matching and proper CORS headers.
     Handles both GET and HEAD requests.
     If the exact filename doesn't exist, search for files with UUID prefix.
     """
@@ -170,7 +174,13 @@ async def serve_story_file(story_id: str, filename: str):
     # Try exact match first
     if exact_path.exists() and exact_path.is_file():
         logger.info(f"✅ Found exact match: {exact_path}")
-        return FileResponse(exact_path)
+        response = FileResponse(exact_path)
+        # Add CORS headers for media files
+        response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
     
     # If not found, try to find file with UUID prefix (e.g., uuid_scene_0.png)
     # Extract the base filename without UUID
@@ -181,7 +191,13 @@ async def serve_story_file(story_id: str, filename: str):
     
     if matches:
         logger.info(f"✅ Found UUID-prefixed file: {matches[0]}")
-        return FileResponse(matches[0])
+        response = FileResponse(matches[0])
+        # Add CORS headers for media files
+        response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
     
     # Try without underscore separator (in case files are stored differently)
     pattern2 = str(story_dir / f"*{filename}")
@@ -191,7 +207,13 @@ async def serve_story_file(story_id: str, filename: str):
     
     if matches2:
         logger.info(f"✅ Found file with alternative pattern: {matches2[0]}")
-        return FileResponse(matches2[0])
+        response = FileResponse(matches2[0])
+        # Add CORS headers for media files
+        response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
     
     # List all files in directory for debugging
     all_files = list(story_dir.iterdir())
@@ -201,7 +223,7 @@ async def serve_story_file(story_id: str, filename: str):
 @app.api_route("/api/generated-stories/{story_id}/{filename:path}", methods=["GET", "HEAD"])
 async def serve_generated_story_file(story_id: str, filename: str):
     """
-    Serve files from generated_stories folder.
+    Serve files from generated_stories folder with proper CORS headers.
     Similar to saved-stories endpoint but for in-progress/temporary stories.
     """
     import glob
@@ -224,7 +246,13 @@ async def serve_generated_story_file(story_id: str, filename: str):
     # Try exact match first
     if exact_path.exists() and exact_path.is_file():
         logger.info(f"✅ Found exact match: {exact_path}")
-        return FileResponse(exact_path)
+        response = FileResponse(exact_path)
+        # Add CORS headers for media files
+        response.headers["Access-Control-Allow-Origin"] = "https://edusmart.ign3el.com"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
     
     # List all files in directory for debugging
     all_files = list(story_dir.iterdir())

@@ -45,6 +45,10 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   const fullAudioUrl = buildFullUrl(scene?.audio_url);
   const fullImageUrl = buildFullUrl(scene?.image_url);
   const uploadUrl = buildFullUrl(storyData?.upload_url);
+  
+  // Audio error state
+  const [audioError, setAudioError] = useState(false);
+  const [audioRetryCount, setAudioRetryCount] = useState(0);
 
   // Expose download function to parent component
   useImperativeHandle(ref, () => ({
@@ -186,6 +190,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     setSavedTime(0); // Reset saved time when scene changes
     setImageLoaded(false);
     setImageError(false);
+    setAudioError(false);
     
     // Pre-load image to ensure onLoad fires
     if (fullImageUrl) {
@@ -204,19 +209,31 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       
-      // Update to new scene's audio
-      audioRef.current.src = fullAudioUrl;
+      // Update to new scene's audio with cache-busting for fresh load
+      const audioUrlWithCacheBust = fullAudioUrl ? 
+        `${fullAudioUrl}${fullAudioUrl.includes('?') ? '&' : '?'}v=${audioRetryCount}` : '';
+      
+      audioRef.current.src = audioUrlWithCacheBust;
       audioRef.current.load(); // Force the browser to load the new scene's audio
+      
+      // Add error handler for audio
+      const handleAudioError = (e) => {
+        console.error('Audio loading error:', e.target.error);
+        setAudioError(true);
+      };
+      
+      audioRef.current.addEventListener('error', handleAudioError);
       
       // If isPlaying is true, wait for audio to be ready before playing
       if (isPlaying) {
         const handleCanPlay = () => {
-          if (audioRef.current && isPlaying) {
+          if (audioRef.current && isPlaying && !audioError) {
             const playPromise = audioRef.current.play();
             if (playPromise !== undefined) {
               playPromise.catch(err => {
                 console.error('Scene change auto-play failed:', err);
                 setIsPlaying(false);
+                setAudioError(true);
               });
             }
           }
@@ -224,8 +241,14 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         };
         audioRef.current.addEventListener('canplay', handleCanPlay);
       }
+      
+      return () => {
+        if (audioRef.current) {
+          audioRef.current.removeEventListener('error', handleAudioError);
+        }
+      };
     }
-  }, [currentScene, fullAudioUrl, fullImageUrl, isPlaying]);
+  }, [currentScene, fullAudioUrl, fullImageUrl, isPlaying, audioRetryCount]);
 
   const handleQuizClick = () => {
     console.log('🎯 Quiz button clicked - starting quiz...')
@@ -346,6 +369,13 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
           audioRef.current.currentTime = savedTime;
         }
         
+        // If audio error occurred, retry loading
+        if (audioError) {
+          setAudioRetryCount(prev => prev + 1);
+          setAudioError(false);
+          return;
+        }
+        
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
           playPromise
@@ -358,6 +388,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
               console.error('Audio play error:', err);
               setUserPaused(true);
               setIsPlaying(false);
+              setAudioError(true);
             });
         } else {
           setUserPaused(false);
@@ -365,6 +396,11 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         }
       }
     }
+  };
+  
+  const retryAudio = () => {
+    setAudioRetryCount(prev => prev + 1);
+    setAudioError(false);
   };
 
   const handleOfflineDownload = async () => {
@@ -478,12 +514,26 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleAudioEnded}
         preload="auto"
-        crossOrigin="anonymous" // Add this line!
+        crossOrigin="anonymous"
+        onError={(e) => {
+          console.error('Audio element error:', e.target.error);
+          setAudioError(true);
+        }}
       />
       
       <div className="player-header">
         <h2>🎬 {storyData.title || "Story Time"}</h2>
       </div>
+      
+      {/* Audio Error Notification */}
+      {audioError && (
+        <div className="audio-error-banner">
+          <p>🔊 Audio unavailable - {scene?.audio_url ? 'loading failed' : 'no audio file'}</p>
+          <button onClick={retryAudio} className="retry-btn">
+            Retry Audio
+          </button>
+        </div>
+      )}
 
       <div className="scene-display">
         <AnimatePresence mode="wait">

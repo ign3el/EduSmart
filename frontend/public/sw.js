@@ -171,26 +171,34 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 3: Cache-First for images and media
+  // Strategy 3: Cache-First for images and media (with CORS handling)
   if (
     request.destination === 'image' ||
     request.destination === 'audio' ||
     request.destination === 'video' ||
     url.pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|mp3|wav|ogg|mp4|webm)$/i)
   ) {
+    // For API media files, strip cache-busting params for better caching
+    const cacheKey = url.hostname === 'edusmart.ign3el.com' ? 
+      new URL(url.origin + url.pathname) : request;
+    
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
+      caches.match(cacheKey).then((cachedResponse) => {
         if (cachedResponse) {
+          console.log('[Service Worker] Serving media from cache:', url.pathname);
           return cachedResponse;
         }
         
         // Add timeout for media fetches
         return Promise.race([
-          fetch(request).then((response) => {
+          fetch(request, { 
+            mode: 'cors',
+            credentials: 'omit'
+          }).then((response) => {
             if (response.status === 200) {
               const responseToCache = response.clone();
               caches.open(RUNTIME_CACHE).then((cache) => {
-                cache.put(request, responseToCache).catch(err => {
+                cache.put(cacheKey, responseToCache).catch(err => {
                   console.warn('[Service Worker] Media cache put failed:', err);
                 });
               });

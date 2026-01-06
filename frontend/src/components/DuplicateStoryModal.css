@@ -15,7 +15,7 @@
 }
 
 .duplicate-modal {
-  position: absolute;
+  position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -267,9 +267,14 @@
 
 /* Additional fixes for very small screens */
 @media (max-width: 480px) {
+  .duplicate-overlay {
+    padding: 0.25rem;
+  }
+  
   .duplicate-modal {
-    width: 98vw;
-    max-height: 88vh;
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 90vh;
   }
 
   .duplicate-header {
