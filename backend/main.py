@@ -1210,13 +1210,27 @@ async def load_story(story_id: str, user: User = Depends(get_current_user)):
         orig_audio = scene.get("audio_url", "")
         logger.debug(f"Scene {idx} original - image: {orig_image[:50] if orig_image else 'EMPTY'}, audio: {orig_audio[:50] if orig_audio else 'EMPTY'}")
         
+        # --- Image URL Fix ---
         if scene.get("image_url"):
-            scene["image_url"] = scene["image_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+            img_url = scene["image_url"]
+            # Fix 1: Legacy outputs path
+            if "/api/outputs/" in img_url:
+                scene["image_url"] = img_url.replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+            # Fix 2: Relative path (e.g. "scene_0.png") -> prepend full API path
+            elif not img_url.startswith("http") and not img_url.startswith("/api/") and not img_url.startswith("data:"):
+                scene["image_url"] = f"/api/saved-stories/{story_id}/{img_url}"
         else:
             logger.warning(f"Scene {idx} has no image_url!")
             
+        # --- Audio URL Fix ---
         if scene.get("audio_url"):
-            scene["audio_url"] = scene["audio_url"].replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+            aud_url = scene["audio_url"]
+            # Fix 1: Legacy outputs path
+            if "/api/outputs/" in aud_url:
+                scene["audio_url"] = aud_url.replace("/api/outputs/", f"/api/saved-stories/{story_id}/")
+            # Fix 2: Relative path (e.g. "scene_0.wav") -> prepend full API path
+            elif not aud_url.startswith("http") and not aud_url.startswith("/api/") and not aud_url.startswith("data:"):
+                scene["audio_url"] = f"/api/saved-stories/{story_id}/{aud_url}"
         else:
             logger.warning(f"Scene {idx} has no audio_url!")
             
