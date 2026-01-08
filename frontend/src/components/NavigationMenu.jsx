@@ -112,17 +112,6 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
 
   return (
     <>
-      {/* Mobile Action Button (New Story) */}
-      {onNewStory && !isMobileOpen && (
-        <button
-          className="mobile-action-btn"
-          onClick={() => handleAction(onNewStory)}
-          aria-label="New Story"
-        >
-          ✨
-        </button>
-      )}
-
       {/* Mobile Hamburger Button */}
       <button
         className="mobile-menu-btn"

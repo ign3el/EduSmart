@@ -1294,28 +1294,6 @@ async def load_story(story_id: str, user: User = Depends(get_current_user)):
         logger.debug(f"Scene {idx} original - image: {orig_image[:50] if orig_image else 'EMPTY'}, audio: {orig_audio[:50] if orig_audio else 'EMPTY'}")
         
         # --- Image URL Fix ---
-        if not scene.get("image_url"):
-             # Try to reconstruct if missing
-            import glob
-            try:
-                story_dir_path = storage_manager.get_story_path(story_id, in_saved=True)
-                # Try multiple image file patterns
-                image_patterns = [
-                    f"scene_{idx}.png",
-                    f"scene_{idx}.jpg",
-                    f"*_scene_{idx}.png",
-                    f"*_scene_{idx}.jpg"
-                ]
-                for pattern in image_patterns:
-                    matches = glob.glob(os.path.join(story_dir_path, pattern))
-                    if matches:
-                        image_filename = os.path.basename(matches[0])
-                        scene["image_url"] = f"/api/saved-stories/{story_id}/{image_filename}"
-                        logger.info(f"✅ Reconstructed missing image URL for scene {idx}: {scene['image_url']}")
-                        break
-            except Exception as e:
-                logger.warning(f"Failed to reconstruct image for scene {idx}: {e}")
-
         if scene.get("image_url"):
             img_url = scene["image_url"]
             # Fix 1: Legacy outputs path
@@ -1328,28 +1306,6 @@ async def load_story(story_id: str, user: User = Depends(get_current_user)):
             logger.warning(f"Scene {idx} has no image_url!")
             
         # --- Audio URL Fix ---
-        if not scene.get("audio_url"):
-             # Try to reconstruct if missing
-            import glob
-            try:
-                story_dir_path = storage_manager.get_story_path(story_id, in_saved=True)
-                # Try multiple audio file patterns
-                audio_patterns = [
-                    f"scene_{idx}.wav",
-                    f"scene_{idx}.mp3",
-                    f"*_scene_{idx}.wav",
-                    f"*_scene_{idx}.mp3"
-                ]
-                for pattern in audio_patterns:
-                    matches = glob.glob(os.path.join(story_dir_path, pattern))
-                    if matches:
-                        audio_filename = os.path.basename(matches[0])
-                        scene["audio_url"] = f"/api/saved-stories/{story_id}/{audio_filename}"
-                        logger.info(f"✅ Reconstructed missing audio URL for scene {idx}: {scene['audio_url']}")
-                        break
-            except Exception as e:
-                logger.warning(f"Failed to reconstruct audio for scene {idx}: {e}")
-
         if scene.get("audio_url"):
             aud_url = scene["audio_url"]
             # Fix 1: Legacy outputs path
