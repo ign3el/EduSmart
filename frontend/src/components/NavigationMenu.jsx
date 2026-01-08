@@ -112,10 +112,21 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
 
   return (
     <>
+      {/* Mobile Action Button (New Story) */}
+      {onNewStory && !isMobileOpen && (
+        <button
+          className="mobile-action-btn"
+          onClick={() => handleAction(onNewStory)}
+          aria-label="New Story"
+        >
+          ✨
+        </button>
+      )}
+
       {/* Mobile Hamburger Button */}
-      <button 
-        className="mobile-menu-btn" 
-        onClick={() => setIsMobileOpen(!isMobileOpen)} 
+      <button
+        className="mobile-menu-btn"
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
         aria-label="Menu"
       >
         <motion.div
@@ -129,71 +140,71 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
       {/* Desktop Menu (Always visible) */}
       <nav className="desktop-menu">
         {onHome && (
-        <button 
-          onClick={() => handleAction(onHome)} 
-          className="menu-btn"
-        >
-          🏠 Home
-        </button>
+          <button
+            onClick={() => handleAction(onHome)}
+            className="menu-btn"
+          >
+            🏠 Home
+          </button>
         )}
         {onLoadStories && (
-        <button 
-          onClick={() => handleAction(onLoadStories)} 
-          className="menu-btn"
-        >
-          📚 Load Story
-        </button>
+          <button
+            onClick={() => handleAction(onLoadStories)}
+            className="menu-btn"
+          >
+            📚 Load Story
+          </button>
         )}
         {onOfflineManager && (
-        <button 
-          onClick={() => handleAction(onOfflineManager)} 
-          className="menu-btn"
-        >
-          📂 Offline Manager
-        </button>
+          <button
+            onClick={() => handleAction(onOfflineManager)}
+            className="menu-btn"
+          >
+            📂 Offline Manager
+          </button>
         )}
         {isAdmin && onAdminClick && (
-        <button 
-          onClick={() => handleAction(onAdminClick)} 
-          className="menu-btn admin"
-        >
-          ⚙️ Admin Panel
-        </button>
+          <button
+            onClick={() => handleAction(onAdminClick)}
+            className="menu-btn admin"
+          >
+            ⚙️ Admin Panel
+          </button>
         )}
         {isPlayingStory && onSaveStory && (
-        <button 
-          onClick={() => handleAction(onSaveStory)} 
-          className="menu-btn primary"
-        >
-          💾 Save
-        </button>
+          <button
+            onClick={() => handleAction(onSaveStory)}
+            className="menu-btn primary"
+          >
+            💾 Save
+          </button>
         )}
         {isPlayingStory && onDownloadStory && (
-        <button 
-          onClick={() => handleAction(onDownloadStory)} 
-          className="menu-btn primary"
-        >
-          📥 Download
-        </button>
+          <button
+            onClick={() => handleAction(onDownloadStory)}
+            className="menu-btn primary"
+          >
+            📥 Download
+          </button>
         )}
         {currentStory?.persistent_path && (
-        <button 
-          onClick={() => handleAction(onShowFileViewer)} 
-          className="menu-btn"
-        >
-          📄 View File
-        </button>
+          <button
+            onClick={() => handleAction(onShowFileViewer)}
+            className="menu-btn"
+          >
+            📄 View File
+          </button>
         )}
         {onNewStory && (
-        <button 
-          onClick={() => handleAction(onNewStory)} 
-          className="menu-btn primary"
-        >
-          ✨ New Story
-        </button>
+          <button
+            onClick={() => handleAction(onNewStory)}
+            className="menu-btn primary"
+          >
+            ✨ New Story
+          </button>
         )}
-        <button 
-          onClick={handleCheckUpdate} 
+        <button
+          onClick={handleCheckUpdate}
           className="menu-btn update"
           disabled={isCheckingUpdate}
           title="Check for updates"
@@ -201,21 +212,21 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
           {isCheckingUpdate ? '⏳' : '🔄'} Update
         </button>
         {onProfile && (
-        <button 
-          onClick={() => handleAction(onProfile)} 
-          className="menu-btn profile"
-          title="Account"
-        >
-          {user?.email?.split('@')[0] || '👤'}
-        </button>
+          <button
+            onClick={() => handleAction(onProfile)}
+            className="menu-btn profile"
+            title="Account"
+          >
+            {user?.email?.split('@')[0] || '👤'}
+          </button>
         )}
         {onLogout && (
-        <button 
-          onClick={() => handleAction(onLogout)} 
-          className="menu-btn logout"
-        >
-          🚪 Logout
-        </button>
+          <button
+            onClick={() => handleAction(onLogout)}
+            className="menu-btn logout"
+          >
+            🚪 Logout
+          </button>
         )}
       </nav>
 
@@ -240,8 +251,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
               >
                 <div className="drawer-header">
                   <h3>Menu</h3>
-                  <button 
-                    onClick={() => setIsMobileOpen(false)} 
+                  <button
+                    onClick={() => setIsMobileOpen(false)}
                     className="drawer-close-btn"
                   >
                     ✕
@@ -250,8 +261,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
 
                 <div className="drawer-content">
                   {user && (
-                    <div 
-                      className="user-profile-card" 
+                    <div
+                      className="user-profile-card"
                       onClick={() => handleAction(onProfile)}
                     >
                       <div className="user-avatar">
@@ -268,8 +279,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                     <div>
                       <h4 className="section-header">Navigation</h4>
                       {onHome && (
-                        <button 
-                          onClick={() => handleAction(onHome)} 
+                        <button
+                          onClick={() => handleAction(onHome)}
                           className="drawer-btn"
                         >
                           <span className="icon">🏠</span>
@@ -277,8 +288,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         </button>
                       )}
                       {onLoadStories && (
-                        <button 
-                          onClick={() => handleAction(onLoadStories)} 
+                        <button
+                          onClick={() => handleAction(onLoadStories)}
                           className="drawer-btn"
                         >
                           <span className="icon">📚</span>
@@ -286,8 +297,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         </button>
                       )}
                       {onOfflineManager && (
-                        <button 
-                          onClick={() => handleAction(onOfflineManager)} 
+                        <button
+                          onClick={() => handleAction(onOfflineManager)}
                           className="drawer-btn"
                         >
                           <span className="icon">📂</span>
@@ -295,8 +306,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         </button>
                       )}
                       {onNewStory && (
-                        <button 
-                          onClick={() => handleAction(onNewStory)} 
+                        <button
+                          onClick={() => handleAction(onNewStory)}
                           className="drawer-btn"
                         >
                           <span className="icon">✨</span>
@@ -304,8 +315,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         </button>
                       )}
                       {isPlayingStory && onSaveStory && (
-                        <button 
-                          onClick={() => handleAction(onSaveStory)} 
+                        <button
+                          onClick={() => handleAction(onSaveStory)}
                           className="drawer-btn primary"
                         >
                           <span className="icon">💾</span>
@@ -313,8 +324,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         </button>
                       )}
                       {isPlayingStory && onDownloadStory && (
-                        <button 
-                          onClick={() => handleAction(onDownloadStory)} 
+                        <button
+                          onClick={() => handleAction(onDownloadStory)}
                           className="drawer-btn primary"
                         >
                           <span className="icon">📥</span>
@@ -322,8 +333,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         </button>
                       )}
                       {currentStory?.persistent_path && (
-                        <button 
-                          onClick={() => handleAction(onShowFileViewer)} 
+                        <button
+                          onClick={() => handleAction(onShowFileViewer)}
                           className="drawer-btn"
                         >
                           <span className="icon">📄</span>
@@ -337,8 +348,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         <div className="section-divider"></div>
                         <div>
                           <h4 className="section-header">Admin</h4>
-                          <button 
-                            onClick={() => handleAction(onAdminClick)} 
+                          <button
+                            onClick={() => handleAction(onAdminClick)}
                             className="drawer-btn"
                           >
                             <span className="icon">⚙️</span>
@@ -351,11 +362,11 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                     <div className="section-divider"></div>
                     <div>
                       <h4 className="section-header">Account</h4>
-                      <button 
+                      <button
                         onClick={() => {
                           handleCheckUpdate();
                           setIsMobileOpen(false);
-                        }} 
+                        }}
                         className="drawer-btn"
                         disabled={isCheckingUpdate}
                       >
@@ -363,11 +374,11 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         <span>Check for Updates</span>
                       </button>
                       {!isPWA && (
-                        <button 
+                        <button
                           onClick={() => {
                             handleInstallPWA();
                             setIsMobileOpen(false);
-                          }} 
+                          }}
                           className="drawer-btn primary"
                         >
                           <span className="icon">📲</span>
@@ -381,8 +392,8 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                         </div>
                       )}
                       {onLogout && (
-                        <button 
-                          onClick={() => handleAction(onLogout)} 
+                        <button
+                          onClick={() => handleAction(onLogout)}
                           className="drawer-btn"
                         >
                           <span className="icon">🚪</span>
@@ -392,11 +403,11 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
                     </div>
                   </div>
                 </div>
-      </motion.div>
-          </>
+              </motion.div>
+            </>
           )}
-        {/* @ts-ignore */}
-        {/* @ts-ignore */}
+          {/* @ts-ignore */}
+          {/* @ts-ignore */}
         </AnimatePresence>,
         document.body
       )}
