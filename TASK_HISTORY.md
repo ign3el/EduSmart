@@ -27,3 +27,12 @@
 
 ✅ [2026-01-06 20:32] - **Combined API Count Verification**  
   - Testing PLAN+ACT aggregation
+
+✅ [2026-01-08] - **Debug Legacy Story Resources**
+  - Fixed audio file loading for legacy stories
+  - Resolved `MediaError` and empty `audio_url` issues
+  - Implemented robust URL reconstruction
+
+✅ [2026-01-08] - **Ensure New Story Button Visibility**
+  - Fixed "New Story" button visibility on all screens
+  - Resolved display issues in story player screen

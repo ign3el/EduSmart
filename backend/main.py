@@ -161,11 +161,16 @@ async def serve_story_file(story_id: str, filename: str):
     
     logger.info(f"📁 File request: story_id={story_id}, filename={filename}")
     
-    story_dir = Path("saved_stories") / story_id
-    logger.info(f"📂 Looking in directory: {story_dir}")
+    # Use storage manager to find the correct directory (handles safe names/UUIDs)
+    try:
+        story_dir = Path(storage_manager.get_story_path(story_id, in_saved=True))
+        logger.info(f"📂 Resolved directory: {story_dir}")
+    except Exception as e:
+        logger.error(f"❌ Failed to resolve story path: {e}")
+        raise HTTPException(status_code=404, detail=f"Story directory not found: {story_id}")
     
     if not story_dir.exists():
-        logger.error(f"❌ Story directory does not exist: {story_dir}")
+        logger.error(f"❌ Story directory does not exist on disk: {story_dir}")
         raise HTTPException(status_code=404, detail=f"Story directory not found: {story_id}")
     
     exact_path = story_dir / filename
@@ -271,8 +276,13 @@ async def serve_generated_story_file(story_id: str, filename: str):
     
     logger.info(f"📁 Generated story file request: story_id={story_id}, filename={filename}")
     
-    story_dir = Path("generated_stories") / story_id
-    logger.info(f"📂 Looking in directory: {story_dir}")
+    # Use storage manager to find the correct directory
+    try:
+        story_dir = Path(storage_manager.get_story_path(story_id, in_saved=False))
+        logger.info(f"📂 Resolved generated directory: {story_dir}")
+    except Exception as e:
+        logger.error(f"❌ Failed to resolve generated story path: {e}")
+        raise HTTPException(status_code=404, detail=f"Generated story directory not found: {story_id}")
     
     if not story_dir.exists():
         logger.error(f"❌ Generated story directory does not exist: {story_dir}")
