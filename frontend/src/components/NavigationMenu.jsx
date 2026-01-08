@@ -184,7 +184,7 @@ function NavigationMenu({ user, isAdmin, onHome, onNewStory, onLoadStories, onOf
           📄 View File
         </button>
         )}
-        {!isPlayingStory && onNewStory && (
+        {onNewStory && (
         <button 
           onClick={() => handleAction(onNewStory)} 
           className="menu-btn primary"
