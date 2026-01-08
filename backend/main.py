@@ -793,6 +793,66 @@ async def get_story_status(story_id: str) -> Dict[str, Any]:
     if status:
         logger.info(f"✅ Found story in job manager")
         scenes = job_manager.get_all_scenes(story_id)
+        
+        # Fallback: Reconstruct URLs for legacy stories with empty audio_url/image_url
+        for s in scenes:
+            scene_index = s["scene_index"]
+            
+            # Check if URLs are missing and try to reconstruct them
+            if not s.get("audio_url") or not s.get("image_url"):
+                logger.info(f"🔧 Scene {scene_index} has missing URLs, attempting reconstruction...")
+                
+                # Check both generated_stories and saved_stories
+                for in_saved in [False, True]:
+                    story_exists = storage_manager.story_exists(story_id, in_saved=in_saved)
+                    if not story_exists:
+                        continue
+                    
+                    story_dir = storage_manager.get_story_path(story_id, in_saved=in_saved)
+                    base_path = "saved-stories" if in_saved else "generated-stories"
+                    logger.info(f"📂 Checking {base_path}/{story_id} for scene {scene_index} files...")
+                    
+                    # Try to find audio file if missing
+                    if not s.get("audio_url"):
+                        # Try multiple audio file patterns
+                        audio_patterns = [
+                            f"scene_{scene_index}.wav",
+                            f"scene_{scene_index}.mp3",
+                            f"*_scene_{scene_index}.wav",
+                            f"*_scene_{scene_index}.mp3"
+                        ]
+                        
+                        for pattern in audio_patterns:
+                            import glob
+                            matches = glob.glob(os.path.join(story_dir, pattern))
+                            if matches:
+                                audio_filename = os.path.basename(matches[0])
+                                s["audio_url"] = f"/api/{base_path}/{story_id}/{audio_filename}"
+                                logger.info(f"✅ Reconstructed audio URL: {s['audio_url']}")
+                                break
+                    
+                    # Try to find image file if missing
+                    if not s.get("image_url"):
+                        # Try multiple image file patterns
+                        image_patterns = [
+                            f"scene_{scene_index}.png",
+                            f"scene_{scene_index}.jpg",
+                            f"*_scene_{scene_index}.png",
+                            f"*_scene_{scene_index}.jpg"
+                        ]
+                        
+                        for pattern in image_patterns:
+                            matches = glob.glob(os.path.join(story_dir, pattern))
+                            if matches:
+                                image_filename = os.path.basename(matches[0])
+                                s["image_url"] = f"/api/{base_path}/{story_id}/{image_filename}"
+                                logger.info(f"✅ Reconstructed image URL: {s['image_url']}")
+                                break
+                    
+                    # If we found both URLs, no need to check the other location
+                    if s.get("audio_url") and s.get("image_url"):
+                        break
+        
         return {
             "story_id": story_id,
             "status": status["status"],
