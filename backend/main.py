@@ -185,6 +185,9 @@ async def serve_story_file(story_id: str, filename: str):
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        # Force correct content type for Kokoro wav files if needed
+        if filename.endswith(".wav"):
+             response.headers["Content-Type"] = "audio/wav"
         return response
     
     # If not found, try multiple patterns to support both old and new formats
@@ -259,7 +262,8 @@ async def serve_story_file(story_id: str, filename: str):
     
     # List all files in directory for debugging
     all_files = list(story_dir.iterdir())
-    logger.error(f"❌ File not found. Available files: {[f.name for f in all_files]}")
+    logger.error(f"❌ File not found: {filename}")
+    logger.error(f"📂 Available files in {story_dir}: {[f.name for f in all_files]}")
     raise HTTPException(status_code=404, detail=f"File not found: {filename}")
 
 @app.api_route("/api/generated-stories/{story_id}/{filename:path}", methods=["GET", "HEAD"])
@@ -574,22 +578,28 @@ async def check_duplicate(
         # Prefer saved stories as they are permanent
         if saved_matches:
             match = saved_matches[0]
+            # Extract metadata
+            metadata = match.get("metadata", {})
             return {
                 "is_duplicate": True,
                 "duplicate_type": "saved",
                 "story_id": match["story_id"],
-                "story_title": match.get("metadata", {}).get("title", "Unknown"),
-                "created_at": match.get("metadata", {}).get("created_timestamp"),
+                "story_title": metadata.get("title", metadata.get("original_filename", "Unknown")),
+                "created_at": metadata.get("created_timestamp", "Unknown date"),
+                "created_by": metadata.get("username", "Unknown"),
                 "file_hash": duplicate_info["hash"]
             }
         elif generated_matches:
             match = generated_matches[0]
+            # Extract metadata
+            metadata = match.get("metadata", {})
             return {
                 "is_duplicate": True,
                 "duplicate_type": "generated",
                 "story_id": match["story_id"],
-                "story_title": match.get("metadata", {}).get("title", "Unknown"),
-                "created_at": match.get("metadata", {}).get("created_timestamp"),
+                "story_title": metadata.get("title", metadata.get("original_filename", "Unknown")),
+                "created_at": metadata.get("created_timestamp", "Unknown date"),
+                "created_by": metadata.get("username", "Unknown"),
                 "file_hash": duplicate_info["hash"]
             }
     
@@ -633,12 +643,15 @@ async def upload_story(
             match = (saved_matches[0] if saved_matches else generated_matches[0])
             duplicate_type = "saved" if saved_matches else "generated"
             
+            # Extract metadata
+            metadata = match.get("metadata", {})
             return {
                 "is_duplicate": True,
                 "duplicate_type": duplicate_type,
                 "story_id": match["story_id"],
-                "story_title": match.get("metadata", {}).get("title", "Unknown"),
-                "created_at": match.get("metadata", {}).get("created_timestamp"),
+                "story_title": metadata.get("title", metadata.get("original_filename", "Unknown")),
+                "created_at": metadata.get("created_timestamp", "Unknown date"),
+                "created_by": metadata.get("username", "Unknown"),
                 "file_hash": file_hash,
                 "message": "File already exists. Choose to view existing or generate new."
             }
