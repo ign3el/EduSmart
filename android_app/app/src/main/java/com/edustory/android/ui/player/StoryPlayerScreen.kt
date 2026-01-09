@@ -1,7 +1,5 @@
 package com.edustory.android.ui.player
 
-import android.media.AudioAttributes
-import android.media.MediaPlayer
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,13 +10,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.edustory.android.data.model.Scene
@@ -40,7 +40,6 @@ fun StoryPlayerScreen(
 
     Scaffold(
         topBar = {
-            // Simple Top Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -98,64 +97,60 @@ fun SceneView(
 ) {
     val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(false) }
-    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
-    var audioError by remember { mutableStateOf<String?>(null) }
-
-    // Audio Cleanup and Setup
-    DisposableEffect(scene.audioUrl) {
-        val player = MediaPlayer()
-        mediaPlayer = player
+    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    
+    // Initialize ExoPlayer
+    LaunchedEffect(scene.audioUrl) {
+        // Release previous player if it exists (though usually handled by onDispose)
+        exoPlayer?.release()
         
         if (!scene.audioUrl.isNullOrEmpty()) {
-            try {
-                // Ensure URL is absolute. Since backend returns /api/... we need to prepend base URL if using RetrofitClient base
-                // But RetrofitClient.BASE_URL is private. We hardcode or extract it.
-                // Assuming backend returns relative path starting with /api/
-                val fullAudioUrl = if (scene.audioUrl.startsWith("http")) scene.audioUrl else "https://edusmart.ign3el.com" + scene.audioUrl
-                
-                player.setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build()
-                )
-                player.setDataSource(fullAudioUrl)
-                player.prepareAsync()
-                player.setOnPreparedListener { 
-                    // Ready to play
-                    Log.d("StoryPlayer", "Audio prepared: $fullAudioUrl")
-                }
-                player.setOnCompletionListener {
-                    isPlaying = false
-                }
-                player.setOnErrorListener { _, what, extra ->
-                    Log.e("StoryPlayer", "Audio Error: $what, $extra")
-                    audioError = "Audio Error"
-                    isPlaying = false
-                    true
-                }
-            } catch (e: Exception) {
-                Log.e("StoryPlayer", "Audio Setup Failed", e)
-                audioError = "Setup Failed"
-            }
-        }
+            val player = ExoPlayer.Builder(context).build()
+            exoPlayer = player
+            
+            val fullAudioUrl = if (scene.audioUrl.startsWith("http")) 
+                scene.audioUrl 
+            else 
+                "https://edusmart.ign3el.com" + scene.audioUrl
 
-        onDispose {
+            Log.d("ExoPlayer", "Loading: $fullAudioUrl")
+
             try {
-                if (player.isPlaying) {
-                    player.stop()
-                }
-                player.release()
+                val mediaItem = MediaItem.fromUri(fullAudioUrl)
+                player.setMediaItem(mediaItem)
+                player.prepare()
+                player.playWhenReady = false // Don't auto-play immediately, let user control
+                
+                player.addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(playing: Boolean) {
+                        isPlaying = playing
+                    }
+                    
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_ENDED) {
+                            isPlaying = false
+                            player.seekTo(0)
+                            player.pause()
+                        }
+                    }
+                    
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        Log.e("ExoPlayer", "Error: ${error.message}")
+                        isPlaying = false
+                    }
+                })
             } catch (e: Exception) {
-                Log.e("StoryPlayer", "Release failed", e)
+                Log.e("ExoPlayer", "Setup Failed", e)
             }
+        } else {
+            exoPlayer = null
         }
     }
-    
-    // Auto-stop when leaving scene
+
+    // Cleanup on Dispose
     DisposableEffect(Unit) {
         onDispose {
-            mediaPlayer?.release()
+            exoPlayer?.release()
         }
     }
 
@@ -174,7 +169,10 @@ fun SceneView(
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             if (!scene.imageUrl.isNullOrEmpty()) {
-                val fullImageUrl = if (scene.imageUrl.startsWith("http")) scene.imageUrl else "https://edusmart.ign3el.com" + scene.imageUrl
+                val fullImageUrl = if (scene.imageUrl.startsWith("http")) 
+                    scene.imageUrl 
+                else 
+                    "https://edusmart.ign3el.com" + scene.imageUrl
                 
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -226,16 +224,12 @@ fun SceneView(
             if (!scene.audioUrl.isNullOrEmpty()) {
                 Button(
                     onClick = {
-                        try {
+                        exoPlayer?.let { player ->
                             if (isPlaying) {
-                                mediaPlayer?.pause()
-                                isPlaying = false
+                                player.pause()
                             } else {
-                                mediaPlayer?.start()
-                                isPlaying = true
+                                player.play()
                             }
-                        } catch (e: Exception) {
-                            Log.e("StoryPlayer", "Play/Pause error", e)
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -244,8 +238,6 @@ fun SceneView(
                 ) {
                     Text(if (isPlaying) "Pause" else "Play Audio")
                 }
-            } else {
-                Text("No Audio", style = MaterialTheme.typography.labelSmall)
             }
 
             Button(onClick = onNext, enabled = currentIndex < totalScenes - 1) {

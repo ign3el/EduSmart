@@ -86,7 +86,7 @@ fun StoryListScreen(
             }
         }
     }
-}
+    }
 }
 
 @Composable
