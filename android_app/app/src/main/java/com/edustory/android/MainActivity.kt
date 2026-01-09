@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import com.edustory.android.ui.dashboard.StoryListScreen
 import com.edustory.android.ui.login.LoginScreen
 import com.edustory.android.ui.theme.EduStoryTheme
+import com.edustory.android.ui.home.HomeScreen
+import com.edustory.android.ui.offline.OfflineLibraryScreen
 
 import com.edustory.android.ui.create.CreateStoryScreen
 import com.edustory.android.ui.player.StoryPlayerScreen
@@ -29,37 +31,55 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     var token by remember { mutableStateOf<String?>(null) }
+                    var currentScreen by remember { mutableStateOf("home") } // home, create, library, offline, player
                     var selectedStoryId by remember { mutableStateOf<String?>(null) }
-                    var isCreatingStory by remember { mutableStateOf(false) }
                     
                     if (token == null) {
                         LoginScreen(onLoginSuccess = { newToken ->
                             token = newToken
+                            currentScreen = "home"
                         })
-                    } else if (isCreatingStory) {
-                        CreateStoryScreen(
-                            token = token!!,
-                            onStoryCreated = { newStoryId ->
-                                isCreatingStory = false
-                                // Ideally refresh list or open new story
-                                selectedStoryId = newStoryId
-                            },
-                            onBack = { isCreatingStory = false }
-                        )
-                    } else if (selectedStoryId != null) {
-                        StoryPlayerScreen(
-                            token = token!!,
-                            storyId = selectedStoryId!!,
-                            onBack = { selectedStoryId = null }
-                        )
                     } else {
-                        StoryListScreen(
-                            token = token!!,
-                            onStoryClick = { story ->
-                                selectedStoryId = story.storyId
-                            },
-                            onFabClick = { isCreatingStory = true } // We need to add this to StoryListScreen too
-                        )
+                        when (currentScreen) {
+                            "home" -> HomeScreen(
+                                onNavigateToCreate = { currentScreen = "create" },
+                                onNavigateToLibrary = { currentScreen = "library" },
+                                onNavigateToOffline = { currentScreen = "offline" }
+                            )
+                            "create" -> CreateStoryScreen(
+                                token = token!!,
+                                onStoryCreated = { newStoryId ->
+                                    selectedStoryId = newStoryId
+                                    currentScreen = "player"
+                                },
+                                onBack = { currentScreen = "home" }
+                            )
+                            "library" -> StoryListScreen(
+                                token = token!!,
+                                onStoryClick = { story ->
+                                    selectedStoryId = story.storyId
+                                    currentScreen = "player"
+                                },
+                                onFabClick = { currentScreen = "create" }
+                            )
+                            "offline" -> com.edustory.android.ui.offline.OfflineLibraryScreen(
+                                onBack = { currentScreen = "home" }
+                            )
+                            "player" -> {
+                                if (selectedStoryId != null) {
+                                    StoryPlayerScreen(
+                                        token = token!!,
+                                        storyId = selectedStoryId!!,
+                                        onBack = { 
+                                            currentScreen = "home" 
+                                            selectedStoryId = null
+                                        }
+                                    )
+                                } else {
+                                    currentScreen = "home"
+                                }
+                            }
+                        }
                     }
                 }
             }

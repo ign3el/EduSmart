@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
@@ -46,24 +49,62 @@ fun CreateStoryScreen(
     ) {
         Text("Create New Story", style = MaterialTheme.typography.headlineMedium)
 
-        Button(onClick = { filePickerLauncher.launch("*/*") }) {
-            Text("Select Document (PDF/TXT)")
+        // Section 1: Grade Level
+        Text("1. Select Grade Level", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            listOf("K-2", "3-5", "6-8", "9-12").forEach { level ->
+                FilterChip(
+                    selected = grade == level,
+                    onClick = { viewModel.setGrade(level) }, // Assuming ViewModel has setGrade
+                    label = { Text(level) }
+                )
+            }
         }
-        
-        Text(text = fileName, style = MaterialTheme.typography.bodyMedium)
 
-        // Settings (Simple Dropdowns/Radios for MVP)
-        // Voice
-        Text("Voice: ${voice}")
-        // Grade
-        Text("Grade: ${grade}")
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Section 2: File Upload
+        Text("2. Upload Document", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .clickable { filePickerLauncher.launch("*/*") },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant) // Dotted effect requires custom draw, using solid for now
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Upload",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = if (fileName == "No file selected") "Tap to select PDF/DOCX" else fileName,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
 
         // Action Button
         Button(
             onClick = { viewModel.startProcess(context, token) },
-            enabled = createState is CreateState.Idle || createState is CreateState.Error
+            enabled = (createState is CreateState.Idle || createState is CreateState.Error) && fileName != "No file selected",
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("Generate Story")
+            Text("Generate Story", fontSize = 18.sp)
         }
 
         // Status

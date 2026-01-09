@@ -52,6 +52,10 @@ class CreateStoryViewModel : ViewModel() {
         _createState.value = CreateState.Idle
     }
 
+    fun setGrade(level: String) {
+        gradeLevel.value = level
+    }
+
     fun startProcess(context: Context, token: String, forceNew: Boolean = false) {
         if (selectedFileUri == null) {
             _createState.value = CreateState.Error("Please select a file first.")
