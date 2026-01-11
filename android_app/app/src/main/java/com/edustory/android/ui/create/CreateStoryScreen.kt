@@ -1,8 +1,11 @@
 package com.edustory.android.ui.create
 
 import android.net.Uri
+import androidx.annotation.OptIn
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -17,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun CreateStoryScreen(
     token: String,
     onStoryCreated: (String) -> Unit, // Callback with Story ID (or Job ID)
@@ -75,7 +79,7 @@ fun CreateStoryScreen(
                 .height(150.dp)
                 .clickable { filePickerLauncher.launch("*/*") },
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant) // Dotted effect requires custom draw, using solid for now
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant) // Dotted effect requires custom draw, using solid for now
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),

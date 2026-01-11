@@ -51,7 +51,7 @@ fun HomeScreen(
         DashboardCard(
             title = "Create New Story",
             subtitle = "Upload PDF/DOCX and generate",
-            icon = Icons.Default.Create,
+            icon = Icons.Filled.Create,
             color = MaterialTheme.colorScheme.primary, // Using theme primary
             onClick = onNavigateToCreate
         )
@@ -61,7 +61,7 @@ fun HomeScreen(
         DashboardCard(
             title = "My Library",
             subtitle = "View your generated accounts",
-            icon = Icons.Default.List,
+            icon = Icons.Filled.List,
             color = MaterialTheme.colorScheme.secondary, // Using theme secondary
             onClick = onNavigateToLibrary
         )
@@ -71,7 +71,7 @@ fun HomeScreen(
         DashboardCard(
             title = "Offline Stories",
             subtitle = "Access downloaded content",
-            icon = Icons.Default.Warning, // TODO: Replace with OfflinePin when available
+            icon = Icons.Filled.Warning, // TODO: Replace with OfflinePin when available
             color = MaterialTheme.colorScheme.tertiary, // Using theme tertiary
             onClick = onNavigateToOffline
         )

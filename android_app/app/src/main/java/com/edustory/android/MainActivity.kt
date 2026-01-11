@@ -1,5 +1,6 @@
 package com.edustory.android
 
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +13,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.annotation.OptIn
 import com.edustory.android.ui.dashboard.StoryListScreen
 import com.edustory.android.ui.login.LoginScreen
 import com.edustory.android.ui.theme.EduStoryTheme
@@ -22,6 +25,7 @@ import com.edustory.android.ui.create.CreateStoryScreen
 import com.edustory.android.ui.player.StoryPlayerScreen
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
