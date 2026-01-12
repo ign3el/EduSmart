@@ -5,9 +5,11 @@ import time
 import io
 import wave
 import asyncio
+import aiohttp
+import aiofiles
 import requests
 from urllib.parse import quote
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict
 from google import genai
 from google.genai import types
 from models import StorySchema
@@ -735,3 +737,191 @@ REQUIREMENTS:
 
     # TTS generation removed - now handled by external Chatterbox service via HTTP
     # See services/chatterbox_client.py for TTS implementation
+    
+    # ==================== PROGRESSIVE TTS GENERATION ====================
+    
+    async def generate_progressive_tts(
+        self,
+        story_id: str,
+        scenes: List[dict],
+        batch_size: int = 2,
+        max_threads_per_tts: int = 1
+    ) -> None:
+        """Generate TTS for scenes in parallel batches with CPU management.
+        
+        Optimized for 3 OCPU VPS:
+        - 2 parallel TTS (batch_size=2)
+        - 1 thread per TTS (max_threads_per_tts=1)
+        - Leaves 4 cores free for API requests
+        
+        Args:
+            story_id: Story identifier for caching
+            scenes: List of scenes (excluding Scene 0 which is already generated)
+            batch_size: Number of parallel TTS requests (default: 2)
+            max_threads_per_tts: Max CPU threads per TTS (default: 1 for CPU management)
+        """
+        total_scenes = len(scenes)
+        print(f"🎤 Starting progressive TTS generation for {total_scenes} scenes (batch_size={batch_size})")
+        
+        for i in range(0, total_scenes, batch_size):
+            batch = scenes[i:i+batch_size]
+            batch_num = i // batch_size + 1
+            
+            # Generate batch in parallel
+            tasks = [
+                self._generate_and_cache_tts(
+                    story_id,
+                    scene_num + 1 + i,  # +1 because Scene 0 already done, +i for batch offset
+                    scene['narrative_text'],
+                    max_threads=max_threads_per_tts
+                )
+                for scene_num, scene in enumerate(batch)
+            ]
+            
+            # Run batch concurrently
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Count successes
+            successes = sum(1 for r in results if r is True)
+            
+            # Update progress
+            completed = min(i + batch_size, total_scenes)
+            await self._update_tts_status(story_id, completed, total_scenes)
+            
+            print(f"✓ TTS batch {batch_num}/{(total_scenes + batch_size - 1) // batch_size} complete: {successes}/{len(batch)} scenes successful")
+    
+    async def _generate_and_cache_tts(
+        self,
+        story_id: str,
+        scene_num: int,
+        text: str,
+        max_threads: int = 1
+    ) -> bool:
+        """Generate TTS and cache the result.
+        
+        Args:
+            story_id: Story identifier
+            scene_num: Scene number (0-indexed)
+            text: Narrative text to convert to speech
+            max_threads: Max CPU threads for TTS generation
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Import TTS client (assumes chatterbox_client exists)
+            # You'll need to create this or adapt to your TTS service
+            from services.chatterbox_client import ChatterboxClient
+            
+            tts_client = ChatterboxClient()
+            
+            # Generate TTS (async)
+            # Note: You may need to add async support to ChatterboxClient
+            audio_bytes = await tts_client.generate_async(
+                text=text,
+                max_threads=max_threads  # CPU management
+            )
+            
+            if audio_bytes:
+                # Cache audio
+                await self._cache_audio(story_id, scene_num, audio_bytes)
+                return True
+            
+            print(f"⚠️  TTS generation returned no audio for scene {scene_num}")
+            return False
+            
+        except Exception as e:
+            print(f"⚠️  TTS generation failed for scene {scene_num}: {e}")
+            return False
+    
+    async def _cache_audio(self, story_id: str, scene_num: int, audio_bytes: bytes) -> None:
+        """Cache audio bytes to file system.
+        
+        Args:
+            story_id: Story identifier
+            scene_num: Scene number
+            audio_bytes: Audio data to cache
+        """
+        try:
+            # Create cache directory
+            cache_dir = "outputs/audio_cache"
+            os.makedirs(cache_dir, exist_ok=True)
+            
+            # Save audio file
+            file_path = os.path.join(cache_dir, f"audio_{story_id}_{scene_num}.mp3")
+            
+            async with aiofiles.open(file_path, 'wb') as f:
+                await f.write(audio_bytes)
+            
+            print(f"✓ Cached audio for scene {scene_num}: {file_path}")
+            
+        except Exception as e:
+            print(f"⚠️  Failed to cache audio for scene {scene_num}: {e}")
+    
+    async def _update_tts_status(
+        self,
+        story_id: str,
+        completed: int,
+        total: int
+    ) -> None:
+        """Update TTS generation status for real-time progress tracking.
+        
+        Args:
+            story_id: Story identifier
+            completed: Number of scenes completed
+            total: Total number of scenes
+        """
+        try:
+            # Create status object
+            status = {
+                "tts_progress": f"{completed}/{total}",
+                "scenes_ready": list(range(completed + 1)),  # +1 for Scene 0
+                "timestamp": time.time(),
+                "percentage": int((completed / total) * 100) if total > 0 else 0
+            }
+            
+            # Save to file (can be replaced with Redis/database)
+            status_dir = "outputs/status"
+            os.makedirs(status_dir, exist_ok=True)
+            
+            status_file = os.path.join(status_dir, f"{story_id}.json")
+            
+            async with aiofiles.open(status_file, 'w') as f:
+                await f.write(json.dumps(status, indent=2))
+            
+            print(f"✓ Updated TTS status: {completed}/{total} scenes ready ({status['percentage']}%)")
+            
+        except Exception as e:
+            print(f"⚠️  Failed to update TTS status: {e}")
+    
+    async def get_tts_status(self, story_id: str) -> Dict:
+        """Get current TTS generation status.
+        
+        Args:
+            story_id: Story identifier
+        
+        Returns:
+            Status dictionary with progress information
+        """
+        try:
+            status_file = f"outputs/status/{story_id}.json"
+            
+            if not os.path.exists(status_file):
+                return {
+                    "tts_progress": "0/9",
+                    "scenes_ready": [0],
+                    "percentage": 0
+                }
+            
+            async with aiofiles.open(status_file, 'r') as f:
+                content = await f.read()
+                return json.loads(content)
+                
+        except Exception as e:
+            print(f"⚠️  Failed to get TTS status: {e}")
+            return {
+                "tts_progress": "unknown",
+                "scenes_ready": [0],
+                "percentage": 0,
+                "error": str(e)
+            }
