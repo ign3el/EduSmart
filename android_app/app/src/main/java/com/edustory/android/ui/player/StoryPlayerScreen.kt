@@ -36,6 +36,8 @@ fun StoryPlayerScreen(
     val playerState by viewModel.playerState.collectAsState()
     val currentIndex by viewModel.currentSceneIndex.collectAsState()
 
+    val ttsReadyScenes by viewModel.ttsReadyScenes.collectAsState()
+
     LaunchedEffect(storyId) {
         viewModel.loadStory(token, storyId)
     }
@@ -74,8 +76,10 @@ fun StoryPlayerScreen(
                     if (scenes.isNotEmpty()) {
                         SceneView(
                             scene = scenes[currentIndex],
+                            storyId = storyId,
                             currentIndex = currentIndex,
                             totalScenes = scenes.size,
+                            ttsReadyScenes = ttsReadyScenes,
                             onNext = { viewModel.nextScene(scenes.size) },
                             onPrev = { viewModel.prevScene() }
                         )
@@ -92,8 +96,10 @@ fun StoryPlayerScreen(
 @Composable
 fun SceneView(
     scene: Scene,
+    storyId: String,
     currentIndex: Int,
     totalScenes: Int,
+    ttsReadyScenes: List<Int>,
     onNext: () -> Unit,
     onPrev: () -> Unit
 ) {
@@ -101,21 +107,28 @@ fun SceneView(
     var isPlaying by remember { mutableStateOf(false) }
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     
+    // Determine effective Audio URL
+    // If scene index is in ttsReadyScenes, use the direct progressive endpoint
+    val effectiveAudioUrl = remember(scene.audioUrl, ttsReadyScenes, currentIndex) {
+        if (ttsReadyScenes.contains(currentIndex)) {
+            "https://edusmart.ign3el.com/api/story/$storyId/scene/$currentIndex/audio"
+        } else if (!scene.audioUrl.isNullOrEmpty()) {
+            if (scene.audioUrl.startsWith("http")) scene.audioUrl else "https://edusmart.ign3el.com${scene.audioUrl}"
+        } else {
+            null
+        }
+    }
+
     // Initialize ExoPlayer
-    LaunchedEffect(scene.audioUrl) {
+    LaunchedEffect(effectiveAudioUrl) {
         // Release previous player if it exists (though usually handled by onDispose)
         exoPlayer?.release()
         
-        if (!scene.audioUrl.isNullOrEmpty()) {
+        if (!effectiveAudioUrl.isNullOrEmpty()) {
             val player = ExoPlayer.Builder(context).build()
             exoPlayer = player
             
-            val fullAudioUrl = if (scene.audioUrl.startsWith("http")) 
-                scene.audioUrl 
-            else 
-                "https://edusmart.ign3el.com" + scene.audioUrl
-
-            Log.d("ExoPlayer", "Loading: $fullAudioUrl")
+            Log.d("ExoPlayer", "Loading: $effectiveAudioUrl")
 
             try {
                 val mediaItem = MediaItem.fromUri(fullAudioUrl)

@@ -27,7 +27,12 @@ import java.io.FileOutputStream
 sealed class CreateState {
     object Idle : CreateState()
     object Checking : CreateState()
-    data class DuplicateFound(val existingStoryId: String, val existingName: String?) : CreateState()
+    data class DuplicateFound(
+        val existingStoryId: String, 
+        val existingName: String?,
+        val createdAt: String?,
+        val createdBy: String?
+    ) : CreateState()
     object Uploading : CreateState()
     data class Generating(val progress: Int, val message: String) : CreateState()
     data class Success(val storyId: String) : CreateState()
@@ -96,7 +101,12 @@ class CreateStoryViewModel : ViewModel() {
                     fileHash = result.fileHash
                     
                     if (result.isDuplicate && result.existingStoryId != null) {
-                        _createState.value = CreateState.DuplicateFound(result.existingStoryId, result.existingStoryName)
+                        _createState.value = CreateState.DuplicateFound(
+                            result.existingStoryId, 
+                            result.existingStoryName,
+                            result.createdAt,
+                            result.createdBy
+                        )
                     } else {
                         // No duplicate, proceed to upload
                          uploadAndGenerate(file, token, false)

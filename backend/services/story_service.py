@@ -716,7 +716,8 @@ Output ONLY the JSON object."""
         scenes: List[dict],
         story_seed: int,
         max_workers: int = 4,
-        is_mobile: bool = False
+        is_mobile: bool = False,
+        start_index: int = 0
     ) -> Dict[int, bytes]:
         """Generate all scene images in parallel with bounded concurrency.
         
@@ -728,16 +729,29 @@ Output ONLY the JSON object."""
         Args:
             scenes: List of scene dictionaries with 'image_prompt' field
             story_seed: Seed for character consistency across all images
-            max_workers: Max concurrent image generations (default: 4 for RunPod)
-            is_mobile: Generate mobile-optimized images (512x512, 15 steps)
+            max_workers: Max concurrent image generations
+            is_mobile: Generate mobile-optimized images (512x512)
+            start_index: Starting scene index (default 0)
         
         Returns:
             Dictionary mapping scene number to image bytes
         """
         semaphore = asyncio.Semaphore(max_workers)
         
-        async def bounded_generate(scene_num: int, scene: dict):
+        async def bounded_generate(i: int, scene: dict):
             """Generate single image with semaphore control"""
+            # Calculate actual scene index
+            scene_num = start_index + i
+            async with semaphore:
+                await asyncio.sleep(i * 0.5)
+                logger.info(f"🎨 Starting image generation for scene {scene_num}...")
+                img_bytes = await self.generate_image(
+                    scene['image_prompt'], 
+                    story_seed=story_seed, 
+                    is_mobile=is_mobile,
+                    scene_num=scene_num
+                )
+                return scene_num, img_bytes
             async with semaphore:
                 return await self.generate_image(
                     prompt=scene['image_prompt'],

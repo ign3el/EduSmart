@@ -194,8 +194,15 @@ fun CreateStoryScreen(
                 is CreateState.DuplicateFound -> {
                     AlertDialog(
                         onDismissRequest = {},
-                        title = { Text("Already Exists") },
-                        text = { Text("A story for this file already exists. Load it?") },
+                        title = { Text("Duplicate Found") },
+                        text = { 
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("This file has already been processed.")
+                                Text("Title: ${state.existingName ?: "Unknown"}", fontWeight = FontWeight.Bold)
+                                if (!state.createdAt.isNullOrEmpty()) Text("Created: ${state.createdAt}", fontSize = 12.sp)
+                                if (!state.createdBy.isNullOrEmpty()) Text("By: ${state.createdBy}", fontSize = 12.sp)
+                            }
+                        },
                         confirmButton = {
                             Button(
                                 onClick = { onStoryCreated(state.existingStoryId) },

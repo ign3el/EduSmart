@@ -40,10 +40,11 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [generatingMessage, setGeneratingMessage] = useState('');
-  const [savedTime, setSavedTime] = useState(0); // Track saved playback position
+  // Track saved playback position
   const [ttsReady, setTtsReady] = useState([]); // Track which scenes have TTS ready
   const [ttsPolling, setTtsPolling] = useState(false);
   const audioRef = useRef(null);
+  const savedTimeRef = useRef(0);
   const imageCache = useRef({});
   const pollingIntervalRef = useRef(null);
 
@@ -197,6 +198,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
 
 
   // Handle audio events
+  // Handle audio events
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -207,14 +209,16 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
 
       // If we have a saved time and we're starting from 0 (or near 0), seek to saved time
       // This handles cases where audio src reload might have reset time
-      if (savedTime > 0.1 && audio.currentTime < 0.1) {
-        audio.currentTime = savedTime;
+      if (savedTimeRef.current > 0.1 && audio.currentTime < 0.1) {
+        audio.currentTime = savedTimeRef.current;
       }
     };
 
     const handlePauseEvent = () => {
       // Always save time on pause
-      setSavedTime(audio.currentTime);
+      if (audio.currentTime > 0) {
+        savedTimeRef.current = audio.currentTime;
+      }
 
       if (!userPaused) {
         setSystemPaused(true);
@@ -224,7 +228,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     const handleEnded = () => {
       setSystemPaused(false);
       setUserPaused(false);
-      setSavedTime(0);
+      savedTimeRef.current = 0;
     };
 
     audio.addEventListener('play', handlePlayEvent);
@@ -236,7 +240,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       audio.removeEventListener('pause', handlePauseEvent);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [audioRef.current, savedTime, userPaused]);
+  }, [audioRef.current, userPaused]);
 
   // Combined play/pause logic
   useEffect(() => {
@@ -439,12 +443,12 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         // Capture current time BEFORE pausing
         const currentPosition = audioRef.current.currentTime;
         audioRef.current.pause();
-        setSavedTime(currentPosition); // Update saved time immediately
+        savedTimeRef.current = currentPosition; // Update saved time ref
         setIsPlaying(false);
         ('⏸️ User paused at:', currentPosition);
       } else {
         // Use ref to bypass state closure issues
-        const targetTime = savedTime > 0 ? savedTime : 0;
+        const targetTime = savedTimeRef.current > 0 ? savedTimeRef.current : 0;
         audioRef.current.currentTime = targetTime;
 
         // If audio error occurred, retry loading

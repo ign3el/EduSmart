@@ -559,46 +559,49 @@ async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grad
         
         logger.info(f"✓ Story structure ready: {len(scenes)} scenes")
         
-        # --- Progressive TTS Generation Strategy ---
+        # --- Optimized Generation Strategy ---
         story_seed = int(uuid.uuid4().hex[:8], 16)
         
-        logger.info("🚀 Starting parallel image + Scene 0 TTS generation...")
+        # Force mobile resolution (512x512) for speed regardless of client
+        force_mobile = True
         
-        # Generate ALL images in parallel (32s)
-        images_task = gemini.generate_images_parallel(
-            scenes=scenes,
+        logger.info("🚀 Starting parallel Scene 0 Image + Scene 0 TTS generation...")
+        
+        # 1. Generate Scene 0 Image Task
+        scene_0_image_task = gemini.generate_image(
+            scenes[0]['image_prompt'],
             story_seed=story_seed,
-            max_workers=4,
-            is_mobile=is_mobile
+            is_mobile=force_mobile,
+            scene_num=0
         )
         
-        # Generate Scene 0 TTS in parallel (7s)
+        # 2. Generate Scene 0 TTS Task
         from services.chatterbox_client import chatterbox
         scene_0_tts_task = chatterbox.generate_audio(
             text=scenes[0]['narrative_text'],
             voice=voice
         )
         
-        # ✅ CRITICAL: Run both concurrently - total time = max(32s, 7s) = 32s
-        images, scene_0_audio = await asyncio.gather(images_task, scene_0_tts_task)
+        # Run Scene 0 tasks concurrently (Blocking Phase)
+        scene_0_data = await asyncio.gather(scene_0_image_task, scene_0_tts_task)
+        img_0_bytes, scene_0_audio = scene_0_data
         
-        logger.info(f"✓ Images and Scene 0 audio ready in ~32s")
-        
-        # Save all images
-        for i, img_bytes in images.items():
-            if img_bytes:
-                img_name = f"scene_{i}.png"
-                try:
-                    img_url = storage_manager.save_file(story_id, img_name, img_bytes, in_saved=False)
-                    job_manager.update_scene_image(scene_ids[i], "completed", img_url)
-                    logger.info(f"✓ Scene {i} image saved: {img_url}")
-                except Exception as e:
-                    logger.error(f"✗ Failed to save scene {i} image: {e}")
-                    job_manager.update_scene_image(scene_ids[i], "failed")
-            else:
-                job_manager.update_scene_image(scene_ids[i], "failed")
-        
-        # Save Scene 0 audio
+        logger.info(f"✓ Scene 0 assets generated. Saving...")
+
+        # Save Scene 0 Image
+        if img_0_bytes:
+            img_0_name = "scene_0.png"
+            try:
+                img_0_url = storage_manager.save_file(story_id, img_0_name, img_0_bytes, in_saved=False)
+                job_manager.update_scene_image(scene_ids[0], "completed", img_0_url)
+                logger.info(f"✓ Scene 0 image saved: {img_0_url}")
+            except Exception as e:
+                logger.error(f"✗ Failed to save scene 0 image: {e}")
+                job_manager.update_scene_image(scene_ids[0], "failed")
+        else:
+            job_manager.update_scene_image(scene_ids[0], "failed")
+            
+        # Save Scene 0 Audio
         if scene_0_audio:
             aud_name = "scene_0.wav"
             try:
@@ -610,14 +613,49 @@ async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grad
                 job_manager.update_scene_audio(scene_ids[0], "failed")
         else:
             job_manager.update_scene_audio(scene_ids[0], "failed")
-        
-        # Start background TTS for scenes 1-9
-        logger.info("🎤 Starting progressive TTS generation for scenes 1-9...")
-        asyncio.create_task(
-            generate_remaining_tts(story_id, scenes[1:], scene_ids[1:], voice, storage_manager, job_manager)
-        )
-        
-        logger.info(f"✓ Story ready in ~40s with progressive TTS background generation")
+
+        logger.info(f"✓ Story ready for initial display. Launching background generation...")
+
+        # 3. Background: Generate Remaining Images (Scenes 1..N)
+        remaining_scenes = scenes[1:]
+        if remaining_scenes:
+            async def generate_remaining_images_background(r_scenes, seed, mobile):
+                logger.info(f"🎨 Background generating images for {len(r_scenes)} scenes...")
+                try:
+                    # generate_images_parallel now accepts start_index=1
+                    images_map = await gemini.generate_images_parallel(
+                        r_scenes,
+                        seed,
+                        max_workers=4,
+                        is_mobile=mobile,
+                        start_index=1
+                    )
+                    # Save them
+                    for idx, img_bytes in images_map.items():
+                        if img_bytes:
+                            # idx is the actual scene number (1..N)
+                            img_name = f"scene_{idx}.png"
+                            try:
+                                url = storage_manager.save_file(story_id, img_name, img_bytes, in_saved=False)
+                                job_manager.update_scene_image(scene_ids[idx], "completed", url)
+                                logger.info(f"✓ Scene {idx} image saved (background)")
+                            except Exception as e:
+                                logger.error(f"Failed save scene {idx}: {e}")
+                                job_manager.update_scene_image(scene_ids[idx], "failed")
+                        else:
+                            job_manager.update_scene_image(scene_ids[idx], "failed")
+                except Exception as e:
+                    logger.error(f"Background image gen error: {e}")
+            
+            asyncio.create_task(
+                generate_remaining_images_background(remaining_scenes, story_seed, force_mobile)
+            )
+
+        # 4. Background: Generate Remaining TTS (Scenes 1..N)
+        if len(scenes) > 1:
+            asyncio.create_task(
+                generate_remaining_tts(story_id, scenes[1:], scene_ids[1:], voice, storage_manager, job_manager)
+            )
         
         # ✅ CRITICAL FIX: Mark story as completed so frontend can display Scene 0 immediately
         # Note: JobStateManager tracks completion via scene statuses, not a separate status field
