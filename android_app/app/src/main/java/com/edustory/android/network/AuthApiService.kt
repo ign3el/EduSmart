@@ -71,4 +71,18 @@ interface AuthApiService {
         @Path("jobId") jobId: String,
         @Header("Authorization") token: String
     ): Call<StatusResponse>
+
+    @GET("/api/story/{storyId}/tts-status")
+    fun getTtsStatus(
+        @Path("storyId") storyId: String,
+        @Header("Authorization") token: String
+    ): Call<TtsStatusResponse>
 }
+
+// TTS Status Response Data Class
+data class TtsStatusResponse(
+    val tts_progress: String,
+    val scenes_ready: List<Int>,
+    val percentage: Int,
+    val is_complete: Boolean
+)

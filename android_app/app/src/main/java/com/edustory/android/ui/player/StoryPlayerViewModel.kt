@@ -28,6 +28,12 @@ class StoryPlayerViewModel : ViewModel() {
     private val _currentSceneIndex = MutableStateFlow(0)
     val currentSceneIndex: StateFlow<Int> = _currentSceneIndex.asStateFlow()
 
+    private val _ttsReadyScenes = MutableStateFlow<List<Int>>(emptyList())
+    val ttsReadyScenes: StateFlow<List<Int>> = _ttsReadyScenes.asStateFlow()
+
+    private val _ttsPolling = MutableStateFlow(false)
+    val ttsPolling: StateFlow<Boolean> = _ttsPolling.asStateFlow()
+
     fun loadStory(token: String, storyId: String) {
         _playerState.value = PlayerState.Loading
         
@@ -38,6 +44,8 @@ class StoryPlayerViewModel : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     _playerState.value = PlayerState.Success(response.body()!!)
                     _currentSceneIndex.value = 0
+                    // Start TTS polling for active stories
+                    startTtsPolling(token, storyId)
                 } else {
                     _playerState.value = PlayerState.Error("Failed to load story: ${response.code()}")
                 }
@@ -47,6 +55,39 @@ class StoryPlayerViewModel : ViewModel() {
                 _playerState.value = PlayerState.Error(t.message ?: "Unknown network error")
             }
         })
+    }
+
+    fun startTtsPolling(token: String, storyId: String) {
+        if (_ttsPolling.value) return // Already polling
+        
+        _ttsPolling.value = true
+        val authToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        
+        viewModelScope.launch {
+            while (_ttsPolling.value) {
+                try {
+                    val response = RetrofitClient.instance.getTtsStatus(storyId, authToken).execute()
+                    if (response.isSuccessful && response.body() != null) {
+                        val status = response.body()!!
+                        _ttsReadyScenes.value = status.scenes_ready
+                        
+                        // Stop polling when complete
+                        if (status.is_complete) {
+                            _ttsPolling.value = false
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Silently continue polling on error
+                }
+                
+                // Poll every 3 seconds
+                kotlinx.coroutines.delay(3000)
+            }
+        }
+    }
+
+    fun stopTtsPolling() {
+        _ttsPolling.value = false
     }
 
     fun nextScene(totalScenes: Int) {
@@ -59,5 +100,10 @@ class StoryPlayerViewModel : ViewModel() {
         if (_currentSceneIndex.value > 0) {
             _currentSceneIndex.value -= 1
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopTtsPolling()
     }
 }
