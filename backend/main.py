@@ -25,7 +25,7 @@ from routers.admin import router as admin_router
 from routers.upload import router as upload_router
 from core.setup import create_admin_user
 from database_models import User, StoryOperations
-from services.story_service import GeminiService
+from services.story_service import StoryService
 from services.tts_service import kokoro_tts
 from services.hash_service import hash_service
 from job_state import job_manager
@@ -34,7 +34,7 @@ from typing import Optional, TYPE_CHECKING, Dict, Any
 
 # Type checking imports for Pylance
 if TYPE_CHECKING:
-    from services.story_service import GeminiService
+    from services.story_service import StoryService
 
 # Load environment variables from .env file
 load_dotenv()
@@ -116,7 +116,7 @@ from typing import Dict, Any, List, TYPE_CHECKING
 
 # Explicitly declare the methods Pylance should recognize
 # This helps with static analysis while maintaining runtime functionality
-gemini: 'GeminiService' = GeminiService()
+gemini: 'StoryService' = StoryService()
 jobs: Dict[str, Any] = {}
 
 # Method existence hints for Pylance (these don't affect runtime)

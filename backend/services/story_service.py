@@ -15,7 +15,7 @@ from google.genai import types
 from models import StorySchema
 from groq import Groq  # Groq API client
 
-class GeminiService:
+class StoryService:
     def __init__(self) -> None:
         # Groq client (primary for story generation)
         self.groq_api_key = os.getenv("GROQ_API_KEY")
@@ -574,9 +574,12 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
                     async with session.get(status_url, headers=headers, timeout=aiohttp.ClientTimeout(total=20)) as status_resp:
                             if status_resp.status != 200:
                                 continue
-                            status_data = await status_resp.json()                    if status_data.get("status") == "COMPLETED" and status_data.get("output"):
+                            status_data = await status_resp.json()
+                            if status_data.get("status") == "COMPLETED" and status_data.get("output"):
+                        
                         output = status_data.get("output")
                         break
+                    
                     if status_data.get("status") in {"FAILED", "CANCELLED"}:
                         print(f"RunPod job failed: {status_data}")
                         return None
