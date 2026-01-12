@@ -47,10 +47,10 @@ class GeminiService:
         We must extract the text first.
         """
         try:
-            import PyPDF2
+            from pypdf import PdfReader  # Modern library
             import io
             
-            pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
+            pdf_reader = PdfReader(io.BytesIO(file_bytes))
             text_content = []
             
             for page_num, page in enumerate(pdf_reader.pages):
@@ -169,9 +169,9 @@ OUTPUT: Valid JSON array of {questions_needed} question objects ONLY (no extra t
             response = self._call_with_exponential_backoff(_generate_additional_questions)
             
             if response and response.text:
-                cleaned_text = response.text.strip()
-                if cleaned_text:
-                    json_obj = self._extract_json_from_response(cleaned_text)
+                try:
+                    # Direct JSON parse (Gemini returns clean JSON)
+                    json_obj = json.loads(response.text.strip())
                     if json_obj and "questions" in json_obj:
                         # Add new questions to existing quiz
                         new_questions = json_obj["questions"]
@@ -181,6 +181,8 @@ OUTPUT: Valid JSON array of {questions_needed} question objects ONLY (no extra t
                         story_json["quiz"] = quiz
                         print(f"✓ Successfully added {len(new_questions)} questions. Total: {len(quiz)}")
                         return story_json
+                except json.JSONDecodeError as e:
+                    print(f"⚠ Failed to parse additional questions JSON: {e}")
             
             print("⚠ Failed to generate additional questions. Returning existing quiz.")
             return story_json
@@ -936,15 +938,18 @@ REQUIREMENTS:
                         priority_prompt
                     ]
                 )
-            
-            response = self._call_with_exponential_backoff(_generate_scene)
-            
+            response = self._call_with_exponential_backoff(_generate_priority_scene)
+        
             if response and response.text:
-                cleaned_text = response.text.strip()
-                if cleaned_text:
-                    json_obj = self._extract_json_from_response(cleaned_text)
-                    if json_obj:
-                        return json_obj
+                try:
+                    # Direct JSON parse
+                    json_obj = json.loads(response.text.strip())
+                    if json_obj and "scene" in json_obj:
+                        scene = json_obj["scene"]
+                        print(f"✓ Priority scene {scene_number} generated")
+                        return scene
+                except json.JSONDecodeError as e:
+                    print(f"⚠ Failed to parse scene JSON: {e}")
             
             return None
         except Exception as e:
