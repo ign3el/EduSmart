@@ -390,12 +390,17 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
             print(f"STORY ERROR: {e}")
             return None
 
-    def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None) -> Optional[bytes]:
-        """Image generation via RunPod ComfyUI FLUX.1-dev with enhanced quality prompting. Uses story_seed for character consistency."""
-        # Build comprehensive, high-quality prompt for better image generation
-        quality_keywords = "masterpiece, best quality, high resolution, sharp focus, detailed faces, clean linework, professional digital art, vibrant colors, clear features, well-proportioned anatomy"
-        style_guide = "children's book illustration style, Disney/Pixar quality, educational cartoon, storybook art"
-        safety_constraints = "[SAFETY] Family-friendly, age-appropriate, fully clothed characters, wholesome educational content"
+    def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None, is_mobile: bool = False) -> Optional[bytes]:
+        """Unified image generation via RunPod ComfyUI FLUX.1-dev with mobile optimization support. Uses story_seed for character consistency."""
+        # Build comprehensive, high-quality prompt (adjust for mobile)
+        if is_mobile:
+            quality_keywords = "masterpiece, best quality, sharp focus, clean linework, vibrant colors"
+            style_guide = "children's book illustration style, educational cartoon"
+            safety_constraints = "[SAFETY] Family-friendly, age-appropriate"
+        else:
+            quality_keywords = "masterpiece, best quality, high resolution, sharp focus, detailed faces, clean linework, professional digital art, vibrant colors, clear features, well-proportioned anatomy"
+            style_guide = "children's book illustration style, Disney/Pixar quality, educational cartoon, storybook art"
+            safety_constraints = "[SAFETY] Family-friendly, age-appropriate, fully clothed characters, wholesome educational content"
         
         # Combine image description with scene narrative for better alignment
         # The prompt (image_description) should already be detailed, but we ensure it matches the scene
@@ -463,6 +468,12 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
                 except ValueError:
                     pass
         
+        # Mobile optimization: adjust dimensions and sampling
+        width = 512 if is_mobile else 768
+        height = 512 if is_mobile else 768
+        steps = 15 if is_mobile else 20
+        sampler = "euler_ancestral" if is_mobile else "euler"
+        
         # Negative prompt to avoid common AI image issues
         negative_prompt = "blurry, distorted, ugly, bad anatomy, bad proportions, extra limbs, malformed hands, duplicate faces, low quality, worst quality, deformed, mutated, disfigured, poorly drawn, bad art, amateur"
         
@@ -485,15 +496,15 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
             },
             "9": {
                 "inputs": {
-                    "filename_prefix": "flux_output",
+                    "filename_prefix": "flux_mobile_output" if is_mobile else "flux_output",
                     "images": ["8", 0]
                 },
                 "class_type": "SaveImage"
             },
             "27": {
                 "inputs": {
-                    "width": 768,
-                    "height": 768,
+                    "width": width,
+                    "height": height,
                     "batch_size": 1
                 },
                 "class_type": "EmptyLatentImage"
@@ -507,9 +518,9 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
             "31": {
                 "inputs": {
                     "seed": seed_value if seed_value else 42,
-                    "steps": 20,
+                    "steps": steps,
                     "cfg": 1.0,
-                    "sampler_name": "euler",
+                    "sampler_name": sampler,
                     "scheduler": "simple",
                     "denoise": 1.0,
                     "model": ["30", 0],
@@ -540,7 +551,8 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
         }
 
         try:
-            resp = requests.post(url, headers=headers, json={"input": payload_input}, timeout=120)  # FLUX takes longer (~30-60s)
+            timeout = 90 if is_mobile else 120  # Mobile generates faster
+            resp = requests.post(url, headers=headers, json={"input": payload_input}, timeout=timeout)
             if resp.status_code != 200:
                 print(f"RunPod FLUX returned {resp.status_code}: {resp.text[:120]}")
                 return None
@@ -554,7 +566,8 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
                 request_id = data["id"]
                 status_url = f"https://api.runpod.ai/v2/{endpoint_id}/status/{request_id}"
                 output = None
-                for _ in range(40):  # FLUX takes longer (~30-60s), poll for up to 80 seconds
+                max_polls = 30 if is_mobile else 40  # Mobile should be faster
+                for _ in range(max_polls):
                     time.sleep(2)
                     status_resp = requests.get(status_url, headers=headers, timeout=20)
                     if status_resp.status_code != 200:
@@ -663,7 +676,8 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
             if image_bytes:
                 usage["images"] = usage.get("images", 0) + 1
                 save_usage(usage)
-                print("✓ Image generated via RunPod FLUX/ComfyUI")
+                mode_str = "mobile" if is_mobile else "desktop"
+                print(f"✓ Image generated via RunPod FLUX/ComfyUI ({mode_str})")
                 return image_bytes
 
             print("RunPod FLUX/ComfyUI output could not be parsed")
@@ -672,243 +686,6 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
             print(f"RunPod FLUX/ComfyUI error: {str(e)[:120]}")
             return None
 
-    def generate_image_mobile_optimized(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None, is_mobile: bool = False) -> Optional[bytes]:
-        """Mobile-optimized image generation with lower resolution and faster sampling."""
-        # Build comprehensive, high-quality prompt for better image generation
-        quality_keywords = "masterpiece, best quality, sharp focus, clean linework, vibrant colors"
-        style_guide = "children's book illustration style, educational cartoon"
-        safety_constraints = "[SAFETY] Family-friendly, age-appropriate"
-        
-        combined_description = prompt
-        if scene_text and len(prompt.split()) < 15:
-            combined_description = f"{prompt}. Story context: {scene_text[:200]}"
-        
-        enhanced_prompt = f"{quality_keywords}. {style_guide}. {safety_constraints}. MAIN VISUAL: {combined_description}"
-        enhanced_prompt = enhanced_prompt.replace("distorted", "clear").replace("blurry", "sharp").replace("ugly", "beautiful")
-
-        endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID_FLUX")
-        api_key = os.getenv("RUNPOD_KEY")
-
-        if not endpoint_id or not api_key:
-            print("RUNPOD_ENDPOINT_ID_FLUX or RUNPOD_KEY not set; cannot generate image")
-            return None
-
-        # Mobile optimization: lower resolution, faster sampler
-        width = 512 if is_mobile else 768
-        height = 512 if is_mobile else 768
-        steps = 15 if is_mobile else 20  # Fewer steps for mobile
-        sampler = "euler_ancestral" if is_mobile else "euler"  # Faster sampler for mobile
-        
-        # Cost tracking
-        cap_aed = float(os.getenv("RUNPOD_MONTHLY_CAP_AED", "25"))
-        est_cost_per_image = float(os.getenv("RUNPOD_COST_AED_PER_IMAGE", "0.02"))
-        usage_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runpod_usage.json")
-        month_key = time.strftime("%Y-%m")
-
-        def load_usage():
-            if os.path.exists(usage_file):
-                try:
-                    with open(usage_file, "r") as f:
-                        return json.load(f)
-                except Exception:
-                    return {"month": month_key, "images": 0}
-            return {"month": month_key, "images": 0}
-
-        def save_usage(data):
-            try:
-                with open(usage_file, "w") as f:
-                    json.dump(data, f)
-            except Exception as e:
-                print(f"Usage file save failed: {e}")
-
-        usage = load_usage()
-        if usage.get("month") != month_key:
-            usage = {"month": month_key, "images": 0}
-
-        projected_cost = (usage.get("images", 0) + 1) * est_cost_per_image
-        if cap_aed > 0 and projected_cost > cap_aed:
-            print(f"RunPod cap reached (~{projected_cost:.2f} AED > {cap_aed} AED); skipping image")
-            return None
-
-        seed_value = story_seed
-        if not seed_value:
-            seed_env = os.getenv("RUNPOD_SEED")
-            if seed_env:
-                try:
-                    seed_value = int(seed_env)
-                except ValueError:
-                    pass
-        
-        negative_prompt = "blurry, distorted, ugly, bad anatomy, bad proportions, extra limbs, malformed hands, duplicate faces, low quality, worst quality, deformed, mutated, disfigured, poorly drawn, bad art, amateur"
-        
-        # Optimized workflow for mobile
-        workflow = {
-            "6": {
-                "inputs": {
-                    "text": enhanced_prompt,
-                    "clip": ["30", 1]
-                },
-                "class_type": "CLIPTextEncode"
-            },
-            "8": {
-                "inputs": {
-                    "samples": ["31", 0],
-                    "vae": ["30", 2]
-                },
-                "class_type": "VAEDecode"
-            },
-            "9": {
-                "inputs": {
-                    "filename_prefix": "flux_mobile_output",
-                    "images": ["8", 0]
-                },
-                "class_type": "SaveImage"
-            },
-            "27": {
-                "inputs": {
-                    "width": width,
-                    "height": height,
-                    "batch_size": 1
-                },
-                "class_type": "EmptyLatentImage"
-            },
-            "30": {
-                "inputs": {
-                    "ckpt_name": "flux1-dev-fp8.safetensors"
-                },
-                "class_type": "CheckpointLoaderSimple"
-            },
-            "31": {
-                "inputs": {
-                    "seed": seed_value if seed_value else 42,
-                    "steps": steps,
-                    "cfg": 1.0,
-                    "sampler_name": sampler,
-                    "scheduler": "simple",
-                    "denoise": 1.0,
-                    "model": ["30", 0],
-                    "positive": ["6", 0],
-                    "negative": ["33", 0],
-                    "latent_image": ["27", 0]
-                },
-                "class_type": "KSampler"
-            },
-            "33": {
-                "inputs": {
-                    "text": negative_prompt,
-                    "clip": ["30", 1]
-                },
-                "class_type": "CLIPTextEncode"
-            }
-        }
-        
-        payload_input = {"workflow": workflow}
-        url = f"https://api.runpod.ai/v2/{endpoint_id}/run"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
-        try:
-            resp = requests.post(url, headers=headers, json={"input": payload_input}, timeout=90)
-            if resp.status_code != 200:
-                print(f"RunPod FLUX returned {resp.status_code}: {resp.text[:120]}")
-                return None
-
-            data = resp.json()
-            output = None
-            
-            if data.get("status") == "COMPLETED" and data.get("output"):
-                output = data.get("output")
-            elif data.get("id"):
-                request_id = data["id"]
-                status_url = f"https://api.runpod.ai/v2/{endpoint_id}/status/{request_id}"
-                for _ in range(30):  # Shorter polling for mobile
-                    time.sleep(2)
-                    status_resp = requests.get(status_url, headers=headers, timeout=15)
-                    if status_resp.status_code != 200:
-                        continue
-                    status_data = status_resp.json()
-                    if status_data.get("status") == "COMPLETED" and status_data.get("output"):
-                        output = status_data.get("output")
-                        break
-                    if status_data.get("status") in {"FAILED", "CANCELLED"}:
-                        print(f"RunPod job failed: {status_data}")
-                        return None
-            else:
-                print("RunPod response missing output/id")
-                return None
-
-            image_bytes = None
-
-            def decode_b64(candidate):
-                if isinstance(candidate, str):
-                    try:
-                        return base64.b64decode(candidate)
-                    except Exception:
-                        return None
-                return None
-
-            def find_b64_in_obj(obj):
-                if isinstance(obj, str):
-                    if len(obj) > 100:
-                        decoded = decode_b64(obj)
-                        if decoded:
-                            return decoded
-                    return None
-                if isinstance(obj, list):
-                    for item in obj:
-                        found = find_b64_in_obj(item)
-                        if found:
-                            return found
-                    return None
-                if isinstance(obj, dict):
-                    for key in ["image", "image_base64", "images", "output"]:
-                        if key in obj:
-                            found = find_b64_in_obj(obj[key])
-                            if found:
-                                return found
-                    for val in obj.values():
-                        found = find_b64_in_obj(val)
-                        if found:
-                            return found
-                return None
-
-            if isinstance(output, str):
-                image_bytes = decode_b64(output)
-            elif isinstance(output, dict):
-                if "images" in output and isinstance(output.get("images"), list) and output["images"]:
-                    first_image = output["images"][0]
-                    if isinstance(first_image, dict):
-                        b64 = first_image.get("image") or first_image.get("image_base64")
-                        image_bytes = decode_b64(b64)
-                    else:
-                        image_bytes = decode_b64(first_image)
-                if not image_bytes:
-                    b64 = output.get("image") or output.get("image_base64")
-                    image_bytes = decode_b64(b64)
-            elif isinstance(output, list) and output:
-                first = output[0]
-                if isinstance(first, str):
-                    image_bytes = decode_b64(first)
-                elif isinstance(first, dict):
-                    b64 = first.get("image") or first.get("image_base64")
-                    image_bytes = decode_b64(b64)
-
-            if not image_bytes:
-                image_bytes = find_b64_in_obj(output)
-
-            if image_bytes:
-                usage["images"] = usage.get("images", 0) + 1
-                save_usage(usage)
-                print(f"✓ {'Mobile' if is_mobile else 'Desktop'} image generated ({width}x{height})")
-                return image_bytes
-
-            print("RunPod FLUX/ComfyUI output could not be parsed")
-            return None
-        except Exception as e:
-            print(f"RunPod FLUX/ComfyUI error: {str(e)[:120]}")
-            return None
 
     def generate_scene_priority(self, file_path: str, grade_level: str, scene_number: int) -> Optional[dict]:
         """Generate a single scene with priority for immediate display."""
