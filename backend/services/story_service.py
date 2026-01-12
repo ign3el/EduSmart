@@ -468,8 +468,12 @@ Output ONLY the JSON object."""
 
         projected_cost = (usage.get("images", 0) + 1) * est_cost_per_image
         if cap_aed > 0 and projected_cost > cap_aed:
-            print(f"RunPod cap reached (~{projected_cost:.2f} AED > {cap_aed} AED); skipping image")
+            print(f"⚠️  Monthly cap reached ({projected_cost:.2f} AED \u003e {cap_aed} AED). Skipping image generation.")
             return None
+        
+        # Start timing for image generation
+        import time
+        start_time = time.time()
 
         # Use story-specific seed for character consistency, fall back to environment variable
         seed_value = story_seed
@@ -888,6 +892,10 @@ REQUIREMENTS:
             True if successful, False otherwise
         """
         try:
+            # Start timing
+            import time
+            start_time = time.time()
+            
             # Use the original working kokoro_client
             from services.kokoro_client import generate_tts
             
