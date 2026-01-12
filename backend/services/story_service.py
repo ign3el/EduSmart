@@ -845,11 +845,11 @@ REQUIREMENTS:
             tasks = [
                 self._generate_and_cache_tts(
                     story_id,
-                    scene_num + 1 + i,  # +1 because Scene 0 already done, +i for batch offset
+                    i + idx + 1,  # Scene 0 already done, so scenes 1-N
                     scene['narrative_text'],
                     max_threads=max_threads_per_tts
                 )
-                for scene_num, scene in enumerate(batch)
+                for idx, scene in enumerate(batch)
             ]
             
             # Run batch concurrently
@@ -897,6 +897,7 @@ REQUIREMENTS:
             if audio_bytes:
                 # Cache audio
                 await self._cache_audio(story_id, scene_num, audio_bytes)
+                print(f"✓ Audio generated for Scene {scene_num}: {len(audio_bytes)} bytes")
                 return True
             
             print(f"⚠️  TTS generation returned no audio for scene {scene_num}")
