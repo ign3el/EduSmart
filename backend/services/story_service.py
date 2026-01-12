@@ -403,8 +403,12 @@ Output ONLY the JSON object."""
             print(f"STORY ERROR: {e}")
             return None
 
-    async def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None, is_mobile: bool = False) -> Optional[bytes]:
-        """Unified image generation via RunPod ComfyUI FLUX.1-dev with mobile optimization support. Uses story_seed for character consistency."""
+    async def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None, is_mobile: bool = False, scene_num: Optional[int] = None) -> Optional[bytes]:
+        """Unified image generation via RunPod ComfyUI FLUX.1-dev with mobile optimization support. Uses story_seed for character consistency.
+        
+        Args:
+            scene_num: Optional scene index for logging purposes.
+        """
         # Import time at function start for timing measurements
         import time
         start_time = time.time()
