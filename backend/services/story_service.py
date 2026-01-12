@@ -694,7 +694,10 @@ Output ONLY the JSON object."""
                 mode_str = "mobile" if is_mobile else "desktop"
                 # Get image dimensions (assuming PNG header)
                 resolution = "1024x1024" if not is_mobile else "512x512"
-                print(f"✓ Image generated via RunPod FLUX/ComfyUI ({mode_str}) | Size: {len(image_bytes):,} bytes | Resolution: {resolution}")
+                elapsed = time.time() - start_time
+                # Extract scene number from filename
+                scene_num = filename.split('_')[-1].split('.')[0]
+                print(f"✓ Image for Scene {scene_num} generated in {elapsed:.2f}s via RunPod FLUX/ComfyUI ({mode_str}) | Size: {len(image_bytes):,} bytes | Resolution: {resolution}")
                 return image_bytes
 
             print("RunPod FLUX/ComfyUI output could not be parsed")
@@ -899,7 +902,9 @@ REQUIREMENTS:
             if audio_bytes:
                 # Cache audio
                 await self._cache_audio(story_id, scene_num, audio_bytes)
-                print(f"✓ TTS generated via Kokoro for Scene {scene_num} | Story: {story_id[:8]}... | Size: {len(audio_bytes):,} bytes | Duration: ~{len(audio_bytes) / (176 * 1024):.1f}s")
+                elapsed = time.time() - start_time
+                duration_seconds = len(audio_bytes) / (176 * 1024)
+                print(f"✓ Audio for Scene {scene_num} generated in {elapsed:.2f}s via Kokoro | Story: {story_id[:8]}... | Size: {len(audio_bytes):,} bytes | Duration: ~{duration_seconds:.1f}s")
                 return True
             
             print(f"⚠️  TTS generation returned no audio for scene {scene_num}")
