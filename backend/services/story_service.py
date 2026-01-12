@@ -872,15 +872,15 @@ REQUIREMENTS:
             True if successful, False otherwise
         """
         try:
-            # Import TTS client (assumes chatterbox_client exists)
-            # You'll need to create this or adapt to your TTS service
-            from services.chatterbox_client import ChatterboxClient
+            # Use the original working kokoro_client
+            from services.kokoro_client import generate_tts
             
-            tts_client = ChatterboxClient()
-            
-            # Generate TTS (async) - use generate_audio method
-            audio_bytes = await tts_client.generate_audio(
-                text=text
+            # Generate TTS using proven kokoro client
+            audio_bytes = await asyncio.to_thread(
+                generate_tts,
+                text=text,
+                voice="af_sarah",  # Default voice
+                speed=1.0
             )
             
             if audio_bytes:
