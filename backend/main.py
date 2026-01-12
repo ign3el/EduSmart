@@ -415,22 +415,13 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
             
             job_manager.update_scene_image(scene_id, "processing")
             
-            # Use mobile-optimized image generation for mobile devices
-            if is_mobile:
-                img_bytes = await asyncio.to_thread(
-                    gemini.generate_image_mobile_optimized,
-                    character_prompt,
-                    text,
-                    story_seed,
-                    True  # is_mobile=True
-                )
-            else:
-                img_bytes = await asyncio.to_thread(
-                    gemini.generate_image,
-                    character_prompt,
-                    text,
-                    story_seed
-                )
+            # Use async generate_image method (now supports mobile optimization)
+            img_bytes = await gemini.generate_image(
+                prompt=character_prompt,
+                scene_text=text,
+                story_seed=story_seed,
+                is_mobile=is_mobile
+            )
             
             if img_bytes:
                 img_name = f"scene_{scene_index}.png"
