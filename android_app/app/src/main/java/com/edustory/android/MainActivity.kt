@@ -1,28 +1,24 @@
 package com.edustory.android
 
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.annotation.OptIn
-import com.edustory.android.ui.dashboard.StoryListScreen
-import com.edustory.android.ui.login.LoginScreen
-import com.edustory.android.ui.theme.EduStoryTheme
-import com.edustory.android.ui.home.HomeScreen
-import com.edustory.android.ui.offline.OfflineLibraryScreen
-
 import com.edustory.android.ui.create.CreateStoryScreen
+import com.edustory.android.ui.dashboard.StoryListScreen
+import com.edustory.android.ui.home.HomeScreen
+import com.edustory.android.ui.login.LoginScreen
+import com.edustory.android.ui.offline.OfflineLibraryScreen
 import com.edustory.android.ui.player.StoryPlayerScreen
+import com.edustory.android.ui.theme.EduStoryTheme
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -66,7 +62,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onFabClick = { currentScreen = "create" }
                             )
-                            "offline" -> com.edustory.android.ui.offline.OfflineLibraryScreen(
+                            "offline" -> OfflineLibraryScreen(
                                 onBack = { currentScreen = "home" }
                             )
                             "player" -> {

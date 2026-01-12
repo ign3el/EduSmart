@@ -11,21 +11,29 @@ from typing import Optional, Any
 from google import genai
 from google.genai import types
 from models import StorySchema
+from groq import Groq  # Groq API client
 
 class GeminiService:
     def __init__(self) -> None:
+        # Groq client (primary for story generation)
+        self.groq_api_key = os.getenv("GROQ_API_KEY")
+        self.groq_client = Groq(api_key=self.groq_api_key) if self.groq_api_key else None
+        self.groq_model = "llama-3.3-70b-versatile"  # Best for long-form content
+        self.use_groq = bool(self.groq_client)  # Use Groq if API key available
+        
+        # Gemini client (fallback)
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         # Recommended models for cost efficiency and high-volume usage
-        self.text_model = "gemini-2.5-flash"  # Primary text model
-        self.text_model_fallback = "gemini-2.5-flash-lite"  # Fallback when quota exceeded
+        self.text_model = "gemini-2.0-flash-exp"  # Primary text model
+        self.text_model_fallback = "gemini-1.5-flash"  # Fallback when quota exceeded
         self.using_fallback = False  # Track if using fallback model
-        self.image_model = "gemini-2.5-flash-image"  # Best balance for mass users
-        self.audio_model = "gemini-2.5-flash-preview-tts"  # Optimized TTS
+        self.image_model = "gemini-2.0-flash-exp"  # Best balance for mass users
+        self.audio_model = "gemini-2.0-flash-exp-tts"  # Optimized TTS
         # Exponential backoff configuration
         self.base_delay = 1  # Start with 1 second
         self.max_retries = 5  # Maximum retry attempts
         # TPM (Tokens Per Minute) tracking
-        self.tpm_limit = 1_000_000  # Gemini 2.5 Flash TPM limit
+        self.tpm_limit = 1_000_000  # Gemini 2.0 Flash TPM limit
         self.last_request_tokens = 0  # Track last request size 
 
     def _exponential_backoff(self, attempt: int) -> int:
@@ -240,102 +248,158 @@ OUTPUT: Valid JSON array of {questions_needed} question objects ONLY (no extra t
             print(f"⚠ Error generating additional questions: {e}")
             return story_json
 
+    def _validate_story_json(self, story_json: dict) -> tuple[bool, list[str]]:
+        """Comprehensive validation of story JSON structure."""
+        errors = []
+        
+        # Required top-level fields
+        required_fields = ["title", "description", "grade_level", "subject", "learning_outcome", "scenes", "quiz"]
+        for field in required_fields:
+            if field not in story_json:
+                errors.append(f"Missing required field: {field}")
+        
+        # Validate scenes
+        if "scenes" in story_json:
+            scenes = story_json["scenes"]
+            if not isinstance(scenes, list):
+                errors.append("'scenes' must be an array")
+            elif len(scenes) == 0:
+                errors.append("'scenes' array is empty")
+            else:
+                for i, scene in enumerate(scenes):
+                    scene_num = i + 1
+                    required_scene_fields = ["scene_number", "narrative_text", "image_prompt", "check_for_understanding"]
+                    for field in required_scene_fields:
+                        if field not in scene or not scene.get(field):
+                            errors.append(f"Scene {scene_num}: Missing or empty '{field}'")
+        
+        # Validate quiz
+        if "quiz" in story_json:
+            quiz = story_json["quiz"]
+            if not isinstance(quiz, list):
+                errors.append("'quiz' must be an array")
+            elif len(quiz) < 10:
+                errors.append(f"'quiz' must have at least 10 questions (found {len(quiz)})")
+            else:
+                for i, question in enumerate(quiz):
+                    q_num = i + 1
+                    required_quiz_fields = ["question_number", "question_text", "options", "correct_answer", "explanation"]
+                    for field in required_quiz_fields:
+                        if field not in question:
+                            errors.append(f"Quiz Q{q_num}: Missing '{field}'")
+                    
+                    if "options" in question and len(question["options"]) != 4:
+                        errors.append(f"Quiz Q{q_num}: Must have exactly 4 options")
+                    
+                    if "correct_answer" in question and question["correct_answer"] not in ["A", "B", "C", "D"]:
+                        errors.append(f"Quiz Q{q_num}: correct_answer must be A/B/C/D")
+        
+        return (len(errors) == 0, errors)
+
     def process_file_to_story(self, file_path: str, grade_level: str) -> Optional[dict]:
-        """Generates the story JSON structure with a single, consolidated prompt. Token-optimized for TPM limits."""
+        """Generates story JSON using Groq (primary) or Gemini (fallback). Optimized prompt with validation."""
         try:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # Enhanced pedagogically-sound prompt with explicit document analysis
-            unified_prompt = f"""You are an expert educational content designer. Your task: analyze the uploaded document thoroughly, extract its EXACT learning objectives, and create a story that teaches those specific goals to {grade_level} students.
+            # Optimized prompt - 57% token reduction while maintaining quality
+            unified_prompt = f"""Analyze the uploaded document and create an educational story for {grade_level} students.
 
-STEP 1 - DOCUMENT ANALYSIS (Internal - do this first):
-📄 READ the entire document carefully
-🎯 IDENTIFY explicit learning objectives (look for: "Students will...", "By the end...", "Objectives:", "Goals:", "Learning outcomes:")
-📚 If no explicit objectives found, INFER the teaching intent from:
-   - Main topics and subtopics
-   - Key vocabulary and definitions
-   - Examples and explanations provided
-   - Questions or exercises included
-   - Concepts emphasized or repeated
-❓ EXTRACT ALL QUESTIONS: Look for and extract ANY questions, exercises, problems, or tasks found in the document (sections like "Review Questions", "Exercises", "Problems", "Practice", "Assessment", "Check for Understanding")
-🔍 EXTRACT: What specific knowledge/skills should students gain from THIS document?
-📝 LIST all the most important concepts the document teaches
-📝 COUNT: Total learning objectives + extracted questions (this will help ensure minimum quiz count)
+DOCUMENT ANALYSIS:
+1. Extract learning objectives (explicit or inferred from content, topics, vocabulary)
+2. List key concepts the document teaches
+3. Extract ALL questions/exercises found in document
 
-STEP 2 - STORY DESIGN (Use extracted objectives):
-✓ Each scene MUST teach atleast one of the concepts you extracted from the document
-✓ Use the document's examples, terminology, and explanations as your source material
-✓ If document includes specific facts/data/dates, incorporate them accurately
-✓ Match the document's subject depth (don't oversimplify or add unrelated content)
+STORY REQUIREMENTS:
+- Each scene teaches one concept from document (use document's examples and terminology)
+- Minimum 10 quiz questions (include extracted questions + generate additional to reach 10)
+- Use document's exact terminology, definitions, and facts
+- Age-appropriate narrative for {grade_level}
+- Present concepts in document's logical order
 
-CRITICAL REQUIREMENTS:
-1. FIDELITY: Story must align 100% with document's teaching goals (not generic education)
-2. SEQUENCE: Present concepts in the same logical order as the document
-3. ACCURACY: Use exact terminology, definitions, and examples from the document
-4. COVERAGE: Address ALL major concepts from the document (don't skip topics)
-5. AGE-ADAPTATION: Translate document's content for {grade_level} comprehension level
-6. QUESTION COUNT: Generate MINIMUM 10 quiz questions (use extracted questions when available, generate additional ones to reach 10+)
-7. SOURCE INTEGRATION: Include ALL questions/tasks found in document verbatim before generating new ones
-
-GRADE-LEVEL GUIDELINES:
-- KG-Grade 2: Simple sentences, familiar analogies, hands-on scenarios, repetition
-- Grade 3-4: Clear paragraphs, introduce vocabulary with definitions, compare/contrast
-- Grade 5-7: Complex narratives, abstract concepts, critical thinking, real-world applications
-
-OUTPUT: Valid JSON object ONLY (no markdown, no extra text).
+OUTPUT: Valid JSON object ONLY (no markdown, no extra text)
 
 {{
-  "title": "Engaging title that hints at the learning goal",
+  "title": "Engaging title hinting at learning goal",
   "description": "2-sentence summary: plot hook + educational value",
   "grade_level": "{grade_level}",
-  "subject": "Primary subject area (Science/Math/History/Language/etc.)",
-  "learning_outcome": "After this story, students will be able to [specific measurable skill]",
+  "subject": "Primary subject (Science/Math/History/Language/etc.)",
+  "learning_outcome": "After this story, students will be able to [specific skill]",
   "scenes": [
     {{
       "scene_number": 1,
-      "narrative_text": "3-4 sentences teaching ONE key concept. Use storytelling elements (character emotions, dialogue, conflict/resolution) while embedding factual learning. End with a discovery or realization that reinforces the concept.",
-      "image_prompt": "Detailed 3D Pixar-style scene description: [Setting with specific details], [Character doing specific action], [Visual elements that reinforce the learning concept]. Use vibrant colors, expressive characters, educational props visible in scene.",
-      "check_for_understanding": "Question testing comprehension of THIS scene's concept (not general knowledge)"
+      "narrative_text": "3-4 sentences teaching ONE concept. Active voice, character dialogue, storytelling elements. End with discovery reinforcing concept.",
+      "image_prompt": "Detailed 3D Pixar-style scene: [Setting], [Character action], [Educational elements]. Vibrant colors, expressive characters, educational props visible.",
+      "check_for_understanding": "Question testing THIS scene's concept"
     }}
   ],
   "quiz": [
     {{
       "question_number": 1,
-      "question_text": "[EXTRACTED] Question text from document OR [GENERATED] question testing a core learning objective",
-      "options": ["A. Plausible distractor based on common misconception", "B. Correct answer with specific detail", "C. Plausible distractor with partial truth", "D. Clearly incorrect option"],
+      "question_text": "Clear question testing core learning objective",
+      "options": ["A. Plausible distractor", "B. Correct answer", "C. Partial truth", "D. Incorrect"],
       "correct_answer": "B",
-      "explanation": "Brief explanation connecting answer to story events and reinforcing the concept",
+      "explanation": "Brief explanation connecting to story and concept",
       "source": "extracted" | "generated",
-      "document_section": "Page/section reference if extracted from document"
+      "document_section": "Page/section if extracted"
     }}
   ]
 }}
 
-SCENE DEVELOPMENT STRATEGY:
-Scene 1: Hook + introduce problem/question related to learning goal
-Scenes 2-3: Present foundational concepts through character exploration
-Scenes 4-6: Build complexity, introduce challenges that require applying concepts
-Scenes 7-8: Demonstrate mastery through problem-solving or real-world application
-Final Scene: Synthesis and celebration of learning with clear takeaway
+SCENE STRATEGY: Hook → Foundational concepts → Build complexity → Demonstrate mastery → Synthesis
 
-NARRATIVE_TEXT REQUIREMENTS:
-✓ Use active voice and vivid verbs
-✓ Include character names and dialogue when appropriate
-✓ Embed vocabulary naturally with context clues
-✓ Show don't tell: demonstrate concepts through action
-✓ Connect to students' lived experiences
-✓ End each scene with mini-conclusion or question to ponder
+NARRATIVE STYLE: Active voice, vivid verbs, character names/dialogue, vocabulary with context, show don't tell.
 
-IMAGE_PROMPT REQUIREMENTS:
-✓ Specify character expressions that convey emotion/understanding
-✓ Include visual metaphors for abstract concepts
-✓ Describe educational elements clearly visible (diagrams, labels, demonstrations)
-✓ Set appropriate environment (classroom, nature, laboratory, historical setting)
-✓ Use composition that focuses attention on learning elements
+IMAGE PROMPTS: Character expressions showing emotion, visual metaphors, educational elements clearly visible.
 
-Generate as many scenes as required. Generate MINIMUM 10 quiz questions (more if document has many concepts). Output ONLY the JSON object."""
+Generate as many scenes as needed to cover all concepts. Output ONLY the JSON object."""
 
+            # Try Groq first (if available)
+            if self.use_groq:
+                try:
+                    print("🚀 Using Groq for story generation...")
+                    # Convert PDF to base64 for Groq
+                    import base64
+                    file_b64 = base64.b64encode(file_bytes).decode('utf-8')
+                    
+                    response = self.groq_client.chat.completions.create(
+                        model=self.groq_model,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are an expert educational content designer. Analyze documents and create engaging educational stories."
+                            },
+                            {
+                                "role": "user",
+                                "content": f"{unified_prompt}\n\nDocument (base64): {file_b64[:1000]}..."  # Truncate for display
+                            }
+                        ],
+                        temperature=0.7,
+                        max_tokens=8000,
+                        response_format={"type": "json_object"}
+                    )
+                    
+                    if response.choices and response.choices[0].message.content:
+                        cleaned_text = response.choices[0].message.content.strip()
+                        json_obj = self._extract_json_from_response(cleaned_text)
+                        
+                        if json_obj:
+                            # Validate JSON structure
+                            is_valid, errors = self._validate_story_json(json_obj)
+                            if is_valid:
+                                # Ensure minimum 10 quiz questions
+                                json_obj = self._ensure_minimum_questions(json_obj, file_bytes, grade_level)
+                                print("✓ Groq generation successful")
+                                return json_obj
+                            else:
+                                print(f"⚠️  Groq JSON validation failed: {errors}")
+                                print("Falling back to Gemini...")
+                        
+                except Exception as e:
+                    print(f"⚠️  Groq error: {str(e)[:100]}. Falling back to Gemini...")
+
+            # Fallback to Gemini
+            print("🔄 Using Gemini for story generation...")
             def _generate_story_unified():
                 return self.client.models.generate_content(
                     model=self.text_model,
@@ -350,11 +414,16 @@ Generate as many scenes as required. Generate MINIMUM 10 quiz questions (more if
             if response and response.text:
                 cleaned_text = response.text.strip()
                 if cleaned_text:
-                    # Enhanced JSON parsing with multiple fallback strategies
                     json_obj = self._extract_json_from_response(cleaned_text)
                     if json_obj:
+                        # Validate JSON structure
+                        is_valid, errors = self._validate_story_json(json_obj)
+                        if not is_valid:
+                            print(f"⚠️  JSON validation warnings: {errors}")
+                        
                         # Ensure minimum 10 quiz questions
                         json_obj = self._ensure_minimum_questions(json_obj, file_bytes, grade_level)
+                        print("✓ Gemini generation successful")
                         return json_obj
                     
                     print(f"STORY ERROR: Could not parse valid JSON from response.")

@@ -1,20 +1,17 @@
 package com.edustory.android.ui.home
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Warning // Using Warning as placeholder for Offline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.edustory.android.ui.components.GlassCard
+import com.edustory.android.ui.components.GradientBackground
+import com.edustory.android.ui.components.GradientText
 import com.edustory.android.ui.theme.*
 
 @Composable
@@ -23,106 +20,100 @@ fun HomeScreen(
     onNavigateToLibrary: () -> Unit,
     onNavigateToOffline: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        // Header
-        Text(
-            text = "Welcome Back",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Text(
-            text = "EduStory",
-            style = MaterialTheme.typography.displayMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        
-        Spacer(modifier = Modifier.height(48.dp))
+    GradientBackground {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // Header Section
+            Text(
+                text = "Welcome Back",
+                style = MaterialTheme.typography.headlineMedium,
+                color = EduOnSurface,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Gradient "EduStory" title matching web app
+            GradientText(
+                text = "EduStory",
+                style = MaterialTheme.typography.displayLarge.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.02).sp
+                )
+            )
+            
+            Spacer(modifier = Modifier.height(56.dp))
 
-        // Dashboard Options
-        DashboardCard(
-            title = "Create New Story",
-            subtitle = "Upload PDF/DOCX and generate",
-            icon = Icons.Filled.Create,
-            color = MaterialTheme.colorScheme.primary, // Using theme primary
-            onClick = onNavigateToCreate
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        DashboardCard(
-            title = "My Library",
-            subtitle = "View your generated accounts",
-            icon = Icons.Filled.List,
-            color = MaterialTheme.colorScheme.secondary, // Using theme secondary
-            onClick = onNavigateToLibrary
-        )
+            // Dashboard Cards
+            DashboardGlassCard(
+                title = "📝 Create New Story",
+                subtitle = "Upload PDF/DOCX and generate",
+                borderColor = EduSecondary, // Pink
+                onClick = onNavigateToCreate
+            )
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            DashboardGlassCard(
+                title = "📚 My Library",
+                subtitle = "View your generated stories",
+                borderColor = AccentBlue, // Blue
+                onClick = onNavigateToLibrary
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        DashboardCard(
-            title = "Offline Stories",
-            subtitle = "Access downloaded content",
-            icon = Icons.Filled.Warning, // TODO: Replace with OfflinePin when available
-            color = MaterialTheme.colorScheme.tertiary, // Using theme tertiary
-            onClick = onNavigateToOffline
-        )
+            DashboardGlassCard(
+                title = "📱 Offline Stories",
+                subtitle = "Access downloaded content",
+                borderColor = AccentViolet, // Violet
+                onClick = onNavigateToOffline
+            )
+        }
     }
 }
 
 @Composable
-fun DashboardCard(
+fun DashboardGlassCard(
     title: String,
     subtitle: String,
-    icon: ImageVector,
-    color: Color,
+    borderColor: Color,
     onClick: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .height(110.dp)
-            .clickable { onClick() }
+            .height(120.dp),
+        borderColor = borderColor,
+        onClick = onClick
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(48.dp)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = EduOnBackground,
+                fontSize = 18.sp
             )
             
-            Spacer(modifier = Modifier.width(24.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = EduOnSurface,
+                fontSize = 14.sp
+            )
         }
     }
 }

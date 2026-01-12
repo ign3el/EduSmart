@@ -28,6 +28,8 @@ private val EduColorScheme = darkColorScheme(
     onTertiary = Color.White,
     onBackground = EduOnBackground,
     onSurface = EduOnSurface,
+    onSurfaceVariant = EduOnSurface,
+    outline = Edge,  // Border color
     error = EduError
 )
 
@@ -45,8 +47,8 @@ fun EduStoryTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            window.statusBarColor = colorScheme.background.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
 

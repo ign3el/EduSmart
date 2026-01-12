@@ -1,0 +1,6 @@
+﻿
+ANTIGRAVITY V18.2 (GLOBAL BRAIN)
+1. Single-Pass Workflow: SME -> Debug -> Arch -> Coder -> SME.
+2. Knowledge Base & Memory are GLOBAL (C:\Users\sahte\.gemini).
+3. All projects share the same 'Brain'.
+

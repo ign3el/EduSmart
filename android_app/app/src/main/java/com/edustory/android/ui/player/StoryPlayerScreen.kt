@@ -23,6 +23,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.edustory.android.data.model.Scene
 import com.edustory.android.network.RetrofitClient
+import com.edustory.android.ui.components.GradientBackground
+import com.edustory.android.ui.theme.*
 
 @Composable
 fun StoryPlayerScreen(
