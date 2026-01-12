@@ -696,30 +696,50 @@ async def check_duplicate(
         elif generated_matches:
             # For generated stories, use job manager to get most recent
             match = generated_matches[-1]  # Get most recent (last in list)
+            story_id = match["story_id"]
+            
+            logger.info(f"Duplicate found in generated stories: {story_id}")
+            
             try:
-                status = job_manager.get_job_status(match["story_id"])
-                return {
+                status = job_manager.get_job_status(story_id)
+                logger.info(f"Job status for {story_id}: {status}")
+                
+                # Extract title from status
+                title = status.get("title", "Unknown")
+                created_at = status.get("created_at", None)
+                
+                # If no created_at in status, try to get from metadata
+                if not created_at:
+                    metadata = match.get("metadata", {})
+                    created_at = metadata.get("created_timestamp", None)
+                
+                response = {
                     "is_duplicate": True,
                     "duplicate_type": "generated",
-                    "story_id": match["story_id"],
-                    "story_title": status.get("title", "Unknown"),
-                    "created_at": status.get("created_at", None),
+                    "story_id": story_id,
+                    "story_title": title,
+                    "created_at": created_at,
                     "created_by": current_user["username"],
                     "file_hash": duplicate_info["hash"]
                 }
+                logger.info(f"Returning duplicate response: {response}")
+                return response
+                
             except Exception as e:
                 logger.error(f"Error fetching generated story status: {e}")
                 # Fallback
                 metadata = match.get("metadata", {})
-                return {
+                response = {
                     "is_duplicate": True,
                     "duplicate_type": "generated",
-                    "story_id": match["story_id"],
+                    "story_id": story_id,
                     "story_title": metadata.get("title", "Unknown"),
                     "created_at": metadata.get("created_timestamp", None),
                     "created_by": current_user["username"],
                     "file_hash": duplicate_info["hash"]
                 }
+                logger.info(f"Returning fallback duplicate response: {response}")
+                return response
     
     return {"is_duplicate": False, "file_hash": hash_service.generate_bytes_hash(file_content)}
 
