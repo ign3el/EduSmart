@@ -216,8 +216,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         }
       };
 
-      const handlePause = () => {
-        console.log('⏸️ Audio paused');
+      const handlePauseEvent = () => {
         // Only set system paused if not user-initiated
         if (!userPaused) {
           setSystemPaused(true);
@@ -225,19 +224,18 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       };
 
       const handleEnded = () => {
-        console.log('⏹️ Audio ended');
         setSystemPaused(false);
         setUserPaused(false);
       };
 
       audioRef.current.addEventListener('play', handlePlayEvent);
-      audioRef.current.addEventListener('pause', handlePause);
+      audioRef.current.addEventListener('pause', handlePauseEvent);
       audioRef.current.addEventListener('ended', handleEnded);
 
       return () => {
         if (audioRef.current) {
           audioRef.current.removeEventListener('play', handlePlayEvent);
-          audioRef.current.removeEventListener('pause', handlePause);
+          audioRef.current.removeEventListener('pause', handlePauseEvent);
           audioRef.current.removeEventListener('ended', handleEnded);
         }
       };
