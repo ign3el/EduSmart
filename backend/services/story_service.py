@@ -926,7 +926,7 @@ REQUIREMENTS:
             async with aiofiles.open(file_path, 'wb') as f:
                 await f.write(audio_bytes)
             
-            print(f"✓ Cached audio for scene {scene_num}: {file_path}")
+            print(f"✓ Cached audio for Scene {scene_num}: {file_path}")
             
         except Exception as e:
             print(f"⚠️  Failed to cache audio for scene {scene_num}: {e}")
