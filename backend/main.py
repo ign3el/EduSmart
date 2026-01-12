@@ -619,6 +619,9 @@ async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grad
         
         logger.info(f"✓ Story ready in ~40s with progressive TTS background generation")
         
+        # ✅ CRITICAL FIX: Mark story as completed so frontend can display Scene 0 immediately
+        job_manager.update_job_status(story_id, "completed")
+        
     except Exception as e:
         logger.error(f"AI Workflow Error: {e}")
         job_manager.mark_story_failed(story_id, str(e))
