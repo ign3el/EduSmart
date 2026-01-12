@@ -90,7 +90,7 @@ class StoryService:
                             self.text_model = self.text_model_fallback
                             self.using_fallback = True
                             # Retry immediately with fallback model
-                            await asyncio.sleep(2)  # Brief pause before fallback attempt
+                            time.sleep(2)  # Brief pause before fallback attempt
                             continue
                         else:
                             # Fallback model also exhausted
