@@ -247,17 +247,23 @@ OUTPUT: Valid JSON array of {questions_needed} question objects ONLY (no extra t
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            # Optimized prompt - 57% token reduction while maintaining quality
+            # Enhanced prompt - LLM decides scene count based on content complexity
             unified_prompt = f"""Analyze the uploaded document and create an educational story for {grade_level} students.
 
 DOCUMENT ANALYSIS:
 1. Extract learning objectives (explicit or inferred from content, topics, vocabulary)
 2. List key concepts the document teaches
 3. Extract ALL questions/exercises found in document
+4. Assess content complexity and determine optimal scene count
 
 STORY REQUIREMENTS:
-- Each scene teaches one concept from document (use document's examples and terminology)
-- Minimum 10 quiz questions (include extracted questions + generate additional to reach 10)
+- **SCENE COUNT**: Determine the ideal number of scenes (typically 4-15) based on:
+  * Content complexity and depth
+  * Number of distinct concepts to teach
+  * Appropriate pacing for {grade_level}
+  * Natural narrative flow
+- Each scene teaches ONE focused concept from document
+- **QUIZ**: Minimum 10 questions, but generate MORE if document has rich content (10-20 questions ideal)
 - Use document's exact terminology, definitions, and facts
 - Age-appropriate narrative for {grade_level}
 - Present concepts in document's logical order
@@ -297,7 +303,12 @@ NARRATIVE STYLE: Active voice, vivid verbs, character names/dialogue, vocabulary
 
 IMAGE PROMPTS: Character expressions showing emotion, visual metaphors, educational elements clearly visible.
 
-Generate as many scenes as needed to cover all concepts. Output ONLY the JSON object."""
+**IMPORTANT**: 
+- Generate the OPTIMAL number of scenes for the content (not a fixed count)
+- Generate 10-20 quiz questions based on content richness
+- Ensure comprehensive coverage of all document concepts
+
+Output ONLY the JSON object."""
 
             # Try Groq first (if available)
             if self.use_groq:
