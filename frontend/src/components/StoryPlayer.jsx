@@ -549,7 +549,11 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     console.log('✅ Rendering Quiz - questions:', storyData.quiz.length)
     return (
       <div className="story-player">
-        <Quiz questions={storyData.quiz} onComplete={onRestart} />
+        <Quiz
+          questions={storyData.quiz}
+          onComplete={onRestart}
+          onBackToStory={() => setShowQuiz(false)}
+        />
       </div>
     );
   }
