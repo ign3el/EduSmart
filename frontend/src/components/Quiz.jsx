@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Quiz.css';
 
-const Quiz = ({ questions, onComplete }) => {
+const Quiz = ({ questions, onComplete, onBackToStory }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
@@ -14,7 +14,7 @@ const Quiz = ({ questions, onComplete }) => {
 
   // Handle missing or invalid quiz data
   const validQuestions = Array.isArray(questions) && questions.length > 0 ? questions : [];
-  
+
   // Fallback: Generate quiz from story data if quiz is missing
   const generateFallbackQuiz = () => {
     console.log('🔄 Generating fallback quiz from available data...');
@@ -63,7 +63,7 @@ const Quiz = ({ questions, onComplete }) => {
       source: currentQ.source,
       document_section: currentQ.document_section
     };
-    
+
     setUserAnswers(prev => [...prev, newAnswer]);
     if (correct) {
       setScore(prev => prev + 1);
@@ -91,6 +91,7 @@ const Quiz = ({ questions, onComplete }) => {
         <div className="result-buttons">
           <button onClick={retakeQuiz} className="retake-btn">🔄 Retake Quiz</button>
           <button onClick={() => setReviewMode(true)} className="review-btn">📖 Review Answers</button>
+          {onBackToStory && <button onClick={onBackToStory} className="story-btn">📖 Back to Story</button>}
           <button onClick={onComplete} className="finish-btn">Back to Library</button>
         </div>
       </motion.div>
@@ -103,7 +104,7 @@ const Quiz = ({ questions, onComplete }) => {
         <h2>📖 Answer Review</h2>
         <div className="review-list">
           {userAnswers.map((answer, index) => (
-            <motion.div 
+            <motion.div
               key={index}
               className={`review-item ${answer.isCorrect ? 'correct-answer' : 'wrong-answer'}`}
               initial={{ opacity: 0, y: 20 }}
@@ -124,14 +125,14 @@ const Quiz = ({ questions, onComplete }) => {
               <h4>{answer.question}</h4>
               <div className="review-answers">
                 <p className="user-answer">
-                  <strong>Your answer:</strong> 
+                  <strong>Your answer:</strong>
                   <span className={answer.isCorrect ? 'text-correct' : 'text-wrong'}>
                     {answer.selected}
                   </span>
                 </p>
                 {!answer.isCorrect && (
                   <p className="correct-answer-text">
-                    <strong>Correct answer:</strong> 
+                    <strong>Correct answer:</strong>
                     <span className="text-correct">{answer.correct}</span>
                   </p>
                 )}
@@ -150,9 +151,10 @@ const Quiz = ({ questions, onComplete }) => {
         </div>
         <div className="review-footer">
           <div className="final-score">
-            Final Score: <strong>{score} / {questions.length}</strong> 
+            Final Score: <strong>{score} / {questions.length}</strong>
             ({Math.round((score / questions.length) * 100)}%)
           </div>
+          {onBackToStory && <button onClick={onBackToStory} className="story-btn">📖 Back to Story</button>}
           <button onClick={onComplete} className="finish-btn">Back to Library</button>
         </div>
       </motion.div>
@@ -162,16 +164,17 @@ const Quiz = ({ questions, onComplete }) => {
   // Guard: Handle missing or invalid questions
   if (!validQuestions.length) {
     return (
-      <motion.div 
-        className="quiz-container error" 
-        initial={{ opacity: 0 }} 
+      <motion.div
+        className="quiz-container error"
+        initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
         <div className="error-state">
           <h2>⚠️ Quiz Unavailable</h2>
           <p>The quiz data for this story is not yet available.</p>
           <p className="small">Please ensure the story generation completed successfully.</p>
-          <button onClick={onComplete} className="finish-btn">Back to Story</button>
+          {onBackToStory && <button onClick={onBackToStory} className="finish-btn">Back to Story</button>}
+          <button onClick={onComplete} className="finish-btn">Back to Library</button>
         </div>
       </motion.div>
     );
@@ -192,9 +195,9 @@ const Quiz = ({ questions, onComplete }) => {
           </span>
         )}
       </div>
-      
+
       <AnimatePresence mode="wait">
-        <motion.div 
+        <motion.div
           key={currentQuestion}
           initial={{ x: 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -212,11 +215,10 @@ const Quiz = ({ questions, onComplete }) => {
               <button
                 key={index}
                 onClick={() => handleAnswer(option)}
-                className={`option-btn ${
-                  selectedOption === option 
-                    ? (isCorrect ? 'correct' : 'wrong') 
+                className={`option-btn ${selectedOption === option
+                    ? (isCorrect ? 'correct' : 'wrong')
                     : ''
-                }`}
+                  }`}
                 disabled={selectedOption !== null}
               >
                 {option}
