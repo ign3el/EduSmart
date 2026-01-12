@@ -475,6 +475,46 @@ async def generate_scene_media_progressive(story_id: str, scene_id: str, scene_i
     # Run image and audio generation IN PARALLEL
     await asyncio.gather(generate_image(), generate_audio())
 
+async def generate_remaining_tts(story_id: str, scenes: list, scene_ids: list, voice: str, storage_manager, job_manager):
+    """Generate TTS for scenes 1-9 in background using progressive batching"""
+    try:
+        from services.chatterbox_client import chatterbox
+        
+        # Use gemini's progressive TTS method
+        await gemini.generate_progressive_tts(
+            story_id=story_id,
+            scenes=scenes,
+            batch_size=2,
+            max_threads_per_tts=1
+        )
+        
+        # Update job manager for each completed scene
+        for i, scene_id in enumerate(scene_ids):
+            scene_num = i + 1  # +1 because Scene 0 is already done
+            cache_file = f"outputs/audio_cache/audio_{story_id}_{scene_num}.mp3"
+            
+            if os.path.exists(cache_file):
+                # Save to story folder
+                with open(cache_file, 'rb') as f:
+                    audio_bytes = f.read()
+                
+                aud_name = f"scene_{scene_num}.wav"
+                try:
+                    aud_url = storage_manager.save_file(story_id, aud_name, audio_bytes, in_saved=False)
+                    job_manager.update_scene_audio(scene_id, "completed", aud_url)
+                    logger.info(f"✓ Scene {scene_num} audio completed")
+                except Exception as e:
+                    logger.error(f"✗ Failed to save scene {scene_num} audio: {e}")
+                    job_manager.update_scene_audio(scene_id, "failed")
+            else:
+                job_manager.update_scene_audio(scene_id, "failed")
+                logger.error(f"✗ Scene {scene_num} audio not found in cache")
+        
+        logger.info(f"✓ All TTS generation complete for story {story_id}")
+        
+    except Exception as e:
+        logger.error(f"✗ Background TTS generation error: {e}")
+
 async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grade_level: str, voice: str, speed: float, is_mobile: bool):
     """
     Progressive story generation workflow:
@@ -519,28 +559,65 @@ async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grad
         
         logger.info(f"✓ Story structure ready: {len(scenes)} scenes")
         
-        # --- Hybrid Generation Strategy ---
+        # --- Progressive TTS Generation Strategy ---
         story_seed = int(uuid.uuid4().hex[:8], 16)
         
-        # 1. Generate Scene 1 first for a fast user start
-        if len(scenes) > 0:
-            logger.info("Starting media generation for Scene 1 (priority)...")
-            await generate_scene_media_progressive(
-                story_id, scene_ids[0], 0, scenes[0], voice, speed, story_seed
-            )
-            logger.info("✓ Finished media generation for Scene 1.")
-
-        # 2. Generate the rest of the scenes in parallel
-        if len(scenes) > 1:
-            logger.info(f"Starting parallel media generation for remaining {len(scenes) - 1} scenes...")
-            remaining_tasks = [
-                generate_scene_media_progressive(story_id, scene_ids[i], i, scene, voice, speed, story_seed)
-                for i, scene in enumerate(scenes[1:], start=1) # Start enumeration from index 1
-            ]
-            await asyncio.gather(*remaining_tasks, return_exceptions=True)
-            logger.info("✓ Finished parallel generation for remaining scenes.")
-
-        logger.info(f"✓ All media generation complete for story {story_id}")
+        logger.info("🚀 Starting parallel image + Scene 0 TTS generation...")
+        
+        # Generate ALL images in parallel (32s)
+        images_task = gemini.generate_images_parallel(
+            scenes=scenes,
+            story_seed=story_seed,
+            max_workers=4,
+            is_mobile=is_mobile
+        )
+        
+        # Generate Scene 0 TTS in parallel (7s)
+        from services.chatterbox_client import chatterbox
+        scene_0_tts_task = chatterbox.generate_audio(
+            text=scenes[0]['narrative_text'],
+            voice=voice
+        )
+        
+        # ✅ CRITICAL: Run both concurrently - total time = max(32s, 7s) = 32s
+        images, scene_0_audio = await asyncio.gather(images_task, scene_0_tts_task)
+        
+        logger.info(f"✓ Images and Scene 0 audio ready in ~32s")
+        
+        # Save all images
+        for i, img_bytes in images.items():
+            if img_bytes:
+                img_name = f"scene_{i}.png"
+                try:
+                    img_url = storage_manager.save_file(story_id, img_name, img_bytes, in_saved=False)
+                    job_manager.update_scene_image(scene_ids[i], "completed", img_url)
+                    logger.info(f"✓ Scene {i} image saved: {img_url}")
+                except Exception as e:
+                    logger.error(f"✗ Failed to save scene {i} image: {e}")
+                    job_manager.update_scene_image(scene_ids[i], "failed")
+            else:
+                job_manager.update_scene_image(scene_ids[i], "failed")
+        
+        # Save Scene 0 audio
+        if scene_0_audio:
+            aud_name = "scene_0.wav"
+            try:
+                aud_url = storage_manager.save_file(story_id, aud_name, scene_0_audio, in_saved=False)
+                job_manager.update_scene_audio(scene_ids[0], "completed", aud_url)
+                logger.info(f"✓ Scene 0 audio saved: {aud_url}")
+            except Exception as e:
+                logger.error(f"✗ Failed to save Scene 0 audio: {e}")
+                job_manager.update_scene_audio(scene_ids[0], "failed")
+        else:
+            job_manager.update_scene_audio(scene_ids[0], "failed")
+        
+        # Start background TTS for scenes 1-9
+        logger.info("🎤 Starting progressive TTS generation for scenes 1-9...")
+        asyncio.create_task(
+            generate_remaining_tts(story_id, scenes[1:], scene_ids[1:], voice, storage_manager, job_manager)
+        )
+        
+        logger.info(f"✓ Story ready in ~40s with progressive TTS background generation")
         
     except Exception as e:
         logger.error(f"AI Workflow Error: {e}")
@@ -1443,3 +1520,70 @@ async def export_story(story_id: str, user: User = Depends(get_current_user)):
             "Content-Disposition": f"attachment; filename={story['name'].replace(' ', '_')}.zip"
         }
     )
+ 
+ #   - - -   P R O G R E S S I V E   T T S   E N D P O I N T S   - - -  
+  
+ @ a p p . g e t ( " / a p i / s t o r y / { s t o r y _ i d } / t t s - s t a t u s " )  
+ a s y n c   d e f   g e t _ t t s _ s t a t u s ( s t o r y _ i d :   s t r ) :  
+         " " " G e t   s p e c i a l i z e d   p r o g r e s s i v e   T T S   g e n e r a t i o n   s t a t u s " " "  
+         #   U s e   g e m i n i   s e r v i c e ' s   s t a t u s   t r a c k i n g  
+         r e t u r n   a w a i t   g e m i n i . g e t _ t t s _ s t a t u s ( s t o r y _ i d )  
+  
+ @ a p p . g e t ( " / a p i / s t o r y / { s t o r y _ i d } / s c e n e / { s c e n e _ n u m } / a u d i o " )  
+ a s y n c   d e f   g e t _ s c e n e _ a u d i o ( s t o r y _ i d :   s t r ,   s c e n e _ n u m :   i n t ) :  
+         " " " G e t   s c e n e   a u d i o   ( f r o m   c a c h e   o r   g e n e r a t e d / s a v e d   f o l d e r )   w i t h   w a t e r f a l l   f a l l b a c k s " " "  
+         i m p o r t   o s  
+         i m p o r t   a i o f i l e s  
+         f r o m   f a s t a p i . r e s p o n s e s   i m p o r t   F i l e R e s p o n s e ,   R e s p o n s e  
+          
+         #   1 .   C h e c k   p r o g r e s s i v e   T T S   c a c h e   ( f a s t e s t )  
+         #   N o t e :   s c e n e _ n u m   m a t c h e s   t h e   1 - b a s e d   i n d e x   u s e d   i n   f i l e   n a m e s  
+         c a c h e _ f i l e   =   f " o u t p u t s / a u d i o _ c a c h e / a u d i o _ { s t o r y _ i d } _ { s c e n e _ n u m } . m p 3 "  
+          
+         i f   o s . p a t h . e x i s t s ( c a c h e _ f i l e ) :  
+                 r e t u r n   F i l e R e s p o n s e ( c a c h e _ f i l e ,   m e d i a _ t y p e = " a u d i o / m p e g " )  
+          
+         #   2 .   C h e c k   a c t i v e   j o b   ( i n - m e m o r y / g e n e r a t e d _ s t o r i e s )  
+         t r y :  
+                 s t o r y _ d i r   =   s t o r a g e _ m a n a g e r . g e t _ s t o r y _ p a t h ( s t o r y _ i d ,   i n _ s a v e d = F a l s e )  
+                  
+                 #   T r y   W A V   ( K o k o r o   d e f a u l t )   a n d   M P 3  
+                 f o r   e x t   i n   [ " . w a v " ,   " . m p 3 " ] :  
+                         #   T r y   s i m p l e   n a m e  
+                         s i m p l e _ p a t h   =   o s . p a t h . j o i n ( s t o r y _ d i r ,   f " s c e n e _ { s c e n e _ n u m } { e x t } " )  
+                         i f   o s . p a t h . e x i s t s ( s i m p l e _ p a t h ) :  
+                                 m e d i a _ t y p e   =   " a u d i o / w a v "   i f   e x t   = =   " . w a v "   e l s e   " a u d i o / m p e g "  
+                                 r e t u r n   F i l e R e s p o n s e ( s i m p l e _ p a t h ,   m e d i a _ t y p e = m e d i a _ t y p e )  
+                          
+                         #   T r y   U U I D   p r e f i x e d  
+                         i m p o r t   g l o b  
+                         m a t c h e s   =   g l o b . g l o b ( o s . p a t h . j o i n ( s t o r y _ d i r ,   f " * _ s c e n e _ { s c e n e _ n u m } { e x t } " ) )  
+                         i f   m a t c h e s :  
+                                   m e d i a _ t y p e   =   " a u d i o / w a v "   i f   e x t   = =   " . w a v "   e l s e   " a u d i o / m p e g "  
+                                   r e t u r n   F i l e R e s p o n s e ( m a t c h e s [ 0 ] ,   m e d i a _ t y p e = m e d i a _ t y p e )  
+         e x c e p t   E x c e p t i o n :  
+                 p a s s  
+                  
+         #   3 .   C h e c k   s a v e d   s t o r i e s   ( p e r s i s t e n t   s t o r a g e )  
+         t r y :  
+                 s t o r y _ d i r   =   s t o r a g e _ m a n a g e r . g e t _ s t o r y _ p a t h ( s t o r y _ i d ,   i n _ s a v e d = T r u e )  
+                   #   T r y   W A V   ( K o k o r o   d e f a u l t )   a n d   M P 3  
+                 f o r   e x t   i n   [ " . w a v " ,   " . m p 3 " ] :  
+                         #   T r y   s i m p l e   n a m e  
+                         s i m p l e _ p a t h   =   o s . p a t h . j o i n ( s t o r y _ d i r ,   f " s c e n e _ { s c e n e _ n u m } { e x t } " )  
+                         i f   o s . p a t h . e x i s t s ( s i m p l e _ p a t h ) :  
+                                 m e d i a _ t y p e   =   " a u d i o / w a v "   i f   e x t   = =   " . w a v "   e l s e   " a u d i o / m p e g "  
+                                 r e t u r n   F i l e R e s p o n s e ( s i m p l e _ p a t h ,   m e d i a _ t y p e = m e d i a _ t y p e )  
+                          
+                         #   T r y   U U I D   p r e f i x e d  
+                         i m p o r t   g l o b  
+                         m a t c h e s   =   g l o b . g l o b ( o s . p a t h . j o i n ( s t o r y _ d i r ,   f " * _ s c e n e _ { s c e n e _ n u m } { e x t } " ) )  
+                         i f   m a t c h e s :  
+                                   m e d i a _ t y p e   =   " a u d i o / w a v "   i f   e x t   = =   " . w a v "   e l s e   " a u d i o / m p e g "  
+                                   r e t u r n   F i l e R e s p o n s e ( m a t c h e s [ 0 ] ,   m e d i a _ t y p e = m e d i a _ t y p e )  
+         e x c e p t   E x c e p t i o n :  
+                 p a s s  
+          
+         #   N o t   f o u n d   i n   a n y   l o c a t i o n  
+         r a i s e   H T T P E x c e p t i o n ( s t a t u s _ c o d e = 4 0 4 ,   d e t a i l = f " A u d i o   n o t   f o u n d   f o r   s c e n e   { s c e n e _ n u m } " )  
+ 
