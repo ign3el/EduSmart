@@ -561,28 +561,68 @@ async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grad
         
         # --- Optimized Generation Strategy ---
         story_seed = int(uuid.uuid4().hex[:8], 16)
-        
-        # Force mobile resolution (512x512) for speed regardless of client
         force_mobile = True
         
+        # Define background task for remaining images (Scenes 1..N)
+        async def generate_remaining_images_background(r_scenes, seed, mobile):
+            logger.info(f"🎨 Background generating images for {len(r_scenes)} scenes...")
+            try:
+                images_map = await gemini.generate_images_parallel(
+                    r_scenes,
+                    seed,
+                    max_workers=4,
+                    is_mobile=mobile,
+                    start_index=1
+                )
+                for idx, img_bytes in images_map.items():
+                    if img_bytes:
+                        img_name = f"scene_{idx}.png"
+                        try:
+                            url = storage_manager.save_file(story_id, img_name, img_bytes, in_saved=False)
+                            job_manager.update_scene_image(scene_ids[idx], "completed", url)
+                            logger.info(f"✓ Scene {idx} image saved (background)")
+                        except Exception as e:
+                            logger.error(f"Failed save scene {idx}: {e}")
+                            job_manager.update_scene_image(scene_ids[idx], "failed")
+                    else:
+                        job_manager.update_scene_image(scene_ids[idx], "failed")
+            except Exception as e:
+                logger.error(f"Background image gen error: {e}")
+
+        # Define Scene 0 Image Task with Immediate Chaining
+        async def generate_scene_0_image_and_chain():
+            logger.info("🎨 Starting Scene 0 image generation...")
+            img_0 = await gemini.generate_image(
+                scenes[0]['image_prompt'],
+                story_seed=story_seed,
+                is_mobile=force_mobile,
+                scene_num=0
+            )
+            
+            # 🔗 CRITICAL: Trigger background generation IMMEDIATELY after Scene 0 Image finishes
+            # This prevents RunPod 10s idle timeout if TTS takes longer than Image gen
+            if len(scenes) > 1:
+                logger.info("🔗 Chaining background image generation immediately...")
+                asyncio.create_task(
+                    generate_remaining_images_background(scenes[1:], story_seed, force_mobile)
+                )
+                
+            return img_0
+
         logger.info("🚀 Starting parallel Scene 0 Image + Scene 0 TTS generation...")
+
+        # 1. Generate Scene 0 Image (and chain background)
+        scene_0_image_task = generate_scene_0_image_and_chain()
         
-        # 1. Generate Scene 0 Image Task
-        scene_0_image_task = gemini.generate_image(
-            scenes[0]['image_prompt'],
-            story_seed=story_seed,
-            is_mobile=force_mobile,
-            scene_num=0
-        )
-        
-        # 2. Generate Scene 0 TTS Task
+        # 2. Generate Scene 0 TTS
         from services.chatterbox_client import chatterbox
         scene_0_tts_task = chatterbox.generate_audio(
             text=scenes[0]['narrative_text'],
             voice=voice
         )
         
-        # Run Scene 0 tasks concurrently (Blocking Phase)
+        # Run Scene 0 tasks concurrently
+        # Even if TTS takes longer, background images have already started!
         scene_0_data = await asyncio.gather(scene_0_image_task, scene_0_tts_task)
         img_0_bytes, scene_0_audio = scene_0_data
         
@@ -614,42 +654,7 @@ async def run_ai_workflow_progressive_mobile(story_id: str, file_path: str, grad
         else:
             job_manager.update_scene_audio(scene_ids[0], "failed")
 
-        logger.info(f"✓ Story ready for initial display. Launching background generation...")
-
-        # 3. Background: Generate Remaining Images (Scenes 1..N)
-        remaining_scenes = scenes[1:]
-        if remaining_scenes:
-            async def generate_remaining_images_background(r_scenes, seed, mobile):
-                logger.info(f"🎨 Background generating images for {len(r_scenes)} scenes...")
-                try:
-                    # generate_images_parallel now accepts start_index=1
-                    images_map = await gemini.generate_images_parallel(
-                        r_scenes,
-                        seed,
-                        max_workers=4,
-                        is_mobile=mobile,
-                        start_index=1
-                    )
-                    # Save them
-                    for idx, img_bytes in images_map.items():
-                        if img_bytes:
-                            # idx is the actual scene number (1..N)
-                            img_name = f"scene_{idx}.png"
-                            try:
-                                url = storage_manager.save_file(story_id, img_name, img_bytes, in_saved=False)
-                                job_manager.update_scene_image(scene_ids[idx], "completed", url)
-                                logger.info(f"✓ Scene {idx} image saved (background)")
-                            except Exception as e:
-                                logger.error(f"Failed save scene {idx}: {e}")
-                                job_manager.update_scene_image(scene_ids[idx], "failed")
-                        else:
-                            job_manager.update_scene_image(scene_ids[idx], "failed")
-                except Exception as e:
-                    logger.error(f"Background image gen error: {e}")
-            
-            asyncio.create_task(
-                generate_remaining_images_background(remaining_scenes, story_seed, force_mobile)
-            )
+        logger.info(f"✓ Story ready for initial display. Background tasks running...")
 
         # 4. Background: Generate Remaining TTS (Scenes 1..N)
         if len(scenes) > 1:
