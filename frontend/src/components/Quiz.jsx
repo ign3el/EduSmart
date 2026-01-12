@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { markQuizComplete } from '../services/api';
 import './Quiz.css';
 
-const Quiz = ({ questions, onComplete, onBackToStory }) => {
+const Quiz = ({ questions, onComplete, onBackToStory, storyId }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
@@ -69,13 +70,22 @@ const Quiz = ({ questions, onComplete, onBackToStory }) => {
       setScore(prev => prev + 1);
     }
 
-    setTimeout(() => {
+    setTimeout(async () => {
       if (currentQuestion + 1 < questions.length) {
         setCurrentQuestion(currentQuestion + 1);
         setSelectedOption(null);
         setIsCorrect(null);
       } else {
         setShowResults(true);
+        // Mark quiz as completed
+        if (storyId) {
+          try {
+            await markQuizComplete(storyId);
+            console.log('✓ Quiz marked as completed');
+          } catch (error) {
+            console.error('Failed to mark quiz complete:', error);
+          }
+        }
       }
     }, 1500);
   };
@@ -216,8 +226,8 @@ const Quiz = ({ questions, onComplete, onBackToStory }) => {
                 key={index}
                 onClick={() => handleAnswer(option)}
                 className={`option-btn ${selectedOption === option
-                    ? (isCorrect ? 'correct' : 'wrong')
-                    : ''
+                  ? (isCorrect ? 'correct' : 'wrong')
+                  : ''
                   }`}
                 disabled={selectedOption !== null}
               >

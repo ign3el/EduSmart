@@ -188,6 +188,21 @@ def initialize_database():
                 logger.info("✓ Successfully added 'is_admin' column to 'users' table.")
             else:
                 logger.info("✓ 'users' table schema is up to date.")
+            
+            # --- Schema Migration: Add 'quiz_completed' column to user_stories ---
+            cursor.execute("""
+                SELECT COUNT(*) AS count
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                AND table_name = 'user_stories'
+                AND column_name = 'quiz_completed'
+            """)
+            if cursor.fetchone()['count'] == 0:
+                logger.warning("! 'quiz_completed' column not found in 'user_stories' table. Adding it now...")
+                cursor.execute("ALTER TABLE user_stories ADD COLUMN quiz_completed BOOLEAN DEFAULT FALSE")
+                logger.info("✓ Successfully added 'quiz_completed' column to 'user_stories' table.")
+            else:
+                logger.info("✓ 'user_stories' table schema is up to date.")
 
     except (mysql.connector.Error, ConnectionError) as err:
         logger.error(f"⚠ Could not initialize database: {err}")

@@ -57,5 +57,11 @@ export const getSceneAudioUrl = (storyId, sceneNum) => {
   return `${API_URL}/api/story/${storyId}/scene/${sceneNum}/audio`;
 };
 
+// Quiz completion
+export const markQuizComplete = async (storyId) => {
+  const response = await apiClient.post(`/api/story/${storyId}/complete-quiz`);
+  return response.data;
+};
+
 
 export default apiClient;

@@ -553,6 +553,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
           questions={storyData.quiz}
           onComplete={onRestart}
           onBackToStory={() => setShowQuiz(false)}
+          storyId={savedStoryId}
         />
       </div>
     );

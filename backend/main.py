@@ -1587,6 +1587,68 @@ async def get_scene_audio(story_id: str, scene_num: int):
     # Not found in any location
     raise HTTPException(status_code=404, detail=f"Audio not found for scene {scene_num}")
 
+# --- QUIZ COMPLETION ENDPOINT ---
+
+@app.post("/api/story/{story_id}/complete-quiz")
+async def mark_quiz_complete(
+    story_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark quiz as completed for the current user's story"""
+    try:
+        with get_db_cursor(commit=True) as cursor:
+            # Update quiz_completed status
+            cursor.execute("""
+                UPDATE user_stories
+                SET quiz_completed = TRUE
+                WHERE user_id = %s AND story_id = %s
+            """, (current_user["id"], story_id))
+            
+            if cursor.rowcount == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Story not found or not owned by user"
+                )
+            
+            # Fetch updated story data
+            cursor.execute("""
+                SELECT story_id, name, story_data, created_at, quiz_completed
+                FROM user_stories
+                WHERE user_id = %s AND story_id = %s
+            """, (current_user["id"], story_id))
+            
+            story = cursor.fetchone()
+            
+            return {
+                "success": True,
+                "message": "Quiz marked as completed",
+                "story": {
+                    "story_id": story["story_id"],
+                    "name": story["name"],
+                    "quiz_completed": story["quiz_completed"],
+                    "created_at": story["created_at"].isoformat() if story["created_at"] else None
+                }
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error marking quiz complete: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- STARTUP EVENT ---
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    logger.info("Initializing story storage manager...")
+    storage_manager.initialize()
+    
+    logger.info("Starting story cleanup scheduler (24-hour TTL)...")
+    storage_manager.start_cleanup_scheduler()
+    
+    logger.info("Starting database cleanup scheduler (runs every 2 days)...")
+    storage_manager.start_db_cleanup_scheduler()
+
 # --- PROGRESSIVE TTS ENDPOINTS ---
 
 @app.get("/api/story/{story_id}/tts-status")
