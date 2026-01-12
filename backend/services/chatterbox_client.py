@@ -48,10 +48,10 @@ class ChatterboxClient:
             if self.api_key:
                 headers["X-API-Key"] = self.api_key
             
-            # Kokoro uses root path (/) based on proxy configuration
+            # Direct container access uses full API path (proxy is for external access only)
             response = await asyncio.to_thread(
                 requests.post,
-                f"{self.base_url}/",
+                f"{self.base_url}/v1/audio/speech",
                 json={
                     "model": "kokoro",
                     "input": text,
@@ -133,11 +133,10 @@ class ChatterboxClient:
             if self.api_key:
                 headers["X-API-Key"] = self.api_key
             
-            # Mobile optimization: lower bitrate for faster streaming
-            # Note: Kokoro may not support bitrate parameter
+            # Mobile optimization
             response = await asyncio.to_thread(
                 requests.post,
-                f"{self.base_url}/",
+                f"{self.base_url}/v1/audio/speech",
                 json={
                     "model": "kokoro",
                     "input": text,
