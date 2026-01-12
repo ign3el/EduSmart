@@ -40,94 +40,35 @@ class GeminiService:
         """Calculate exponential backoff delay: base_delay * (2 ^ attempt)."""
         return self.base_delay * (2 ** attempt)
 
-    def _extract_json_from_response(self, text: str) -> Optional[dict]:
-        """Extract JSON from AI response using multiple strategies."""
+    def _extract_pdf_text(self, file_bytes: bytes) -> str:
+        """Extract text from PDF for text-only models like Groq.
         
-        # Strategy 1: Look for complete JSON object with proper bracket counting
-        def find_complete_json(text: str) -> Optional[str]:
-            start = text.find('{')
-            if start == -1:
-                return None
+        Critical: Groq's Llama models are text-only and cannot read PDFs directly.
+        We must extract the text first.
+        """
+        try:
+            import PyPDF2
+            import io
             
-            bracket_count = 0
-            in_string = False
-            escape_next = False
+            pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
+            text_content = []
             
-            for i in range(start, len(text)):
-                char = text[i]
-                
-                if escape_next:
-                    escape_next = False
-                    continue
-                
-                if char == '\\':
-                    escape_next = True
-                    continue
-                
-                if char == '"' and not escape_next:
-                    in_string = not in_string
-                    continue
-                
-                if not in_string:
-                    if char == '{':
-                        bracket_count += 1
-                    elif char == '}':
-                        bracket_count -= 1
-                        if bracket_count == 0:
-                            return text[start:i+1]
+            for page_num, page in enumerate(pdf_reader.pages):
+                page_text = page.extract_text()
+                if page_text.strip():
+                    text_content.append(f"--- Page {page_num + 1} ---\n{page_text}")
             
-            return None
-        
-        # Strategy 2: Find JSON in markdown code blocks
-        def extract_from_code_block(text: str) -> Optional[str]:
-            import re
-            # Look for ```json ... ``` or ``` ... ```
-            patterns = [
-                r'```json\s*(\{.*?\})\s*```',
-                r'```\s*(\{.*?\})\s*```'
-            ]
-            for pattern in patterns:
-                match = re.search(pattern, text, re.DOTALL)
-                if match:
-                    return match.group(1)
-            return None
-        
-        # Strategy 3: Find JSON after common AI response prefixes
-        def extract_after_prefix(text: str) -> Optional[str]:
-            prefixes = [
-                'Here is the story:\n',
-                'Here is your story:\n',
-                'JSON:\n',
-                '```json\n',
-                '```'
-            ]
-            for prefix in prefixes:
-                if prefix in text:
-                    after = text.split(prefix, 1)[1]
-                    json_str = find_complete_json(after)
-                    if json_str:
-                        return json_str
-            return None
-        
-        # Try all strategies in order
-        strategies = [
-            find_complete_json,
-            extract_from_code_block,
-            extract_after_prefix
-        ]
-        
-        for strategy in strategies:
-            try:
-                json_str = strategy(text)
-                if json_str:
-                    try:
-                        return json.loads(json_str)
-                    except json.JSONDecodeError:
-                        continue
-            except Exception:
-                continue
-        
-        return None
+            full_text = "\n\n".join(text_content)
+            
+            # Truncate if too long (Groq has token limits)
+            max_chars = 100000  # ~25k tokens
+            if len(full_text) > max_chars:
+                full_text = full_text[:max_chars] + "\n\n[Document truncated due to length]"
+            
+            return full_text
+        except Exception as e:
+            print(f"⚠️  PDF text extraction failed: {e}")
+            return ""
 
     def _call_with_exponential_backoff(self, func, *args, **kwargs):
         """Execute API call with exponential backoff retry logic with automatic fallback."""
@@ -358,32 +299,33 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
             if self.use_groq:
                 try:
                     print("🚀 Using Groq for story generation...")
-                    # Convert PDF to base64 for Groq
-                    import base64
-                    file_b64 = base64.b64encode(file_bytes).decode('utf-8')
+                    # CRITICAL FIX: Extract text from PDF (Groq is text-only)
+                    pdf_text = self._extract_pdf_text(file_bytes)
                     
-                    response = self.groq_client.chat.completions.create(
-                        model=self.groq_model,
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "You are an expert educational content designer. Analyze documents and create engaging educational stories."
-                            },
-                            {
-                                "role": "user",
-                                "content": f"{unified_prompt}\n\nDocument (base64): {file_b64[:1000]}..."  # Truncate for display
-                            }
-                        ],
-                        temperature=0.7,
-                        max_tokens=8000,
-                        response_format={"type": "json_object"}
-                    )
-                    
-                    if response.choices and response.choices[0].message.content:
-                        cleaned_text = response.choices[0].message.content.strip()
-                        json_obj = self._extract_json_from_response(cleaned_text)
+                    if not pdf_text:
+                        print("⚠️  PDF text extraction failed. Falling back to Gemini...")
+                    else:
+                        response = self.groq_client.chat.completions.create(
+                            model=self.groq_model,
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": "You are an expert educational content designer. Analyze documents and create engaging educational stories. Always respond with valid JSON only."
+                                },
+                                {
+                                    "role": "user",
+                                    "content": f"{unified_prompt}\n\nDOCUMENT TEXT:\n{pdf_text}"
+                                }
+                            ],
+                            temperature=0.7,
+                            max_tokens=8000,
+                            response_format={"type": "json_object"}  # Native JSON mode
+                        )
                         
-                        if json_obj:
+                        if response.choices and response.choices[0].message.content:
+                            # Native JSON mode guarantees valid JSON - just parse it
+                            json_obj = json.loads(response.choices[0].message.content)
+                            
                             # Validate JSON structure
                             is_valid, errors = self._validate_story_json(json_obj)
                             if is_valid:
@@ -412,23 +354,33 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
             response = self._call_with_exponential_backoff(_generate_story_unified)
             
             if response and response.text:
-                cleaned_text = response.text.strip()
-                if cleaned_text:
-                    json_obj = self._extract_json_from_response(cleaned_text)
-                    if json_obj:
-                        # Validate JSON structure
-                        is_valid, errors = self._validate_story_json(json_obj)
-                        if not is_valid:
-                            print(f"⚠️  JSON validation warnings: {errors}")
-                        
-                        # Ensure minimum 10 quiz questions
-                        json_obj = self._ensure_minimum_questions(json_obj, file_bytes, grade_level)
-                        print("✓ Gemini generation successful")
-                        return json_obj
-                    
-                    print(f"STORY ERROR: Could not parse valid JSON from response.")
-                    print(f"Received (first 500 chars): {cleaned_text[:500]}")
-                    return None
+                try:
+                    # Try direct JSON parse first (Gemini often returns clean JSON)
+                    json_obj = json.loads(response.text.strip())
+                except json.JSONDecodeError:
+                    # Fallback: extract JSON from markdown/text
+                    import re
+                    json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+                    if json_match:
+                        try:
+                            json_obj = json.loads(json_match.group(0))
+                        except json.JSONDecodeError:
+                            print(f"STORY ERROR: Could not parse JSON from response.")
+                            print(f"Received (first 500 chars): {response.text[:500]}")
+                            return None
+                    else:
+                        print(f"STORY ERROR: No JSON found in response.")
+                        return None
+                
+                # Validate JSON structure
+                is_valid, errors = self._validate_story_json(json_obj)
+                if not is_valid:
+                    print(f"⚠️  JSON validation warnings: {errors}")
+                
+                # Ensure minimum 10 quiz questions
+                json_obj = self._ensure_minimum_questions(json_obj, file_bytes, grade_level)
+                print("✓ Gemini generation successful")
+                return json_obj
             
             print("STORY ERROR: Received empty or invalid response from GenAI model.")
             return None
