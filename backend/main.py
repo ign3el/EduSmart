@@ -1636,18 +1636,6 @@ async def mark_quiz_complete(
         logger.error(f"Error marking quiz complete: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- STARTUP EVENT ---
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup"""
-    logger.info("Initializing story storage manager...")
-    storage_manager.initialize()
-    
-    logger.info("Starting story cleanup scheduler (24-hour TTL)...")
-    storage_manager.start_cleanup_scheduler()
-    
-    logger.info("Starting database cleanup scheduler (runs every 2 days)...")
-    storage_manager.start_db_cleanup_scheduler()
 
 # --- PROGRESSIVE TTS ENDPOINTS ---
 
