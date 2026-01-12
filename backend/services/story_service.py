@@ -90,7 +90,7 @@ class GeminiService:
                             self.text_model = self.text_model_fallback
                             self.using_fallback = True
                             # Retry immediately with fallback model
-                            time.sleep(2)  # Brief pause before fallback attempt
+                            await asyncio.sleep(2)  # Brief pause before fallback attempt
                             continue
                         else:
                             # Fallback model also exhausted
@@ -392,7 +392,7 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
             print(f"STORY ERROR: {e}")
             return None
 
-    def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None, is_mobile: bool = False) -> Optional[bytes]:
+    async def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None, is_mobile: bool = False) -> Optional[bytes]:
         """Unified image generation via RunPod ComfyUI FLUX.1-dev with mobile optimization support. Uses story_seed for character consistency."""
         # Build comprehensive, high-quality prompt (adjust for mobile)
         if is_mobile:
@@ -553,14 +553,14 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
         }
 
         try:
-            timeout = 90 if is_mobile else 120  # Mobile generates faster
-            resp = requests.post(url, headers=headers, json={"input": payload_input}, timeout=timeout)
-            if resp.status_code != 200:
-                print(f"RunPod FLUX returned {resp.status_code}: {resp.text[:120]}")
-                return None
-
-            data = resp.json()
-            # If synchronous output is returned directly
+            timeout_seconds = 90 if is_mobile else 120  # Mobile generates faster
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, headers=headers, json={"input": payload_input}, timeout=aiohttp.ClientTimeout(total=timeout_seconds)) as resp:
+                    if resp.status != 200:
+                        text = await resp.text()
+                        print(f"RunPod FLUX returned {resp.status}: {text[:120]}")
+                        return None
+                    data = await resp.json()            # If synchronous output is returned directly
             if data.get("status") == "COMPLETED" and data.get("output"):
                 output = data.get("output")
             # Otherwise poll status endpoint
@@ -570,12 +570,11 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
                 output = None
                 max_polls = 30 if is_mobile else 40  # Mobile should be faster
                 for _ in range(max_polls):
-                    time.sleep(2)
-                    status_resp = requests.get(status_url, headers=headers, timeout=20)
-                    if status_resp.status_code != 200:
-                        continue
-                    status_data = status_resp.json()
-                    if status_data.get("status") == "COMPLETED" and status_data.get("output"):
+                    await asyncio.sleep(2)
+                    async with session.get(status_url, headers=headers, timeout=aiohttp.ClientTimeout(total=20)) as status_resp:
+                            if status_resp.status != 200:
+                                continue
+                            status_data = await status_resp.json()                    if status_data.get("status") == "COMPLETED" and status_data.get("output"):
                         output = status_data.get("output")
                         break
                     if status_data.get("status") in {"FAILED", "CANCELLED"}:
@@ -687,6 +686,67 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
         except Exception as e:
             print(f"RunPod FLUX/ComfyUI error: {str(e)[:120]}")
             return None
+    
+    async def generate_images_parallel(
+        self,
+        scenes: List[dict],
+        story_seed: int,
+        max_workers: int = 4,
+        is_mobile: bool = False
+    ) -> Dict[int, bytes]:
+        """Generate all scene images in parallel with bounded concurrency.
+        
+        Optimized for RunPod with 4 workers:
+        - Uses asyncio.Semaphore to limit concurrent requests
+        - Prevents cold boot overhead
+        - Maximizes throughput while respecting worker limits
+        
+        Args:
+            scenes: List of scene dictionaries with 'image_prompt' field
+            story_seed: Seed for character consistency across all images
+            max_workers: Max concurrent image generations (default: 4 for RunPod)
+            is_mobile: Generate mobile-optimized images (512x512, 15 steps)
+        
+        Returns:
+            Dictionary mapping scene number to image bytes
+        """
+        semaphore = asyncio.Semaphore(max_workers)
+        
+        async def bounded_generate(scene_num: int, scene: dict):
+            """Generate single image with semaphore control"""
+            async with semaphore:
+                return await self.generate_image(
+                    prompt=scene['image_prompt'],
+                    scene_text=scene.get('narrative_text', ''),
+                    story_seed=story_seed,
+                    is_mobile=is_mobile
+                )
+        
+        print(f"🎨 Starting parallel image generation for {len(scenes)} scenes (max_workers={max_workers}, mobile={is_mobile})")
+        
+        # Create tasks for all scenes
+        tasks = [
+            bounded_generate(i, scene)
+            for i, scene in enumerate(scenes)
+        ]
+        
+        # Run all tasks concurrently (semaphore limits actual parallelism)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Build result dictionary, filtering out failures
+        images = {}
+        for i, result in enumerate(results):
+            if result and not isinstance(result, Exception):
+                images[i] = result
+            else:
+                error_msg = str(result) if isinstance(result, Exception) else "Unknown error"
+                print(f"⚠️  Image generation failed for scene {i}: {error_msg[:100]}")
+        
+        success_rate = (len(images) / len(scenes)) * 100 if scenes else 0
+        print(f"✓ Generated {len(images)}/{len(scenes)} images successfully ({success_rate:.1f}%)")
+        
+        return images
+
 
 
     def generate_scene_priority(self, file_path: str, grade_level: str, scene_number: int) -> Optional[dict]:
