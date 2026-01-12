@@ -5,7 +5,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
 from langdetect import detect, LangDetectException
-import PyPDF2
+from pypdf import PdfReader
 import docx
 
 # Setup logging
@@ -43,7 +43,7 @@ async def extract_text_from_file(file: UploadFile = File(...)):
         
         if filename.endswith(".pdf"):
             try:
-                pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+                pdf_reader = PdfReader(io.BytesIO(content))
                 for page in pdf_reader.pages:
                     extracted = page.extract_text()
                     if extracted:
