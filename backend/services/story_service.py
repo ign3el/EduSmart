@@ -561,30 +561,31 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
                         print(f"RunPod FLUX returned {resp.status}: {text[:120]}")
                         return None
                     data = await resp.json()            # If synchronous output is returned directly
-            if data.get("status") == "COMPLETED" and data.get("output"):
-                output = data.get("output")
-            # Otherwise poll status endpoint
-            elif data.get("id"):
-                request_id = data["id"]
-                status_url = f"https://api.runpod.ai/v2/{endpoint_id}/status/{request_id}"
-                output = None
-                max_polls = 30 if is_mobile else 40  # Mobile should be faster
-                for _ in range(max_polls):
-                    await asyncio.sleep(2)
-                    async with session.get(status_url, headers=headers, timeout=aiohttp.ClientTimeout(total=20)) as status_resp:
-                            if status_resp.status != 200:
-                                continue
-                            status_data = await status_resp.json()
-                            if status_data.get("status") == "COMPLETED" and status_data.get("output"):
-                                output = status_data.get("output")
-                                break
-                    
-                    if status_data.get("status") in {"FAILED", "CANCELLED"}:
-                        print(f"RunPod job failed: {status_data}")
-                        return None
-            else:
-                print("RunPod response missing output/id")
-                return None
+                
+                if data.get("status") == "COMPLETED" and data.get("output"):
+                    output = data.get("output")
+                # Otherwise poll status endpoint
+                elif data.get("id"):
+                    request_id = data["id"]
+                    status_url = f"https://api.runpod.ai/v2/{endpoint_id}/status/{request_id}"
+                    output = None
+                    max_polls = 30 if is_mobile else 40  # Mobile should be faster
+                    for _ in range(max_polls):
+                        await asyncio.sleep(2)
+                        async with session.get(status_url, headers=headers, timeout=aiohttp.ClientTimeout(total=20)) as status_resp:
+                                if status_resp.status != 200:
+                                    continue
+                                status_data = await status_resp.json()
+                                if status_data.get("status") == "COMPLETED" and status_data.get("output"):
+                                    output = status_data.get("output")
+                                    break
+                        
+                        if status_data.get("status") in {"FAILED", "CANCELLED"}:
+                            print(f"RunPod job failed: {status_data}")
+                            return None
+                else:
+                    print("RunPod response missing output/id")
+                    return None
 
             image_bytes = None
 
@@ -877,11 +878,9 @@ REQUIREMENTS:
             
             tts_client = ChatterboxClient()
             
-            # Generate TTS (async)
-            # Note: You may need to add async support to ChatterboxClient
-            audio_bytes = await tts_client.generate_async(
-                text=text,
-                max_threads=max_threads  # CPU management
+            # Generate TTS (async) - use generate_audio method
+            audio_bytes = await tts_client.generate_audio(
+                text=text
             )
             
             if audio_bytes:
