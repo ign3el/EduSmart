@@ -242,7 +242,7 @@
     max-width: 1200px;
     margin: 0 auto;
     gap: 2rem;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
   }
 
   .home-btn {

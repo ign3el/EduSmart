@@ -62,14 +62,14 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   // Debug logging for URL construction
   useEffect(() => {
     if (scene?.audio_url) {
-      console.log('🎵 Audio URL Debug:', {
+      ('🎵 Audio URL Debug:', {
         original: scene.audio_url,
         built: fullAudioUrl,
         isAbsolute: fullAudioUrl.startsWith('http')
       });
     }
     if (scene?.image_url) {
-      console.log('🖼️ Image URL Debug:', {
+      ('🖼️ Image URL Debug:', {
         original: scene.image_url,
         built: fullImageUrl,
         isAbsolute: fullImageUrl.startsWith('http')
@@ -172,7 +172,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     if (fullImageUrl) {
       const testImg = new Image();
       testImg.onload = () => {
-        console.log('✅ Image pre-test successful:', fullImageUrl);
+        ('✅ Image pre-test successful:', fullImageUrl);
       };
       testImg.onerror = () => {
         console.warn('⚠️ Image pre-test failed:', fullImageUrl);
@@ -189,58 +189,54 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   const handlePause = () => {
     if (audioRef.current) {
       setSavedTime(audioRef.current.currentTime);
-      console.log('⏸️ User paused at:', audioRef.current.currentTime);
+      ('⏸️ User paused at:', audioRef.current.currentTime);
     }
   };
 
   // Resume from saved time when user plays
-  const handlePlay = () => {
-    if (audioRef.current && savedTime > 0) {
-      audioRef.current.currentTime = savedTime;
-      console.log('▶️ Audio resumed from:', savedTime);
-    }
-  };
 
+
+  // Handle audio events
   useEffect(() => {
-    if (audioRef.current) {
-      const handlePlayEvent = () => {
-        console.log('▶️ Audio started playing');
-        setSystemPaused(false);
-        setIsPlaying(true);
+    const audio = audioRef.current;
+    if (!audio) return;
 
-        // Restore saved position if exists
-        if (savedTime > 0 && audioRef.current) {
-          audioRef.current.currentTime = savedTime;
-          console.log('▶️ Audio resumed from:', savedTime);
-          setSavedTime(0); // Clear after using
-        }
-      };
+    const handlePlayEvent = () => {
+      setSystemPaused(false);
+      setIsPlaying(true);
 
-      const handlePauseEvent = () => {
-        // Only set system paused if not user-initiated
-        if (!userPaused) {
-          setSystemPaused(true);
-        }
-      };
+      // If we have a saved time and we're starting from 0 (or near 0), seek to saved time
+      // This handles cases where audio src reload might have reset time
+      if (savedTime > 0.1 && audio.currentTime < 0.1) {
+        audio.currentTime = savedTime;
+      }
+    };
 
-      const handleEnded = () => {
-        setSystemPaused(false);
-        setUserPaused(false);
-      };
+    const handlePauseEvent = () => {
+      // Always save time on pause
+      setSavedTime(audio.currentTime);
 
-      audioRef.current.addEventListener('play', handlePlayEvent);
-      audioRef.current.addEventListener('pause', handlePauseEvent);
-      audioRef.current.addEventListener('ended', handleEnded);
+      if (!userPaused) {
+        setSystemPaused(true);
+      }
+    };
 
-      return () => {
-        if (audioRef.current) {
-          audioRef.current.removeEventListener('play', handlePlayEvent);
-          audioRef.current.removeEventListener('pause', handlePauseEvent);
-          audioRef.current.removeEventListener('ended', handleEnded);
-        }
-      };
-    }
-  }, [savedTime]);
+    const handleEnded = () => {
+      setSystemPaused(false);
+      setUserPaused(false);
+      setSavedTime(0);
+    };
+
+    audio.addEventListener('play', handlePlayEvent);
+    audio.addEventListener('pause', handlePauseEvent);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('play', handlePlayEvent);
+      audio.removeEventListener('pause', handlePauseEvent);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [audioRef.current, savedTime, userPaused]);
 
   // Combined play/pause logic
   useEffect(() => {
@@ -333,7 +329,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   }, [currentScene, fullAudioUrl, fullImageUrl, isPlaying, audioRetryCount]);
 
   const handleQuizClick = () => {
-    console.log('🎯 Quiz button clicked - starting quiz...')
+    ('🎯 Quiz button clicked - starting quiz...')
     setIsPlaying(false)
     setShowQuiz(true)
   };
@@ -445,7 +441,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         audioRef.current.pause();
         setSavedTime(currentPosition); // Update saved time immediately
         setIsPlaying(false);
-        console.log('⏸️ User paused at:', currentPosition);
+        ('⏸️ User paused at:', currentPosition);
       } else {
         // Use ref to bypass state closure issues
         const targetTime = savedTime > 0 ? savedTime : 0;
@@ -461,7 +457,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         audioRef.current.play()
           .then(() => {
             setIsPlaying(true);
-            console.log('▶️ Audio resumed from:', targetTime);
+            ('▶️ Audio resumed from:', targetTime);
           })
           .catch(err => {
             console.error('Play error:', err);
@@ -551,7 +547,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   };
 
   if (showQuiz && storyData?.quiz) {
-    console.log('✅ Rendering Quiz - questions:', storyData.quiz.length)
+    ('✅ Rendering Quiz - questions:', storyData.quiz.length)
     return (
       <div className="story-player">
         <Quiz
@@ -565,13 +561,13 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   }
 
   if (showQuiz && !storyData?.quiz) {
-    console.log('⚠️ Quiz mode but no quiz data available')
-    console.log('📊 storyData structure:', {
-      hasStoryData: !!storyData,
-      storyDataKeys: storyData ? Object.keys(storyData) : [],
-      hasQuiz: !!storyData?.quiz,
-      scenes: storyData?.scenes?.length
-    })
+    ('⚠️ Quiz mode but no quiz data available')
+      ('📊 storyData structure:', {
+        hasStoryData: !!storyData,
+        storyDataKeys: storyData ? Object.keys(storyData) : [],
+        hasQuiz: !!storyData?.quiz,
+        scenes: storyData?.scenes?.length
+      })
   }
 
   if (!scene) {
