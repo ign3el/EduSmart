@@ -1520,73 +1520,73 @@ async def export_story(story_id: str, user: User = Depends(get_current_user)):
             "Content-Disposition": f"attachment; filename={story['name'].replace(' ', '_')}.zip"
         }
     )
- 
- #   - - -   P R O G R E S S I V E   T T S   E N D P O I N T S   - - -  
-  
- @ a p p . g e t ( " / a p i / s t o r y / { s t o r y _ i d } / t t s - s t a t u s " )  
- a s y n c   d e f   g e t _ t t s _ s t a t u s ( s t o r y _ i d :   s t r ) :  
-         " " " G e t   s p e c i a l i z e d   p r o g r e s s i v e   T T S   g e n e r a t i o n   s t a t u s " " "  
-         #   U s e   g e m i n i   s e r v i c e ' s   s t a t u s   t r a c k i n g  
-         r e t u r n   a w a i t   g e m i n i . g e t _ t t s _ s t a t u s ( s t o r y _ i d )  
-  
- @ a p p . g e t ( " / a p i / s t o r y / { s t o r y _ i d } / s c e n e / { s c e n e _ n u m } / a u d i o " )  
- a s y n c   d e f   g e t _ s c e n e _ a u d i o ( s t o r y _ i d :   s t r ,   s c e n e _ n u m :   i n t ) :  
-         " " " G e t   s c e n e   a u d i o   ( f r o m   c a c h e   o r   g e n e r a t e d / s a v e d   f o l d e r )   w i t h   w a t e r f a l l   f a l l b a c k s " " "  
-         i m p o r t   o s  
-         i m p o r t   a i o f i l e s  
-         f r o m   f a s t a p i . r e s p o n s e s   i m p o r t   F i l e R e s p o n s e ,   R e s p o n s e  
-          
-         #   1 .   C h e c k   p r o g r e s s i v e   T T S   c a c h e   ( f a s t e s t )  
-         #   N o t e :   s c e n e _ n u m   m a t c h e s   t h e   1 - b a s e d   i n d e x   u s e d   i n   f i l e   n a m e s  
-         c a c h e _ f i l e   =   f " o u t p u t s / a u d i o _ c a c h e / a u d i o _ { s t o r y _ i d } _ { s c e n e _ n u m } . m p 3 "  
-          
-         i f   o s . p a t h . e x i s t s ( c a c h e _ f i l e ) :  
-                 r e t u r n   F i l e R e s p o n s e ( c a c h e _ f i l e ,   m e d i a _ t y p e = " a u d i o / m p e g " )  
-          
-         #   2 .   C h e c k   a c t i v e   j o b   ( i n - m e m o r y / g e n e r a t e d _ s t o r i e s )  
-         t r y :  
-                 s t o r y _ d i r   =   s t o r a g e _ m a n a g e r . g e t _ s t o r y _ p a t h ( s t o r y _ i d ,   i n _ s a v e d = F a l s e )  
-                  
-                 #   T r y   W A V   ( K o k o r o   d e f a u l t )   a n d   M P 3  
-                 f o r   e x t   i n   [ " . w a v " ,   " . m p 3 " ] :  
-                         #   T r y   s i m p l e   n a m e  
-                         s i m p l e _ p a t h   =   o s . p a t h . j o i n ( s t o r y _ d i r ,   f " s c e n e _ { s c e n e _ n u m } { e x t } " )  
-                         i f   o s . p a t h . e x i s t s ( s i m p l e _ p a t h ) :  
-                                 m e d i a _ t y p e   =   " a u d i o / w a v "   i f   e x t   = =   " . w a v "   e l s e   " a u d i o / m p e g "  
-                                 r e t u r n   F i l e R e s p o n s e ( s i m p l e _ p a t h ,   m e d i a _ t y p e = m e d i a _ t y p e )  
-                          
-                         #   T r y   U U I D   p r e f i x e d  
-                         i m p o r t   g l o b  
-                         m a t c h e s   =   g l o b . g l o b ( o s . p a t h . j o i n ( s t o r y _ d i r ,   f " * _ s c e n e _ { s c e n e _ n u m } { e x t } " ) )  
-                         i f   m a t c h e s :  
-                                   m e d i a _ t y p e   =   " a u d i o / w a v "   i f   e x t   = =   " . w a v "   e l s e   " a u d i o / m p e g "  
-                                   r e t u r n   F i l e R e s p o n s e ( m a t c h e s [ 0 ] ,   m e d i a _ t y p e = m e d i a _ t y p e )  
-         e x c e p t   E x c e p t i o n :  
-                 p a s s  
-                  
-         #   3 .   C h e c k   s a v e d   s t o r i e s   ( p e r s i s t e n t   s t o r a g e )  
-         t r y :  
-                 s t o r y _ d i r   =   s t o r a g e _ m a n a g e r . g e t _ s t o r y _ p a t h ( s t o r y _ i d ,   i n _ s a v e d = T r u e )  
-                   #   T r y   W A V   ( K o k o r o   d e f a u l t )   a n d   M P 3  
-                 f o r   e x t   i n   [ " . w a v " ,   " . m p 3 " ] :  
-                         #   T r y   s i m p l e   n a m e  
-                         s i m p l e _ p a t h   =   o s . p a t h . j o i n ( s t o r y _ d i r ,   f " s c e n e _ { s c e n e _ n u m } { e x t } " )  
-                         i f   o s . p a t h . e x i s t s ( s i m p l e _ p a t h ) :  
-                                 m e d i a _ t y p e   =   " a u d i o / w a v "   i f   e x t   = =   " . w a v "   e l s e   " a u d i o / m p e g "  
-                                 r e t u r n   F i l e R e s p o n s e ( s i m p l e _ p a t h ,   m e d i a _ t y p e = m e d i a _ t y p e )  
-                          
-                         #   T r y   U U I D   p r e f i x e d  
-                         i m p o r t   g l o b  
-                         m a t c h e s   =   g l o b . g l o b ( o s . p a t h . j o i n ( s t o r y _ d i r ,   f " * _ s c e n e _ { s c e n e _ n u m } { e x t } " ) )  
-                         i f   m a t c h e s :  
-                                   m e d i a _ t y p e   =   " a u d i o / w a v "   i f   e x t   = =   " . w a v "   e l s e   " a u d i o / m p e g "  
-                                   r e t u r n   F i l e R e s p o n s e ( m a t c h e s [ 0 ] ,   m e d i a _ t y p e = m e d i a _ t y p e )  
-         e x c e p t   E x c e p t i o n :  
-                 p a s s  
-          
-         #   N o t   f o u n d   i n   a n y   l o c a t i o n  
-         r a i s e   H T T P E x c e p t i o n ( s t a t u s _ c o d e = 4 0 4 ,   d e t a i l = f " A u d i o   n o t   f o u n d   f o r   s c e n e   { s c e n e _ n u m } " )  
- 
+
+# --- PROGRESSIVE TTS ENDPOINTS ---
+
+@app.get("/api/story/{story_id}/tts-status")
+async def get_tts_status(story_id: str):
+    """Get specialized progressive TTS generation status"""
+    # Use gemini service's status tracking
+    return await gemini.get_tts_status(story_id)
+
+@app.get("/api/story/{story_id}/scene/{scene_num}/audio")
+async def get_scene_audio(story_id: str, scene_num: int):
+    """Get scene audio (from cache or generated/saved folder) with waterfall fallbacks"""
+    import os
+    import aiofiles
+    from fastapi.responses import FileResponse, Response
+    
+    # 1. Check progressive TTS cache (fastest)
+    # Note: scene_num matches the 1-based index used in file names
+    cache_file = f"outputs/audio_cache/audio_{story_id}_{scene_num}.mp3"
+    
+    if os.path.exists(cache_file):
+        return FileResponse(cache_file, media_type="audio/mpeg")
+    
+    # 2. Check active job (in-memory/generated_stories)
+    try:
+        story_dir = storage_manager.get_story_path(story_id, in_saved=False)
+        
+        # Try WAV (Kokoro default) and MP3
+        for ext in [".wav", ".mp3"]:
+            # Try simple name
+            simple_path = os.path.join(story_dir, f"scene_{scene_num}{ext}")
+            if os.path.exists(simple_path):
+                media_type = "audio/wav" if ext == ".wav" else "audio/mpeg"
+                return FileResponse(simple_path, media_type=media_type)
+            
+            # Try UUID prefixed
+            import glob
+            matches = glob.glob(os.path.join(story_dir, f"*_scene_{scene_num}{ext}"))
+            if matches:
+                 media_type = "audio/wav" if ext == ".wav" else "audio/mpeg"
+                 return FileResponse(matches[0], media_type=media_type)
+    except Exception:
+        pass
+        
+    # 3. Check saved stories (persistent storage)
+    try:
+        story_dir = storage_manager.get_story_path(story_id, in_saved=True)
+         # Try WAV (Kokoro default) and MP3
+        for ext in [".wav", ".mp3"]:
+            # Try simple name
+            simple_path = os.path.join(story_dir, f"scene_{scene_num}{ext}")
+            if os.path.exists(simple_path):
+                media_type = "audio/wav" if ext == ".wav" else "audio/mpeg"
+                return FileResponse(simple_path, media_type=media_type)
+            
+            # Try UUID prefixed
+            import glob
+            matches = glob.glob(os.path.join(story_dir, f"*_scene_{scene_num}{ext}"))
+            if matches:
+                 media_type = "audio/wav" if ext == ".wav" else "audio/mpeg"
+                 return FileResponse(matches[0], media_type=media_type)
+    except Exception:
+        pass
+    
+    # Not found in any location
+    raise HTTPException(status_code=404, detail=f"Audio not found for scene {scene_num}")
+
 # --- PROGRESSIVE TTS ENDPOINTS ---
 
 @app.get("/api/story/{story_id}/tts-status")
