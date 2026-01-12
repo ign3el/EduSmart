@@ -576,9 +576,8 @@ Generate as many scenes as needed to cover all concepts. Output ONLY the JSON ob
                                 continue
                             status_data = await status_resp.json()
                             if status_data.get("status") == "COMPLETED" and status_data.get("output"):
-                        
-                        output = status_data.get("output")
-                        break
+                                output = status_data.get("output")
+                                break
                     
                     if status_data.get("status") in {"FAILED", "CANCELLED"}:
                         print(f"RunPod job failed: {status_data}")
