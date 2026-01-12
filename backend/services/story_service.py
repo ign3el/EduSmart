@@ -702,9 +702,7 @@ Output ONLY the JSON object."""
                 # Get image dimensions (assuming PNG header)
                 resolution = "1024x1024" if not is_mobile else "512x512"
                 elapsed = time.time() - start_time
-                # Extract scene number from filename
-                scene_num = filename.split('_')[-1].split('.')[0]
-                print(f"✓ Image for Scene {scene_num} generated in {elapsed:.2f}s via RunPod FLUX/ComfyUI ({mode_str}) | Size: {len(image_bytes):,} bytes | Resolution: {resolution}")
+                print(f"✓ Image generated in {elapsed:.2f}s via RunPod FLUX/ComfyUI ({mode_str}) | Size: {len(image_bytes):,} bytes | Resolution: {resolution}")
                 return image_bytes
 
             print("RunPod FLUX/ComfyUI output could not be parsed")
