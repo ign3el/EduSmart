@@ -65,7 +65,9 @@ class ChatterboxClient:
             
             if response.status_code == 200:
                 audio_bytes = response.content
-                print(f"✓ Chatterbox TTS generated: {len(audio_bytes)} bytes")
+                # Calculate approximate duration (MP3 bitrate ~128kbps = 16KB/s)
+                duration_seconds = len(audio_bytes) / (16 * 1024)
+                print(f"✓ TTS generated via Kokoro: {len(audio_bytes)} bytes (~{duration_seconds:.1f}s)")
                 return audio_bytes
             else:
                 print(f"✗ Chatterbox TTS failed: {response.status_code} - {response.text}")

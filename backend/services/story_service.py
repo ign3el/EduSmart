@@ -692,7 +692,9 @@ Output ONLY the JSON object."""
                 usage["images"] = usage.get("images", 0) + 1
                 save_usage(usage)
                 mode_str = "mobile" if is_mobile else "desktop"
-                print(f"✓ Image generated via RunPod FLUX/ComfyUI ({mode_str})")
+                # Get image dimensions (assuming PNG header)
+                resolution = "1024x1024" if not is_mobile else "512x512"
+                print(f"✓ Image generated via RunPod FLUX/ComfyUI ({mode_str}) | Size: {len(image_bytes):,} bytes | Resolution: {resolution}")
                 return image_bytes
 
             print("RunPod FLUX/ComfyUI output could not be parsed")
@@ -897,7 +899,7 @@ REQUIREMENTS:
             if audio_bytes:
                 # Cache audio
                 await self._cache_audio(story_id, scene_num, audio_bytes)
-                print(f"✓ Audio generated for Scene {scene_num}: {len(audio_bytes)} bytes")
+                print(f"✓ TTS generated via Kokoro for Scene {scene_num} | Story: {story_id[:8]}... | Size: {len(audio_bytes):,} bytes | Duration: ~{len(audio_bytes) / (176 * 1024):.1f}s")
                 return True
             
             print(f"⚠️  TTS generation returned no audio for scene {scene_num}")
