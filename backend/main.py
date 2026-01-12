@@ -648,31 +648,78 @@ async def check_duplicate(
         
         # Prefer saved stories as they are permanent
         if saved_matches:
+            # Get the most recent saved story from database
+            try:
+                with get_db_cursor() as cursor:
+                    # Get all matching story IDs and sort by created_at DESC to get most recent
+                    story_ids = [m["story_id"] for m in saved_matches]
+                    placeholders = ','.join(['%s'] * len(story_ids))
+                    
+                    cursor.execute(f"""
+                        SELECT story_id, name, created_at, user_id
+                        FROM user_stories
+                        WHERE story_id IN ({placeholders})
+                        AND user_id = %s
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                    """, (*story_ids, current_user["id"]))
+                    
+                    db_story = cursor.fetchone()
+                    
+                    if db_story:
+                        return {
+                            "is_duplicate": True,
+                            "duplicate_type": "saved",
+                            "story_id": db_story["story_id"],
+                            "story_title": db_story["name"],
+                            "created_at": db_story["created_at"].isoformat() if db_story["created_at"] else None,
+                            "created_by": current_user["username"],
+                            "file_hash": duplicate_info["hash"]
+                        }
+            except Exception as e:
+                logger.error(f"Error fetching duplicate story from DB: {e}")
+                # Fallback to hash service metadata
+                pass
+            
+            # Fallback if DB query fails
             match = saved_matches[0]
-            # Extract metadata
             metadata = match.get("metadata", {})
             return {
                 "is_duplicate": True,
                 "duplicate_type": "saved",
                 "story_id": match["story_id"],
                 "story_title": metadata.get("title", metadata.get("original_filename", "Unknown")),
-                "created_at": metadata.get("created_timestamp", "Unknown date"),
-                "created_by": metadata.get("username", "Unknown"),
+                "created_at": metadata.get("created_timestamp", None),
+                "created_by": current_user["username"],
                 "file_hash": duplicate_info["hash"]
             }
         elif generated_matches:
-            match = generated_matches[0]
-            # Extract metadata
-            metadata = match.get("metadata", {})
-            return {
-                "is_duplicate": True,
-                "duplicate_type": "generated",
-                "story_id": match["story_id"],
-                "story_title": metadata.get("title", metadata.get("original_filename", "Unknown")),
-                "created_at": metadata.get("created_timestamp", "Unknown date"),
-                "created_by": metadata.get("username", "Unknown"),
-                "file_hash": duplicate_info["hash"]
-            }
+            # For generated stories, use job manager to get most recent
+            match = generated_matches[-1]  # Get most recent (last in list)
+            try:
+                status = job_manager.get_job_status(match["story_id"])
+                return {
+                    "is_duplicate": True,
+                    "duplicate_type": "generated",
+                    "story_id": match["story_id"],
+                    "story_title": status.get("title", "Unknown"),
+                    "created_at": status.get("created_at", None),
+                    "created_by": current_user["username"],
+                    "file_hash": duplicate_info["hash"]
+                }
+            except Exception as e:
+                logger.error(f"Error fetching generated story status: {e}")
+                # Fallback
+                metadata = match.get("metadata", {})
+                return {
+                    "is_duplicate": True,
+                    "duplicate_type": "generated",
+                    "story_id": match["story_id"],
+                    "story_title": metadata.get("title", "Unknown"),
+                    "created_at": metadata.get("created_timestamp", None),
+                    "created_by": current_user["username"],
+                    "file_hash": duplicate_info["hash"]
+                }
     
     return {"is_duplicate": False, "file_hash": hash_service.generate_bytes_hash(file_content)}
 
