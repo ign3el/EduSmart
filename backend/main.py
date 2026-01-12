@@ -1587,3 +1587,69 @@ async def export_story(story_id: str, user: User = Depends(get_current_user)):
          #   N o t   f o u n d   i n   a n y   l o c a t i o n  
          r a i s e   H T T P E x c e p t i o n ( s t a t u s _ c o d e = 4 0 4 ,   d e t a i l = f " A u d i o   n o t   f o u n d   f o r   s c e n e   { s c e n e _ n u m } " )  
  
+# --- PROGRESSIVE TTS ENDPOINTS ---
+
+@app.get("/api/story/{story_id}/tts-status")
+async def get_tts_status(story_id: str):
+    """Get specialized progressive TTS generation status"""
+    # Use gemini service's status tracking
+    return await gemini.get_tts_status(story_id)
+
+@app.get("/api/story/{story_id}/scene/{scene_num}/audio")
+async def get_scene_audio(story_id: str, scene_num: int):
+    """Get scene audio (from cache or generated/saved folder) with waterfall fallbacks"""
+    import os
+    import aiofiles
+    from fastapi.responses import FileResponse, Response
+    
+    # 1. Check progressive TTS cache (fastest)
+    # Note: scene_num matches the 1-based index used in file names
+    cache_file = f"outputs/audio_cache/audio_{story_id}_{scene_num}.mp3"
+    
+    if os.path.exists(cache_file):
+        return FileResponse(cache_file, media_type="audio/mpeg")
+    
+    # 2. Check active job (in-memory/generated_stories)
+    try:
+        story_dir = storage_manager.get_story_path(story_id, in_saved=False)
+        
+        # Try WAV (Kokoro default) and MP3
+        for ext in [".wav", ".mp3"]:
+            # Try simple name
+            simple_path = os.path.join(story_dir, f"scene_{scene_num}{ext}")
+            if os.path.exists(simple_path):
+                media_type = "audio/wav" if ext == ".wav" else "audio/mpeg"
+                return FileResponse(simple_path, media_type=media_type)
+            
+            # Try UUID prefixed
+            import glob
+            matches = glob.glob(os.path.join(story_dir, f"*_scene_{scene_num}{ext}"))
+            if matches:
+                 media_type = "audio/wav" if ext == ".wav" else "audio/mpeg"
+                 return FileResponse(matches[0], media_type=media_type)
+    except Exception:
+        pass
+        
+    # 3. Check saved stories (persistent storage)
+    try:
+        story_dir = storage_manager.get_story_path(story_id, in_saved=True)
+         # Try WAV (Kokoro default) and MP3
+        for ext in [".wav", ".mp3"]:
+            # Try simple name
+            simple_path = os.path.join(story_dir, f"scene_{scene_num}{ext}")
+            if os.path.exists(simple_path):
+                media_type = "audio/wav" if ext == ".wav" else "audio/mpeg"
+                return FileResponse(simple_path, media_type=media_type)
+            
+            # Try UUID prefixed
+            import glob
+            matches = glob.glob(os.path.join(story_dir, f"*_scene_{scene_num}{ext}"))
+            if matches:
+                 media_type = "audio/wav" if ext == ".wav" else "audio/mpeg"
+                 return FileResponse(matches[0], media_type=media_type)
+    except Exception:
+        pass
+    
+    # Not found in any location
+    from fastapi import HTTPException
+    raise HTTPException(status_code=404, detail=f"Audio not found for scene {scene_num}")
