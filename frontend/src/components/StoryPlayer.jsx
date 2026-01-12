@@ -54,7 +54,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   // Use progressive TTS endpoint if polling is active and scene is ready
   const sceneHasTts = ttsReady.includes(currentScene);
   const fullAudioUrl = currentJobId && sceneHasTts
-    ? getSceneAudioUrl(currentJobId, currentScene + 1) // scene_num is 1-indexed
+    ? getSceneAudioUrl(currentJobId, currentScene) // 0-indexed to match backend
     : buildFullUrl(scene?.audio_url);
   const fullImageUrl = buildFullUrl(scene?.image_url);
   const uploadUrl = buildFullUrl(storyData?.upload_url);
@@ -203,10 +203,17 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
 
   useEffect(() => {
     if (audioRef.current) {
-      const handlePlay = () => {
+      const handlePlayEvent = () => {
         console.log('▶️ Audio started playing');
         setSystemPaused(false);
         setIsPlaying(true);
+
+        // Restore saved position if exists
+        if (savedTime > 0 && audioRef.current) {
+          audioRef.current.currentTime = savedTime;
+          console.log('▶️ Audio resumed from:', savedTime);
+          setSavedTime(0); // Clear after using
+        }
       };
 
       const handlePause = () => {
@@ -223,13 +230,13 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         setUserPaused(false);
       };
 
-      audioRef.current.addEventListener('play', handlePlay);
+      audioRef.current.addEventListener('play', handlePlayEvent);
       audioRef.current.addEventListener('pause', handlePause);
       audioRef.current.addEventListener('ended', handleEnded);
 
       return () => {
         if (audioRef.current) {
-          audioRef.current.removeEventListener('play', handlePlay);
+          audioRef.current.removeEventListener('play', handlePlayEvent);
           audioRef.current.removeEventListener('pause', handlePause);
           audioRef.current.removeEventListener('ended', handleEnded);
         }
@@ -658,7 +665,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
                 <div className="scene-counter">
                   Scene {currentScene + 1} of {actualTotalScenes}
                   {currentJobId && ttsPolling && (
-                    <span className="generating-indicator"> • {ttsReady.length}/{actualTotalScenes} audio ready</span>
+                    <span className="generating-indicator"> • {ttsReady.filter(Boolean).length}/{actualTotalScenes} audio ready</span>
                   )}
                 </div>
 
