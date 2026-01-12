@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 # Import the new, clean refactored modules
-from database import initialize_database
+from database import initialize_database, get_db_cursor
 from routers.auth import router as auth_router, get_current_user
 from routers.admin import router as admin_router
 from routers.upload import router as upload_router
