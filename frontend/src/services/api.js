@@ -45,5 +45,17 @@ export const generateTestSpeech = async (settings) => {
   return response.data;
 }
 
+// --- Progressive TTS Functions ---
+
+export const getTtsStatus = async (storyId) => {
+  const response = await apiClient.get(`/api/story/${storyId}/tts-status`);
+  return response.data;
+};
+
+export const getSceneAudioUrl = (storyId, sceneNum) => {
+  // Return direct URL for audio player (includes auth token via interceptor)
+  return `${API_URL}/api/story/${storyId}/scene/${sceneNum}/audio`;
+};
+
 
 export default apiClient;

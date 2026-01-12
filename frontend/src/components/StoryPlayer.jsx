@@ -3,24 +3,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlay, FiPause, FiSkipForward, FiSkipBack, FiRotateCw } from 'react-icons/fi';
 import './StoryPlayer.css';
 import Quiz from './Quiz';
+import { getTtsStatus, getSceneAudioUrl } from '../services/api';
 
 // Helper function to build full URL, handling absolute URLs, data URLs, and API paths
 const buildFullUrl = (url) => {
   if (!url) {
     return '';
   }
-  
+
   // Check if already absolute (http/https) or data URL
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }
-  
+
   // Check if it's an API path (starts with /api/)
   if (url.startsWith('/api/')) {
     // Use the current window's origin to build the full URL
     return `${window.location.origin}${url}`;
   }
-  
+
   // For other relative paths, prepend the API domain from environment or current origin
   const apiDomain = import.meta.env.VITE_API_URL || window.location.origin;
   return `${apiDomain}${url}`;
@@ -40,17 +41,24 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   const [imageError, setImageError] = useState(false);
   const [generatingMessage, setGeneratingMessage] = useState('');
   const [savedTime, setSavedTime] = useState(0); // Track saved playback position
+  const [ttsReady, setTtsReady] = useState([]); // Track which scenes have TTS ready
+  const [ttsPolling, setTtsPolling] = useState(false);
   const audioRef = useRef(null);
   const imageCache = useRef({});
+  const pollingIntervalRef = useRef(null);
 
   const scenes = storyData?.scenes || [];
   const actualTotalScenes = totalScenes > 0 ? totalScenes : scenes.length;
   const scene = scenes[currentScene];
 
-  const fullAudioUrl = buildFullUrl(scene?.audio_url);
+  // Use progressive TTS endpoint if polling is active and scene is ready
+  const sceneHasTts = ttsReady.includes(currentScene);
+  const fullAudioUrl = currentJobId && sceneHasTts
+    ? getSceneAudioUrl(currentJobId, currentScene + 1) // scene_num is 1-indexed
+    : buildFullUrl(scene?.audio_url);
   const fullImageUrl = buildFullUrl(scene?.image_url);
   const uploadUrl = buildFullUrl(storyData?.upload_url);
-  
+
   // Debug logging for URL construction
   useEffect(() => {
     if (scene?.audio_url) {
@@ -68,7 +76,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       });
     }
   }, [scene, fullAudioUrl, fullImageUrl]);
-  
+
   // Audio error state
   const [audioError, setAudioError] = useState(false);
   const [audioRetryCount, setAudioRetryCount] = useState(0);
@@ -92,13 +100,53 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     });
   }, [scenes]);
 
+  // Progressive TTS Polling - Start polling when story loads
+  useEffect(() => {
+    if (!currentJobId || isOffline) return; // Only poll for active jobs
+
+    const pollTtsStatus = async () => {
+      try {
+        const status = await getTtsStatus(currentJobId);
+        if (status && status.scenes_ready) {
+          setTtsReady(status.scenes_ready);
+
+          // Stop polling when all scenes are ready
+          if (status.is_complete) {
+            setTtsPolling(false);
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('TTS status polling error:', error);
+      }
+    };
+
+    // Start polling if not already polling
+    if (!ttsPolling && !pollingIntervalRef.current) {
+      setTtsPolling(true);
+      pollTtsStatus(); // Initial poll
+      pollingIntervalRef.current = setInterval(pollTtsStatus, 3000); // Poll every 3s
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [currentJobId, isOffline, ttsPolling]);
+
   // Preload next scene's image and audio in background (for immediate next scene)
   useEffect(() => {
     if (currentScene < scenes.length - 1) {
       const nextScene = scenes[currentScene + 1];
       const nextImageUrl = buildFullUrl(nextScene?.image_url);
       const nextAudioUrl = buildFullUrl(nextScene?.audio_url);
-      
+
       // Preload next image
       if (nextImageUrl && !imageCache.current[nextImageUrl]) {
         const img = new Image();
@@ -107,7 +155,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         };
         img.src = nextImageUrl;
       }
-      
+
       // Preload next audio
       if (nextAudioUrl && !imageCache.current[nextAudioUrl]) {
         const audio = new Audio();
@@ -136,7 +184,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   // Handle Play/Pause Toggle - Robust state management
   const [userPaused, setUserPaused] = useState(false);
   const [systemPaused, setSystemPaused] = useState(false);
-  
+
   // Save current time when user pauses
   const handlePause = () => {
     if (audioRef.current) {
@@ -144,7 +192,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       console.log('⏸️ User paused at:', audioRef.current.currentTime);
     }
   };
-  
+
   // Resume from saved time when user plays
   const handlePlay = () => {
     if (audioRef.current && savedTime > 0) {
@@ -152,7 +200,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       console.log('▶️ Audio resumed from:', savedTime);
     }
   };
-  
+
   useEffect(() => {
     if (audioRef.current) {
       const handlePlay = () => {
@@ -160,7 +208,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         setSystemPaused(false);
         setIsPlaying(true);
       };
-      
+
       const handlePause = () => {
         console.log('⏸️ Audio paused');
         // Only set system paused if not user-initiated
@@ -168,17 +216,17 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
           setSystemPaused(true);
         }
       };
-      
+
       const handleEnded = () => {
         console.log('⏹️ Audio ended');
         setSystemPaused(false);
         setUserPaused(false);
       };
-      
+
       audioRef.current.addEventListener('play', handlePlay);
       audioRef.current.addEventListener('pause', handlePause);
       audioRef.current.addEventListener('ended', handleEnded);
-      
+
       return () => {
         if (audioRef.current) {
           audioRef.current.removeEventListener('play', handlePlay);
@@ -194,7 +242,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     if (audioRef.current) {
       const shouldPlay = isPlaying && !userPaused && !systemPaused;
       const isCurrentlyPlaying = !audioRef.current.paused;
-      
+
       if (shouldPlay && !isCurrentlyPlaying) {
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
@@ -220,7 +268,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
     setImageLoaded(false);
     setImageError(false);
     setAudioError(false);
-    
+
     // Pre-load image to ensure onLoad fires
     if (fullImageUrl) {
       const img = new Image();
@@ -232,27 +280,27 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       };
       img.src = fullImageUrl;
     }
-    
+
     if (audioRef.current) {
       // Stop current audio immediately to prevent overlap
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
-      
+
       // Update to new scene's audio with cache-busting for fresh load
-      const audioUrlWithCacheBust = fullAudioUrl ? 
+      const audioUrlWithCacheBust = fullAudioUrl ?
         `${fullAudioUrl}${fullAudioUrl.includes('?') ? '&' : '?'}v=${audioRetryCount}` : '';
-      
+
       audioRef.current.src = audioUrlWithCacheBust;
       audioRef.current.load(); // Force the browser to load the new scene's audio
-      
+
       // Add error handler for audio
       const handleAudioError = (e) => {
         console.error('Audio loading error:', e.target.error);
         setAudioError(true);
       };
-      
+
       audioRef.current.addEventListener('error', handleAudioError);
-      
+
       // If isPlaying is true, wait for audio to be ready before playing
       if (isPlaying) {
         const handleCanPlay = () => {
@@ -270,7 +318,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         };
         audioRef.current.addEventListener('canplay', handleCanPlay);
       }
-      
+
       return () => {
         if (audioRef.current) {
           audioRef.current.removeEventListener('error', handleAudioError);
@@ -328,7 +376,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       setDuration(audioRef.current.duration);
     }
   };
-  
+
   const handleSeek = (e) => {
     if (audioRef.current && audioRef.current.duration) {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -342,14 +390,14 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       setProgress(percentage * 100);
     }
   };
-  
+
   const formatTime = (time) => {
     if (isNaN(time)) return '0:00';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
-  
+
   const handleAudioEnded = () => {
     // Only auto-advance if we're still on the same scene that finished playing
     // This prevents issues when user manually changes scenes while audio is playing
@@ -370,7 +418,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       setTimeout(() => setGeneratingMessage(''), 3000);
       return;
     }
-    
+
     // Stop current audio before changing scene
     if (audioRef.current) {
       audioRef.current.pause();
@@ -385,7 +433,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
   const togglePlay = () => {
     if (audioRef.current) {
       const isCurrentlyPlaying = !audioRef.current.paused;
-      
+
       if (isCurrentlyPlaying) {
         // Capture current time BEFORE pausing
         const currentPosition = audioRef.current.currentTime;
@@ -397,14 +445,14 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         // Use ref to bypass state closure issues
         const targetTime = savedTime > 0 ? savedTime : 0;
         audioRef.current.currentTime = targetTime;
-        
+
         // If audio error occurred, retry loading
         if (audioError) {
           setAudioRetryCount(prev => prev + 1);
           setAudioError(false);
           return;
         }
-        
+
         audioRef.current.play()
           .then(() => {
             setIsPlaying(true);
@@ -417,7 +465,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       }
     }
   };
-  
+
   const retryAudio = () => {
     setAudioRetryCount(prev => prev + 1);
     setAudioError(false);
@@ -540,11 +588,11 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
           setAudioError(true);
         }}
       />
-      
+
       <div className="player-header">
         <h2>🎬 {storyData.title || "Story Time"}</h2>
       </div>
-      
+
       {/* Audio Error Notification */}
       {audioError && (
         <div className="audio-error-banner">
@@ -567,8 +615,8 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
           >
             <div className="scene-image">
               {fullImageUrl && !imageError ? (
-                <img 
-                  src={fullImageUrl} 
+                <img
+                  src={fullImageUrl}
                   alt={`Scene ${currentScene + 1}`}
                   onLoad={(e) => {
                     if (!imageLoaded) setImageLoaded(true);
@@ -604,28 +652,28 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
 
                 <div className="scene-counter">
                   Scene {currentScene + 1} of {actualTotalScenes}
-                  {currentJobId && completedSceneCount < actualTotalScenes && (
-                    <span className="generating-indicator"> • {completedSceneCount} scenes ready</span>
+                  {currentJobId && ttsPolling && (
+                    <span className="generating-indicator"> • {ttsReady.length}/{actualTotalScenes} audio ready</span>
                   )}
                 </div>
-                
+
                 {generatingMessage && (
                   <div className="generating-message">{generatingMessage}</div>
                 )}
-                
+
                 <div className="control-buttons">
-                  <button 
-                    onClick={goToPrevScene} 
-                    disabled={currentScene === 0} 
+                  <button
+                    onClick={goToPrevScene}
+                    disabled={currentScene === 0}
                     className="control-btn"
                   >
                     <FiSkipBack />
                   </button>
-                  
+
                   <button onClick={togglePlay} className="control-btn play-btn">
                     {isPlaying ? <FiPause /> : <FiPlay />}
                   </button>
-                  
+
                   <button onClick={currentScene === scenes.length - 1 ? handleQuizClick : goToNextScene} className="control-btn next-btn" title={currentScene === scenes.length - 1 ? 'Take Quiz' : 'Next Scene'}>
                     {currentScene === scenes.length - 1 ? "📝 Quiz" : <FiSkipForward />}
                   </button>
@@ -636,7 +684,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
                     const isAvailable = index < scenes.length;
                     const isActive = index === currentScene;
                     const isCompleted = index < currentScene;
-                    
+
                     return (
                       <button
                         key={`dot-${index}`}
@@ -658,7 +706,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
       </div>
 
       {downloadMessage && (
-        <motion.div 
+        <motion.div
           className="download-popup"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -669,19 +717,19 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
               {downloadMessage !== 'Complete! ✓' && !downloadMessage.startsWith('Error') ? <div className="spinner"></div> : <span style={{ fontSize: '1.2rem' }}>✓</span>}
               <p style={{ margin: 0 }}>{downloadMessage}</p>
             </div>
-            
+
             <div className="progress-bar-container">
-              <div 
+              <div
                 className="progress-bar"
                 style={{
-                  width: downloadMessage === 'Zipping file...' ? '25%' : 
-                         downloadMessage === 'Downloading...' ? '60%' : 
-                         downloadMessage === 'Saving file...' ? '85%' : '100%',
+                  width: downloadMessage === 'Zipping file...' ? '25%' :
+                    downloadMessage === 'Downloading...' ? '60%' :
+                      downloadMessage === 'Saving file...' ? '85%' : '100%',
                   transition: 'width 0.4s ease'
                 }}
               ></div>
             </div>
-            
+
             <div className="progress-steps">
               <div className={`progress-step ${downloadMessage === 'Zipping file...' ? 'active' : downloadMessage === 'Downloading...' || downloadMessage === 'Saving file...' || downloadMessage === 'Complete! ✓' ? 'completed' : ''}`}>
                 <div className="step-dot">1</div>
