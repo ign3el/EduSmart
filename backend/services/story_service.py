@@ -405,6 +405,10 @@ Output ONLY the JSON object."""
 
     async def generate_image(self, prompt: str, scene_text: str = "", story_seed: Optional[int] = None, is_mobile: bool = False) -> Optional[bytes]:
         """Unified image generation via RunPod ComfyUI FLUX.1-dev with mobile optimization support. Uses story_seed for character consistency."""
+        # Import time at function start for timing measurements
+        import time
+        start_time = time.time()
+        
         # Build comprehensive, high-quality prompt (adjust for mobile)
         if is_mobile:
             quality_keywords = "masterpiece, best quality, sharp focus, clean linework, vibrant colors"
@@ -472,7 +476,6 @@ Output ONLY the JSON object."""
             return None
         
         # Start timing for image generation
-        import time
         start_time = time.time()
 
         # Use story-specific seed for character consistency, fall back to environment variable
