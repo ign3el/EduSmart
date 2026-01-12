@@ -242,7 +242,7 @@ const StoryPlayer = forwardRef(({ storyData, avatar, onRestart, onSave, onDownlo
         }
       };
     }
-  }, [userPaused]);
+  }, [savedTime]);
 
   // Combined play/pause logic
   useEffect(() => {
