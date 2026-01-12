@@ -24,7 +24,8 @@ services:
       - RUNPOD_SEED=${RUNPOD_SEED:-20240601}
       - RUNPOD_MONTHLY_CAP_AED=${RUNPOD_MONTHLY_CAP_AED:-25}
       - RUNPOD_COST_AED_PER_IMAGE=${RUNPOD_COST_AED_PER_IMAGE:-0.02}
-      # Kokoro TTS Configuration
+      # TTS Configuration
+      - CHATTERBOX_URL=http://kokoro-tts:8001
       - KOKORO_URL=http://kokoro-tts:8880
       # Database Configuration
       - MYSQL_HOST=${MYSQL_HOST:-10.0.0.147}
