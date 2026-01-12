@@ -48,15 +48,16 @@ class ChatterboxClient:
             if self.api_key:
                 headers["X-API-Key"] = self.api_key
             
-            # Call Chatterbox API
+            # Kokoro uses OpenAI-compatible API format
             response = await asyncio.to_thread(
                 requests.post,
-                f"{self.base_url}/tts",
+                f"{self.base_url}/v1/audio/speech",
                 json={
-                    "text": text,
+                    "model": "kokoro",
+                    "input": text,
                     "voice": selected_voice,
-                    "rate": 0.9,  # Slightly slower for clarity
-                    "format": "mp3"
+                    "response_format": "mp3",
+                    "speed": 0.9
                 },
                 headers=headers,
                 timeout=self.timeout
@@ -133,17 +134,16 @@ class ChatterboxClient:
                 headers["X-API-Key"] = self.api_key
             
             # Mobile optimization: lower bitrate for faster streaming
-            bitrate = 64 if is_mobile else 128
-            
+            # Note: Kokoro may not support bitrate parameter
             response = await asyncio.to_thread(
                 requests.post,
-                f"{self.base_url}/tts",
+                f"{self.base_url}/v1/audio/speech",
                 json={
-                    "text": text,
+                    "model": "kokoro",
+                    "input": text,
                     "voice": selected_voice,
-                    "rate": 0.9,
-                    "format": "mp3",
-                    "bitrate": bitrate  # Mobile gets 64kbps, desktop gets 128kbps
+                    "response_format": "mp3",
+                    "speed": 0.9
                 },
                 headers=headers,
                 timeout=self.timeout
@@ -151,7 +151,7 @@ class ChatterboxClient:
             
             if response.status_code == 200:
                 audio_bytes = response.content
-                print(f"✓ Chatterbox TTS {'(mobile)' if is_mobile else ''}: {len(audio_bytes)} bytes @ {bitrate}kbps")
+                print(f"✓ Chatterbox TTS {'(mobile)' if is_mobile else ''}: {len(audio_bytes)} bytes")
                 return audio_bytes
             else:
                 print(f"✗ Chatterbox TTS failed: {response.status_code} - {response.text}")
