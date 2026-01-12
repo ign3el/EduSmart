@@ -48,10 +48,10 @@ class ChatterboxClient:
             if self.api_key:
                 headers["X-API-Key"] = self.api_key
             
-            # Kokoro uses OpenAI-compatible API format
+            # Kokoro uses root path (/) based on proxy configuration
             response = await asyncio.to_thread(
                 requests.post,
-                f"{self.base_url}/v1/audio/speech",
+                f"{self.base_url}/",
                 json={
                     "model": "kokoro",
                     "input": text,
@@ -137,7 +137,7 @@ class ChatterboxClient:
             # Note: Kokoro may not support bitrate parameter
             response = await asyncio.to_thread(
                 requests.post,
-                f"{self.base_url}/v1/audio/speech",
+                f"{self.base_url}/",
                 json={
                     "model": "kokoro",
                     "input": text,
