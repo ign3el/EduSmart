@@ -20,7 +20,7 @@ COPY requirements.txt ./
 RUN pip install --upgrade pip setuptools && pip install -r requirements.txt
 
 # Verify imports
-RUN python -c "import PyPDF2; import docx; from langdetect import detect; print('All specified modules imported successfully during build.')"
+RUN python -c "from pypdf import PdfReader; import docx; from langdetect import detect; print('All specified modules imported successfully during build.')"
 
 # Copy application code
 COPY . .
